@@ -1,28 +1,32 @@
-@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&family=Montserrat:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
 
 :root {
-  --bg-dark: #0D0F16;
-  --accent: #0D496B;
-  --accent-light: #1a6fa0;
-  --accent-glow: rgba(13, 73, 107, 0.45);
-  --text: #D9D9D9;
-  --text-muted: #7a7a8c;
-  --border: #d9d9d9;
-  --field-border: rgba(217, 217, 217, 0.45);
-  --border-focus: rgba(217, 217, 217, 0.72);
-  --glass: rgba(13, 73, 107, 0.07);
-  --input-bg: rgba(13, 15, 22, 0.6);
-  --error: #e05a6a;
+  --bg:           #D9D9D9;
+  --surface:      #FFFFFF;
+  --dark:         #0D0F16;
+  --accent:       #0D496B;
+  --accent-hover: #0f5a84;
+  --accent-glow:  rgba(13, 73, 107, 0.28);
+  --accent-light: #185FA5;
+  --text:         #111111;
+  --text-muted:   rgba(17, 17, 17, 0.5);
+  --border:       rgba(17, 17, 17, 0.13);
+  --border-focus: rgba(13, 73, 107, 0.55);
+  --input-bg:     #FFFFFF;
+  --error:        #A32D2D;
+  --error-bg:     rgba(163, 45, 45, 0.07);
   --header-height: 64px;
-  --logo-height: 110px;
+  --logo-height:   110px;
+  --font-head:    'Playfair Display', Georgia, serif;
+  --font-body:    'DM Sans', system-ui, sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  background-color: var(--bg-dark);
+  background-color: var(--bg);
   color: var(--text);
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-body);
   min-height: 100vh;
 }
 
@@ -33,7 +37,7 @@ body {
   background: rgba(13, 15, 22, 0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 1000;
   display: flex;
   align-items: flex-end;
@@ -70,7 +74,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: calc(var(--header-height) + 40px) 20px 60px;
+  padding: calc(var(--header-height) + 48px) 20px 60px;
+  background: var(--bg);
   position: relative;
   overflow: hidden;
 }
@@ -78,18 +83,18 @@ body {
 .login-page::before {
   content: '';
   position: fixed;
-  top: -30%; right: -10%;
-  width: 600px; height: 600px;
-  background: radial-gradient(ellipse, rgba(13, 73, 107, 0.18) 0%, transparent 65%);
+  top: -10%; right: -8%;
+  width: 560px; height: 560px;
+  background: radial-gradient(ellipse, rgba(13, 73, 107, 0.1) 0%, transparent 65%);
   pointer-events: none; z-index: 0;
 }
 
 .login-page::after {
   content: '';
   position: fixed;
-  bottom: -20%; left: -5%;
-  width: 500px; height: 500px;
-  background: radial-gradient(ellipse, rgba(13, 73, 107, 0.12) 0%, transparent 65%);
+  bottom: -15%; left: -5%;
+  width: 480px; height: 480px;
+  background: radial-gradient(ellipse, rgba(13, 73, 107, 0.07) 0%, transparent 65%);
   pointer-events: none; z-index: 0;
 }
 
@@ -98,16 +103,13 @@ body {
   z-index: 1;
   width: 100%;
   max-width: 430px;
-  background: rgba(13, 15, 22, 0.75);
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   padding: 48px 44px;
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
   box-shadow:
-    0 0 0 1px rgba(217, 217, 217, 0.08),
-    0 30px 80px rgba(0, 0, 0, 0.5),
-    0 0 40px rgba(0, 0, 0, 0.12);
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    0 16px 48px rgba(13, 73, 107, 0.1);
   animation: cardIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -120,8 +122,9 @@ body {
   content: '';
   position: absolute;
   top: 0; left: 10%; right: 10%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(217, 217, 217, 0.35), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(13, 73, 107, 0.4), transparent);
+  border-radius: 0 0 2px 2px;
 }
 
 .card-header { text-align: center; margin-bottom: 36px; }
@@ -129,8 +132,8 @@ body {
 .card-icon {
   width: 52px; height: 52px;
   margin: 0 auto 16px;
-  background: rgba(13, 73, 107, 0.2);
-  border: 1px solid var(--border);
+  background: rgba(13, 73, 107, 0.08);
+  border: 1px solid rgba(13, 73, 107, 0.18);
   border-radius: 14px;
   display: flex;
   align-items: center;
@@ -139,7 +142,7 @@ body {
 
 .card-icon svg {
   width: 24px; height: 24px;
-  stroke: var(--accent-light);
+  stroke: var(--accent);
   fill: none;
   stroke-width: 1.8px;
   stroke-linecap: round;
@@ -147,18 +150,17 @@ body {
 }
 
 .card-title {
-  font-family: 'Raleway', sans-serif;
-  font-size: 1.7rem;
+  font-family: var(--font-head);
+  font-size: 1.75rem;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: 0.03em;
+  letter-spacing: -0.01em;
   margin-bottom: 6px;
 }
 
 .card-subtitle {
-  font-size: 0.82rem;
+  font-size: 0.87rem;
   color: var(--text-muted);
-  letter-spacing: 0.03em;
 }
 
 .login-form {
@@ -183,7 +185,7 @@ body {
 }
 
 .field-label {
-  font-size: 0.75rem;
+  font-size: 0.73rem;
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.08em;
@@ -206,16 +208,16 @@ body {
   transition: stroke 0.25s;
 }
 
-.input-wrapper:focus-within > svg { stroke: var(--accent-light); }
+.input-wrapper:focus-within > svg { stroke: var(--accent); }
 
 .field-input {
   width: 100%;
   height: 48px;
   background: var(--input-bg);
-  border: 1px solid var(--field-border);
+  border: 1px solid var(--border);
   border-radius: 10px;
   color: var(--text);
-  font-family: 'Montserrat', sans-serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   padding: 0 44px 0 42px;
   outline: none;
@@ -226,7 +228,7 @@ body {
 
 .field-input:focus {
   border-color: var(--border-focus);
-  box-shadow: 0 0 0 2px rgba(217, 217, 217, 0.14);
+  box-shadow: 0 0 0 3px rgba(13, 73, 107, 0.1);
 }
 
 .toggle-password {
@@ -251,23 +253,24 @@ body {
 }
 
 .forgot-link {
-  font-size: 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--accent-light);
   text-decoration: none;
   text-align: right;
   display: block;
-  margin-top: -6px;
+  margin-top: -4px;
   transition: color 0.2s;
 }
 
-.forgot-link:hover { color: var(--text); }
+.forgot-link:hover { color: var(--accent); }
 
 .error-msg {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--error);
   padding: 10px 14px;
-  background: rgba(224, 90, 106, 0.08);
-  border: 1px solid var(--field-border);
+  background: var(--error-bg);
+  border: 1px solid rgba(163, 45, 45, 0.18);
   border-radius: 8px;
   text-align: center;
 }
@@ -275,41 +278,32 @@ body {
 .btn-primary {
   height: 50px;
   background: var(--accent);
-  border: 1px solid var(--field-border);
+  border: none;
   border-radius: 10px;
-  color: var(--text);
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.88rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  color: #FFFFFF;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
   transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
   margin-top: 6px;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.07) 0%, transparent 60%);
-  pointer-events: none;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: var(--accent-light);
-  box-shadow: 0 0 28px var(--accent-glow);
+  background: var(--accent-hover);
+  box-shadow: 0 6px 22px var(--accent-glow);
   transform: translateY(-1px);
 }
 
 .btn-primary:active:not(:disabled) { transform: translateY(0); }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .card-footer {
   text-align: center;
   margin-top: 28px;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
 }
 
@@ -320,8 +314,7 @@ body {
   transition: color 0.2s;
 }
 
-.card-footer a:hover { color: var(--text); }
-
+.card-footer a:hover { color: var(--accent); }
 
 @media (max-width: 480px) {
   .header { padding: 0 16px; }
