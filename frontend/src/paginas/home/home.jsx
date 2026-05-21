@@ -368,6 +368,7 @@ function FooterSection() {
           <h4 className="footer-heading">Navegação</h4>
           <nav className="footer-nav">
             <Link to="/eventos">Eventos</Link>
+            <Link to="/calendario">Calendário</Link>
             <Link to="/mapa">Mapa</Link>
             {links
               .filter((l) => l.to.startsWith('/meus-'))
