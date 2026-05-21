@@ -1,10 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  Search, MapPin, ArrowRight, Music, Heart,
-  Calendar, Menu, X, User, Plus, ListMusic,
+  Search, MapPin, ArrowRight, Music,
+  Calendar, Menu, X, User, Plus, ListMusic, Ticket,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import './home.css';
+
+function getNavConfig(tipo) {
+  const base = [
+    { to: '/',        label: 'Início',  icon: Music },
+    { to: '/eventos', label: 'Eventos', icon: Calendar },
+    { to: '/mapa',    label: 'Mapa',    icon: MapPin },
+  ];
+
+  if (tipo === 'pessoal') {
+    base.push({ to: '/meus-ingressos', label: 'Meus Ingressos', icon: Ticket });
+  } else {
+    base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
+  }
+
+  return {
+    links: base,
+    podeCriarEvento: !tipo || tipo === 'comunidade',
+  };
+}
 
 const MOCK_EVENTS = [
   {
@@ -51,6 +71,8 @@ function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled]     = useState(false);
   const location = useLocation();
+  const { usuario, isAuthenticated } = useAuth();
+  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -58,13 +80,9 @@ function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const links = [
-    { to: '/',             label: 'Início',       icon: Music },
-    { to: '/eventos',      label: 'Eventos',      icon: Calendar },
-    { to: '/mapa',         label: 'Mapa',         icon: MapPin },
-    { to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic },
-  ];
   const isActive = (path) => location.pathname === path;
+  const contaLink = isAuthenticated ? '/perfil' : '/login';
+  const contaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
 
   return (
     <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
@@ -95,11 +113,13 @@ function Navbar() {
 
         <div className="navbar-zone navbar-zone--actions">
           <div className="navbar-actions-desktop">
-            <Link to="/criar-evento" className="btn-nav-create">
-              <Plus size={15} strokeWidth={2} aria-hidden />
-              <span>Criar Evento</span>
-            </Link>
-            <Link to="/login" className="navbar-icon-btn navbar-login-btn" aria-label="Entrar">
+            {podeCriarEvento && (
+              <Link to="/criar-evento" className="btn-nav-create">
+                <Plus size={15} strokeWidth={2} aria-hidden />
+                <span>Criar Evento</span>
+              </Link>
+            )}
+            <Link to={contaLink} className="navbar-icon-btn navbar-login-btn" aria-label={contaLabel}>
               <User size={20} strokeWidth={2} />
             </Link>
           </div>
@@ -127,13 +147,15 @@ function Navbar() {
           </Link>
         ))}
         <div className="navbar-mobile-divider" />
-        <Link to="/criar-evento" className="btn-nav-create btn-nav-create--mobile" onClick={() => setMobileOpen(false)}>
-          <Plus size={15} strokeWidth={2} aria-hidden />
-          <span>Criar Evento</span>
-        </Link>
-        <Link to="/login" className="navbar-mobile-link" onClick={() => setMobileOpen(false)}>
+        {podeCriarEvento && (
+          <Link to="/criar-evento" className="btn-nav-create btn-nav-create--mobile" onClick={() => setMobileOpen(false)}>
+            <Plus size={15} strokeWidth={2} aria-hidden />
+            <span>Criar Evento</span>
+          </Link>
+        )}
+        <Link to={contaLink} className="navbar-mobile-link" onClick={() => setMobileOpen(false)}>
           <User size={18} strokeWidth={2} aria-hidden />
-          <span>Entrar</span>
+          <span>{contaLabel}</span>
         </Link>
       </div>
     </nav>
@@ -321,6 +343,10 @@ function StylesSection() {
 }
 
 function FooterSection() {
+  const { usuario } = useAuth();
+  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
+  const contaLink = usuario ? '/perfil' : '/login';
+
   return (
     <footer className="footer">
       <div className="container footer-grid">
@@ -343,8 +369,13 @@ function FooterSection() {
           <nav className="footer-nav">
             <Link to="/eventos">Eventos</Link>
             <Link to="/mapa">Mapa</Link>
-            <Link to="/criar-evento">Criar Evento</Link>
-            <Link to="/perfil">Perfil</Link>
+            {links
+              .filter((l) => l.to.startsWith('/meus-'))
+              .map((l) => (
+                <Link key={l.to} to={l.to}>{l.label}</Link>
+              ))}
+            {podeCriarEvento && <Link to="/criar-evento">Criar Evento</Link>}
+            <Link to={contaLink}>Perfil</Link>
           </nav>
         </div>
 

@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import './login.css'
 
 export default function Login() {
+  const navigate = useNavigate()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [mostrarSenha, setMostrar] = useState(false)
@@ -18,9 +21,11 @@ export default function Login() {
     }
     setCarregando(true)
     try {
-      await new Promise((r) => setTimeout(r, 1200))
-    } catch {
-      setErro('E-mail ou senha incorretos. Tente novamente.')
+      await login(email, senha)
+      navigate('/', { replace: true })
+    } catch (err) {
+      const msg = err.response?.data?.error
+      setErro(msg || 'E-mail ou senha incorretos. Tente novamente.')
     } finally {
       setCarregando(false)
     }
