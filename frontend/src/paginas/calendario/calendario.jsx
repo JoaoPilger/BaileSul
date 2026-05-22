@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { User, ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
@@ -59,6 +59,7 @@ const MOCK_EVENTS = {
   }],
 }
 
+
 function formatKey(day, month, year) {
   return `${pad(day)}/${pad(month + 1)}/${year}`
 }
@@ -88,6 +89,28 @@ export default function Calendario() {
     year: today.getFullYear(),
   })
 
+  const [eventsMap, setEventsMap] = useState(MOCK_EVENTS)
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('bailesul_events')
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      // start with MOCK_EVENTS then merge saved events (saved events appear first)
+      const map = { ...MOCK_EVENTS }
+      parsed.forEach((ev) => {
+        if (!ev.date) return
+        const d = new Date(ev.date)
+        const key = formatKey(d.getDate(), d.getMonth(), d.getFullYear())
+        if (!map[key]) map[key] = []
+        map[key].unshift(ev)
+      })
+      setEventsMap(map)
+    } catch (e) {
+      // ignore parse errors
+    }
+  }, [])
+
   const { year: viewYear, month: viewMonth } = view
   const daysInMonth = getDaysInMonth(viewYear, viewMonth)
   const firstWeekday = getFirstWeekday(viewYear, viewMonth)
@@ -109,10 +132,10 @@ export default function Calendario() {
   }
 
   const selectedKey = formatKey(selected.day, selected.month, selected.year)
-  const events = MOCK_EVENTS[selectedKey] || []
+  const events = eventsMap[selectedKey] || []
 
   const eventDates = new Set(
-    Object.keys(MOCK_EVENTS)
+    Object.keys(eventsMap)
       .filter((k) => {
         const [, m, y] = k.split('/').map(Number)
         return m - 1 === viewMonth && y === viewYear

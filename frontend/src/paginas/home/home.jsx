@@ -411,8 +411,26 @@ function FooterSection() {
 }
 
 export default function Home() {
-  const [events]    = useState(MOCK_EVENTS);
+  const [events, setEvents] = useState([]);
   const [isLoading] = useState(false);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('bailesul_events');
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        // merge parsed (user-created) with mocks, keeping unique ids (parsed first)
+        const byId = new Map()
+        parsed.forEach((e) => byId.set(e.id, e))
+        MOCK_EVENTS.forEach((e) => { if (!byId.has(e.id)) byId.set(e.id, e) })
+        setEvents(Array.from(byId.values()))
+      } else {
+        setEvents(MOCK_EVENTS);
+      }
+    } catch (e) {
+      setEvents(MOCK_EVENTS);
+    }
+  }, []);
 
   return (
     <>
