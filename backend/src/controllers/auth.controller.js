@@ -3,6 +3,19 @@ const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { validarCNPJ, geocodificarEndereco } = require('../services/external.service');
 
+const inserirTokenAtivo = async (client, usuario_id, token) => {
+  const decoded = jwt.decode(token);
+  if (!decoded?.exp) {
+    throw new Error('Não foi possível extrair exp do token JWT');
+  }
+
+  const expiresAt = new Date(decoded.exp * 1000);
+  await client.query(
+    'INSERT INTO auth_tokens (usuario_id, token, expires_at) VALUES ($1, $2, $3)',
+    [usuario_id, token, expiresAt]
+  );
+};
+
 /**
  * Valida formato básico de e-mail.
  */
@@ -217,6 +230,8 @@ const login = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
+
+    await inserirTokenAtivo(pool, usuario.id, token);
 
     return res.json({ token, tipo: usuario.tipo, usuario_id: usuario.id });
 
