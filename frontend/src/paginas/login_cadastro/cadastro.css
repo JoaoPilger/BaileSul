@@ -18,7 +18,7 @@
   --success:      #0F6E56;
   --success-bg:   rgba(15, 110, 86, 0.07);
   --header-height: 64px;
-  --logo-height:   110px;
+  --logo-height:   64px;
   --font-head:    'Playfair Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
 }
@@ -42,7 +42,7 @@ body {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   z-index: 1000;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   padding: 0 40px;
   overflow: visible;
 }
@@ -50,25 +50,25 @@ body {
 .header-inner {
   width: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: flex-start;
 }
 
 .logo-area {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   text-decoration: none;
   line-height: 0;
-  margin-bottom: -1px;
 }
 
 .header-logo {
   display: block;
   height: var(--logo-height);
   width: auto;
-  max-width: min(480px, calc(100vw - 80px));
+  max-width: min(360px, calc(100vw - 80px));
+  max-height: var(--header-height);
   object-fit: contain;
-  object-position: left bottom;
+  object-position: left center;
 }
 
 .cadastro-page {
@@ -371,7 +371,7 @@ select.field-input option { background: #FFFFFF; color: #111111; }
 
 @media (max-width: 520px) {
   .header { padding: 0 16px; }
-  :root { --logo-height: 80px; }
+  :root { --logo-height: 52px; }
   .header-logo { max-width: calc(100vw - 32px); }
   .cadastro-card { padding: 36px 22px; }
   .form-row { grid-template-columns: 1fr; }

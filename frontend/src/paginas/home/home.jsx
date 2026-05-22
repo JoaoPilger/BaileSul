@@ -347,6 +347,20 @@ function FooterSection() {
   const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
   const contaLink = usuario ? '/perfil' : '/login';
 
+  const navItems = [
+    { to: '/eventos', label: 'Eventos' },
+    { to: '/calendario', label: 'Calendário' },
+    { to: '/mapa', label: 'Mapa' },
+    ...links
+      .filter((l) => l.to.startsWith('/meus-'))
+      .map((l) => ({ to: l.to, label: l.label })),
+    ...(podeCriarEvento ? [{ to: '/criar-evento', label: 'Criar Evento' }] : []),
+    { to: contaLink, label: 'Perfil' },
+  ];
+
+  const leftItems = navItems.slice(0, 3);
+  const rightItems = navItems.slice(3, 6);
+
   return (
     <footer className="footer">
       <div className="container footer-grid">
@@ -364,23 +378,23 @@ function FooterSection() {
           </p>
         </div>
 
-        <div>
+        <div className="footer-nav-block">
           <h4 className="footer-heading">Navegação</h4>
           <nav className="footer-nav">
-            <Link to="/eventos">Eventos</Link>
-            <Link to="/calendario">Calendário</Link>
-            <Link to="/mapa">Mapa</Link>
-            {links
-              .filter((l) => l.to.startsWith('/meus-'))
-              .map((l) => (
-                <Link key={l.to} to={l.to}>{l.label}</Link>
+            <div className="footer-nav-col">
+              {leftItems.map((item) => (
+                <Link key={item.to} to={item.to}>{item.label}</Link>
               ))}
-            {podeCriarEvento && <Link to="/criar-evento">Criar Evento</Link>}
-            <Link to={contaLink}>Perfil</Link>
+            </div>
+            <div className="footer-nav-col">
+              {rightItems.map((item) => (
+                <Link key={item.to} to={item.to}>{item.label}</Link>
+              ))}
+            </div>
           </nav>
         </div>
 
-        <div>
+        <div className="footer-region-block">
           <h4 className="footer-heading">Região AMAUC</h4>
           <p className="footer-region">
             <MapPin size={13} />
