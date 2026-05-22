@@ -150,11 +150,21 @@ const register = async (req, res) => {
       );
     }
 
+    const token = jwt.sign(
+      { id: usuario_id, tipo },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    );
+
+    await inserirTokenAtivo(client, usuario_id, token);
     await client.query('COMMIT');
 
     return res.status(201).json({
       message: 'Usuário cadastrado com sucesso',
+      token,
+      tipo,
       usuario_id,
+      email: emailNorm,
       cnpj_validado: cnpjValidado,
     });
 
@@ -216,4 +226,38 @@ const login = async (req, res) => {
   }
 };
 
-module.exports = { register, login };
+const logout = async (req, res) => {
+  const authHeader = req.headers.authorization;
+  const tokenId = req.params.id ? parseInt(req.params.id, 10) : null;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(400).json({ error: 'Token não fornecido' });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const query = tokenId
+      ? 'UPDATE auth_tokens SET deleted_at = NOW() WHERE id = $1 AND token = $2 AND usuario_id = $3 AND deleted_at IS NULL RETURNING id'
+      : 'UPDATE auth_tokens SET deleted_at = NOW() WHERE token = $1 AND usuario_id = $2 AND deleted_at IS NULL RETURNING id';
+
+    const params = tokenId ? [tokenId, token, decoded.id] : [token, decoded.id];
+    const { rows } = await pool.query(query, params);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Token não encontrado ou já revogado' });
+    }
+
+    return res.json({ message: 'Logout realizado com sucesso' });
+  } catch (err) {
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({ error: 'Token inválido ou expirado' });
+    }
+    console.error('Erro no logout:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { register, login, logout };

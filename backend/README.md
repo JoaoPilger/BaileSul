@@ -188,6 +188,8 @@ Envie credenciais em `POST /api/auth/login`. A resposta inclui:
 }
 ```
 
+O cadastro via `POST /api/auth/register` também retorna um JWT e realiza login automático.
+
 ### Uso do token
 
 Inclua em todas as rotas protegidas:
@@ -200,6 +202,24 @@ O middleware `autenticar` decodifica o JWT e define `req.usuario`:
 
 ```json
 { "id": 1, "tipo": "comunidade" }
+```
+
+### Logout
+
+Revogue o token ativo com:
+
+```http
+POST /api/auth/logout
+Authorization: Bearer <token>
+```
+
+O endpoint faz soft delete do token em `auth_tokens.deleted_at`.
+
+Também é possível revogar um token específico pelo seu ID:
+
+```http
+POST /api/auth/logout/:id
+Authorization: Bearer <token>
 ```
 
 ### RBAC
@@ -593,6 +613,7 @@ Respostas de erro seguem o formato:
 |----|-----------|----------------------|
 | RF01 | Cadastro multi-tipo | `POST /api/auth/register` |
 | RF02 | Login JWT | `POST /api/auth/login` |
+| RF03 | Logout JWT | `POST /api/auth/logout`, `POST /api/auth/logout/:id` |
 | RF04 | CNPJ banda/comunidade | Validação OpenCNPJ no register |
 | RF05 | RBAC por tipo | Middleware `autorizar` |
 | RF06 | Calendário / conflito de datas | `GET /calendario`, aviso em `POST /eventos` |
