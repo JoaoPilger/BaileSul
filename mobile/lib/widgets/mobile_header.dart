@@ -7,8 +7,8 @@ class MobileHeader extends StatelessWidget {
   const MobileHeader({
     super.key,
     this.onMenuPressed,
-    this.logoHeight = 106,
-    this.horizontalPadding = 16,
+    this.logoHeight = 206,
+    this.horizontalPadding = 36,
   });
 
   static const Color backgroundColor = Color(0xFF0A0C12);
