@@ -1,0 +1,333 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import './cadastro.css'
+
+function calcForca(senha) {
+  if (!senha) return { pct: '0%', label: '', cor: 'transparent' }
+  let score = 0
+  if (senha.length >= 8) score++
+  if (/[A-Z]/.test(senha)) score++
+  if (/[0-9]/.test(senha)) score++
+  if (/[^A-Za-z0-9]/.test(senha)) score++
+  const map = [
+    { pct: '25%', label: 'Muito fraca', cor: '#e05a6a' },
+    { pct: '25%', label: 'Muito fraca', cor: '#e05a6a' },
+    { pct: '55%', label: 'Moderada', cor: '#f0a050' },
+    { pct: '80%', label: 'Forte', cor: '#4eca8b' },
+    { pct: '100%', label: 'Muito forte', cor: '#4eca8b' },
+  ]
+  return map[score]
+}
+
+export default function Cadastro() {
+  const [form, setForm] = useState({
+    nome: '',
+    sobrenome: '',
+    email: '',
+    telefone: '',
+    perfil: '',
+    senha: '',
+    confirmarSenha: '',
+    termos: false,
+  })
+  const [mostrarSenha, setMostrarSenha] = useState(false)
+  const [mostrarConfirmar, setMostrarConfirmar] = useState(false)
+  const [erro, setErro] = useState('')
+  const [sucesso, setSucesso] = useState(false)
+  const [carregando, setCarregando] = useState(false)
+
+  const forca = calcForca(form.senha)
+
+  const passo = form.nome && form.email ? (form.senha ? 3 : 2) : 1
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target
+    setForm((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }))
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setErro('')
+    if (!form.nome || !form.email || !form.senha || !form.confirmarSenha) {
+      setErro('Preencha todos os campos obrigatórios.')
+      return
+    }
+    if (form.senha !== form.confirmarSenha) {
+      setErro('As senhas não coincidem.')
+      return
+    }
+    if (form.senha.length < 8) {
+      setErro('A senha deve ter pelo menos 8 caracteres.')
+      return
+    }
+    if (!form.termos) {
+      setErro('Você precisa aceitar os termos de uso.')
+      return
+    }
+
+    setCarregando(true)
+    try {
+      await new Promise((r) => setTimeout(r, 1400))
+      setSucesso(true)
+    } catch {
+      setErro('Erro ao criar conta. Tente novamente.')
+    } finally {
+      setCarregando(false)
+    }
+  }
+
+  return (
+    <>
+      <header className="header">
+        <div className="header-inner">
+          <Link to="/login" className="logo-area" aria-label="BaileSul — início">
+            <img
+              src="/imagens/BaileSul.png"
+              alt=""
+              className="header-logo"
+              decoding="sync"
+              fetchPriority="high"
+            />
+          </Link>
+        </div>
+      </header>
+
+      <main className="cadastro-page">
+        <div className="cadastro-card">
+
+          <div className="card-header">
+            <div className="card-icon">
+              <svg viewBox="0 0 24 24">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <line x1="19" y1="8" x2="19" y2="14" />
+                <line x1="22" y1="11" x2="16" y2="11" />
+              </svg>
+            </div>
+            <h1 className="card-title">Criar conta</h1>
+            <p className="card-subtitle">Preencha os dados para começar</p>
+          </div>
+
+          <div className="steps-bar">
+            <div className={`step-dot ${passo >= 1 ? 'active' : ''} ${passo > 1 ? 'done' : ''}`}>
+              {passo > 1 ? '✓' : '1'}
+            </div>
+            <div className={`step-line ${passo > 1 ? 'done' : ''}`} />
+            <div className={`step-dot ${passo >= 2 ? 'active' : ''} ${passo > 2 ? 'done' : ''}`}>
+              {passo > 2 ? '✓' : '2'}
+            </div>
+            <div className={`step-line ${passo > 2 ? 'done' : ''}`} />
+            <div className={`step-dot ${passo >= 3 ? 'active' : ''}`}>3</div>
+          </div>
+
+          {sucesso ? (
+            <p className="success-msg">
+              ✓ Conta criada com sucesso!<br />Verifique seu e-mail para ativar.
+            </p>
+          ) : (
+            <form className="cadastro-form" onSubmit={handleSubmit}>
+
+              <div className="form-row">
+                <div className="field-group">
+                  <label className="field-label" htmlFor="nome">Nome *</label>
+                  <div className="input-wrapper">
+                    <input
+                      id="nome"
+                      name="nome"
+                      type="text"
+                      className="field-input"
+                      placeholder="João"
+                      value={form.nome}
+                      onChange={handleChange}
+                    />
+                    <svg viewBox="0 0 24 24">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="sobrenome">Sobrenome</label>
+                  <div className="input-wrapper">
+                    <input
+                      id="sobrenome"
+                      name="sobrenome"
+                      type="text"
+                      className="field-input no-icon"
+                      placeholder="Silva"
+                      value={form.sobrenome}
+                      onChange={handleChange}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="email">E-mail *</label>
+                <div className="input-wrapper">
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    className="field-input"
+                    placeholder="seu@email.com"
+                    value={form.email}
+                    onChange={handleChange}
+                    autoComplete="email"
+                  />
+                  <svg viewBox="0 0 24 24">
+                    <rect x="2" y="4" width="20" height="16" rx="2" />
+                    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="field-group">
+                  <label className="field-label" htmlFor="telefone">Telefone</label>
+                  <div className="input-wrapper">
+                    <input
+                      id="telefone"
+                      name="telefone"
+                      type="tel"
+                      className="field-input"
+                      placeholder="(11) 9 0000-0000"
+                      value={form.telefone}
+                      onChange={handleChange}
+                    />
+                    <svg viewBox="0 0 24 24">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" />
+                    </svg>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label" htmlFor="perfil">Perfil</label>
+                  <div className="input-wrapper">
+                    <select
+                      id="perfil"
+                      name="perfil"
+                      className="field-input no-icon"
+                      value={form.perfil}
+                      onChange={handleChange}
+                    >
+                      <option value="">Selecione</option>
+                      <option value="pessoal">Pessoal</option>
+                      <option value="comunidade">Comunidade</option>
+                      <option value="banda">Banda</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="senha">Senha *</label>
+                <div className="input-wrapper">
+                  <input
+                    id="senha"
+                    name="senha"
+                    type={mostrarSenha ? 'text' : 'password'}
+                    className="field-input"
+                    placeholder="Mínimo 8 caracteres"
+                    value={form.senha}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                  />
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() => setMostrarSenha(!mostrarSenha)}
+                    aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                  >
+                    {mostrarSenha ? (
+                      <svg viewBox="0 0 24 24">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {form.senha && (
+                  <div className="password-strength">
+                    <div className="strength-bar">
+                      <div className="strength-fill" style={{ width: forca.pct, background: forca.cor }} />
+                    </div>
+                    <p className="strength-label" style={{ color: forca.cor }}>{forca.label}</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="field-group">
+                <label className="field-label" htmlFor="confirmarSenha">Confirmar senha *</label>
+                <div className="input-wrapper">
+                  <input
+                    id="confirmarSenha"
+                    name="confirmarSenha"
+                    type={mostrarConfirmar ? 'text' : 'password'}
+                    className="field-input"
+                    placeholder="Repita a senha"
+                    value={form.confirmarSenha}
+                    onChange={handleChange}
+                    autoComplete="new-password"
+                  />
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() => setMostrarConfirmar(!mostrarConfirmar)}
+                    aria-label={mostrarConfirmar ? 'Ocultar confirmação' : 'Mostrar confirmação'}
+                  >
+                    {mostrarConfirmar ? (
+                      <svg viewBox="0 0 24 24">
+                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                        <line x1="1" y1="1" x2="23" y2="23" />
+                      </svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <label className="checkbox-group">
+                <input type="checkbox" name="termos" checked={form.termos} onChange={handleChange} />
+                <span className="checkbox-label">
+                  Li e aceito os{' '}
+                  <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a>
+                  {' '}e a{' '}
+                  <a href="/privacidade" target="_blank" rel="noreferrer">Política de Privacidade</a>
+                </span>
+              </label>
+
+              {erro && <p className="error-msg">{erro}</p>}
+
+              <button type="submit" className="btn-primary" disabled={carregando}>
+                {carregando ? 'Criando conta...' : 'Criar conta'}
+              </button>
+            </form>
+          )}
+
+          <div className="card-footer">
+            Já tem uma conta? <Link to="/login">Entrar</Link>
+          </div>
+        </div>
+      </main>
+    </>
+  )
+}
