@@ -171,6 +171,14 @@ class _HomePageState extends State<HomePage> {
                 onTap: () => Navigator.pop(sheetContext),
               ),
               _MenuTile(
+                icon: Icons.add_box_rounded,
+                label: 'Criar Evento',
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  Navigator.pushNamed(context, '/criar-evento');
+                },
+              ),
+              _MenuTile(
                 icon: Icons.login_rounded,
                 label: 'Login',
                 onTap: () {
