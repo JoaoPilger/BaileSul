@@ -3,9 +3,16 @@
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/home.dart';
 import 'paginas/login.dart';
+import 'paginas/configuracoes.dart';
+import 'paginas/meus_eventos.dart';
+import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'navigation/app_navigator.dart';
+import 'services/sessao_usuario.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SessaoUsuario.instance.restaurar();
   runApp(const MyApp());
 }
 
@@ -15,6 +22,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'BaileSul',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -27,6 +35,9 @@ class MyApp extends StatelessWidget {
       home: const HomePage(),
       routes: {
         '/login': (_) => const LoginScreen(),
+        '/meus-ingressos': (_) => const MeusIngressosPage(),
+        '/meus-eventos': (_) => const MeusEventosPage(),
+        '/configuracoes': (_) => const ConfiguracoesPage(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
         '/evento': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;

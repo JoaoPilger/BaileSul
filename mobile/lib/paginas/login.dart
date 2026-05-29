@@ -1,10 +1,70 @@
 import 'package:flutter/material.dart';
 
+import '../models/tipo_conta.dart';
+import '../services/auth_service.dart';
+import '../services/sessao_usuario.dart';
+import '../navigation/app_navigator.dart';
+import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
-class LoginScreen extends StatelessWidget {
+void _abrirMenu(BuildContext context) {
+  MobileAppMenu.show(
+    context,
+    entries: MobileAppMenu.entries(context),
+  );
+}
+
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _senhaController = TextEditingController();
+
+  bool _carregando = false;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _senhaController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _entrar() async {
+    setState(() {
+      _erro = null;
+      _carregando = true;
+    });
+
+    try {
+      await SessaoUsuario.instance.login(
+        _emailController.text,
+        _senhaController.text,
+      );
+
+      if (!mounted) return;
+
+      Navigator.of(context).pop();
+
+      mostrarSnackBar('Login realizado com sucesso.');
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _erro = e.message);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _erro = 'Erro inesperado. Tente novamente.');
+    } finally {
+      if (mounted) {
+        setState(() => _carregando = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +75,7 @@ class LoginScreen extends StatelessWidget {
           MobileHeader(
             logoHeight: 58,
             horizontalPadding: 16,
-            onMenuPressed: () => Navigator.of(context).pop(),
+            onMenuPressed: () => _abrirMenu(context),
           ),
           Expanded(
             child: Container(
@@ -54,24 +114,58 @@ class LoginScreen extends StatelessWidget {
                               const SizedBox(height: 42),
                               _LoginLabel('Email', context),
                               const SizedBox(height: 6),
-                              const _LoginField(),
+                              _LoginField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                textInputAction: TextInputAction.next,
+                                enabled: !_carregando,
+                              ),
                               const SizedBox(height: 24),
                               _LoginLabel('Senha', context),
                               const SizedBox(height: 6),
-                              const _LoginField(obscureText: true),
+                              _LoginField(
+                                controller: _senhaController,
+                                obscureText: true,
+                                textInputAction: TextInputAction.done,
+                                enabled: !_carregando,
+                                onSubmitted: (_) => _entrar(),
+                              ),
+                              if (_erro != null) ...[
+                                const SizedBox(height: 12),
+                                Text(
+                                  _erro!,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    color: Color(0xFFB42318),
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                               const SizedBox(height: 16),
                               SizedBox(
                                 height: 44,
                                 child: FilledButton(
-                                  onPressed: () {},
+                                  onPressed: _carregando ? null : _entrar,
                                   style: FilledButton.styleFrom(
                                     backgroundColor: BaileSulColors.headerText,
                                     foregroundColor: Colors.white,
+                                    disabledBackgroundColor:
+                                        BaileSulColors.mutedText,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
-                                  child: const Text('Entrar'),
+                                  child: _carregando
+                                      ? const SizedBox(
+                                          width: 22,
+                                          height: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white,
+                                          ),
+                                        )
+                                      : const Text('Entrar'),
                                 ),
                               ),
                               const SizedBox(height: 22),
@@ -156,7 +250,7 @@ class CadastroScreen extends StatelessWidget {
           MobileHeader(
             logoHeight: 58,
             horizontalPadding: 16,
-            onMenuPressed: () => Navigator.of(context).pop(),
+            onMenuPressed: () => _abrirMenu(context),
           ),
           Expanded(
             child: Container(
@@ -268,13 +362,22 @@ class PersonalRegistrationScreen extends StatelessWidget {
           children: [
             const _SectionTitle('Informações Básicas'),
             const SizedBox(height: 18),
-            const _RegistrationField(label: 'Nome Completo'),
+            _RegistrationField(label: 'Nome Completo'),
             const SizedBox(height: 12),
-            const _RegistrationField(label: 'Email*'),
+            _RegistrationField(
+              label: 'Email*',
+              keyboardType: TextInputType.emailAddress,
+            ),
             const SizedBox(height: 12),
-            const _RegistrationField(label: 'Telefone*'),
+            _RegistrationField(
+              label: 'Telefone*',
+              keyboardType: TextInputType.phone,
+            ),
             const SizedBox(height: 12),
-            const _RegistrationField(label: 'CPF*'),
+            _RegistrationField(
+              label: 'CPF*',
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 20),
             const _SectionTitle('Imagem de Perfil'),
             const SizedBox(height: 12),
@@ -285,9 +388,16 @@ class PersonalRegistrationScreen extends StatelessWidget {
             const SizedBox(height: 8),
             const _TermsRow(),
             const SizedBox(height: 6),
-            const _ActionRow(
+            _ActionRow(
               primaryLabel: 'Cadastrar-se',
               secondaryLabel: 'Cancelar',
+              onPrimary: () async {
+                await SessaoUsuario.instance.definirTipoConta(TipoConta.pessoal);
+                if (!context.mounted) return;
+                Navigator.of(context).popUntil(
+                  (Route<dynamic> route) => route.isFirst,
+                );
+              },
             ),
           ],
         ),
@@ -309,21 +419,36 @@ class CommunityRegistrationScreen extends StatelessWidget {
           children: [
             const _SectionTitle('Informações Básicas'),
             const SizedBox(height: 18),
-            const Row(
+            Row(
               children: [
                 Expanded(
                   child: _RegistrationField(label: 'Nome da Comunidade*'),
                 ),
-                SizedBox(width: 16),
-                Expanded(child: _RegistrationField(label: 'Telefone*')),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'Telefone*',
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            const Row(
+            Row(
               children: [
-                Expanded(child: _RegistrationField(label: 'Email*')),
-                SizedBox(width: 16),
-                Expanded(child: _RegistrationField(label: 'CNPJ*')),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'Email*',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'CNPJ*',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -336,31 +461,43 @@ class CommunityRegistrationScreen extends StatelessWidget {
             const SizedBox(height: 24),
             const _SectionTitle('Localização'),
             const SizedBox(height: 18),
-            const Row(
+            Row(
               children: [
-                Expanded(child: _RegistrationField(label: 'CEP *')),
-                SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'CEP *',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(child: _RegistrationField(label: 'Cidade *')),
               ],
             ),
             const SizedBox(height: 12),
-            const Row(
+            Row(
               children: [
                 Expanded(child: _RegistrationField(label: 'Bairro *')),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(child: _RegistrationField(label: 'Rua *')),
               ],
             ),
             const SizedBox(height: 12),
-            const _RegistrationField(label: 'Referência'),
+            _RegistrationField(label: 'Referência'),
             const SizedBox(height: 12),
             const _MapPreviewBox(height: 160),
             const SizedBox(height: 8),
             const _TermsRow(),
             const SizedBox(height: 6),
-            const _ActionRow(
+            _ActionRow(
               primaryLabel: 'Salvar',
               secondaryLabel: 'Cancelar',
+              onPrimary: () async {
+                await SessaoUsuario.instance.definirTipoConta(TipoConta.comunidade);
+                if (!context.mounted) return;
+                Navigator.of(context).popUntil(
+                  (Route<dynamic> route) => route.isFirst,
+                );
+              },
             ),
           ],
         ),
@@ -382,19 +519,34 @@ class BandRegistrationScreen extends StatelessWidget {
           children: [
             const _SectionTitle('Informações da Banda'),
             const SizedBox(height: 18),
-            const Row(
+            Row(
               children: [
                 Expanded(child: _RegistrationField(label: 'Nome da Banda*')),
-                SizedBox(width: 16),
-                Expanded(child: _RegistrationField(label: 'Telefone*')),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'Telefone*',
+                    keyboardType: TextInputType.phone,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-            const Row(
+            Row(
               children: [
-                Expanded(child: _RegistrationField(label: 'Email*')),
-                SizedBox(width: 16),
-                Expanded(child: _RegistrationField(label: 'CNPJ*')),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'Email*',
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'CNPJ*',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 20),
@@ -402,29 +554,41 @@ class BandRegistrationScreen extends StatelessWidget {
             const SizedBox(height: 20),
             const _SectionTitle('Localização'),
             const SizedBox(height: 18),
-            const Row(
+            Row(
               children: [
-                Expanded(child: _RegistrationField(label: 'CEP *')),
-                SizedBox(width: 16),
+                Expanded(
+                  child: _RegistrationField(
+                    label: 'CEP *',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(child: _RegistrationField(label: 'Cidade *')),
               ],
             ),
             const SizedBox(height: 12),
-            const Row(
+            Row(
               children: [
                 Expanded(child: _RegistrationField(label: 'Bairro *')),
-                SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(child: _RegistrationField(label: 'Rua *')),
               ],
             ),
             const SizedBox(height: 12),
-            const _RegistrationField(label: 'Referência'),
+            _RegistrationField(label: 'Referência'),
             const SizedBox(height: 8),
             const _TermsRow(),
             const SizedBox(height: 6),
-            const _ActionRow(
+            _ActionRow(
               primaryLabel: 'Salvar',
               secondaryLabel: 'Cancelar',
+              onPrimary: () async {
+                await SessaoUsuario.instance.definirTipoConta(TipoConta.banda);
+                if (!context.mounted) return;
+                Navigator.of(context).popUntil(
+                  (Route<dynamic> route) => route.isFirst,
+                );
+              },
             ),
           ],
         ),
@@ -447,7 +611,7 @@ class _RegistrationScreenShell extends StatelessWidget {
         MobileHeader(
           logoHeight: 58,
           horizontalPadding: 16,
-          onMenuPressed: () => Navigator.of(context).pop(),
+          onMenuPressed: () => _abrirMenu(context),
         ),
         Expanded(
           child: Container(
@@ -521,25 +685,55 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _RegistrationField extends StatelessWidget {
-  const _RegistrationField({required this.label});
+  const _RegistrationField({
+    required this.label,
+    this.keyboardType,
+  });
 
   final String label;
+  final TextInputType? keyboardType;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 42,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: BaileSulColors.inputFill,
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: BaileSulColors.headerText),
+      child: TextField(
+        keyboardType: keyboardType,
+        autocorrect: false,
+        style: const TextStyle(
+          color: BaileSulColors.headerText,
+          fontSize: 14,
+        ),
+        cursorColor: BaileSulColors.headerText,
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(
+            color: BaileSulColors.headerText.withValues(alpha: 0.45),
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+          filled: true,
+          fillColor: BaileSulColors.inputFill,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: const BorderSide(
+              color: BaileSulColors.accent,
+              width: 1.5,
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 10,
+          ),
+        ),
       ),
     );
   }
@@ -618,10 +812,15 @@ class _TermsRow extends StatelessWidget {
 }
 
 class _ActionRow extends StatelessWidget {
-  const _ActionRow({required this.primaryLabel, required this.secondaryLabel});
+  const _ActionRow({
+    required this.primaryLabel,
+    required this.secondaryLabel,
+    this.onPrimary,
+  });
 
   final String primaryLabel;
   final String secondaryLabel;
+  final VoidCallback? onPrimary;
 
   @override
   Widget build(BuildContext context) {
@@ -650,7 +849,7 @@ class _ActionRow extends StatelessWidget {
           child: SizedBox(
             height: 34,
             child: FilledButton(
-              onPressed: () {},
+              onPressed: onPrimary,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF0E5880),
                 foregroundColor: Colors.white,
@@ -686,25 +885,65 @@ class _LoginLabel extends StatelessWidget {
 }
 
 class _LoginField extends StatelessWidget {
-  const _LoginField({this.obscureText = false});
+  const _LoginField({
+    required this.controller,
+    this.obscureText = false,
+    this.keyboardType,
+    this.textInputAction,
+    this.enabled = true,
+    this.onSubmitted,
+  });
 
+  final TextEditingController controller;
   final bool obscureText;
+  final TextInputType? keyboardType;
+  final TextInputAction? textInputAction;
+  final bool enabled;
+  final ValueChanged<String>? onSubmitted;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: BaileSulColors.inputFill,
-        borderRadius: BorderRadius.circular(2),
-      ),
+    return SizedBox(
+      height: 48,
       child: TextField(
+        controller: controller,
         obscureText: obscureText,
-        style: const TextStyle(color: BaileSulColors.headerText),
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        enabled: enabled,
+        onSubmitted: onSubmitted,
+        autocorrect: false,
+        enableSuggestions: !obscureText,
+        autofillHints: obscureText
+            ? const <String>[AutofillHints.password]
+            : const <String>[AutofillHints.email],
+        style: const TextStyle(
+          color: BaileSulColors.headerText,
+          fontSize: 15,
+        ),
         cursorColor: BaileSulColors.headerText,
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          isCollapsed: true,
-          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: BaileSulColors.inputFill,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(2),
+            borderSide: const BorderSide(
+              color: BaileSulColors.accent,
+              width: 1.5,
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 14,
+            vertical: 12,
+          ),
         ),
       ),
     );

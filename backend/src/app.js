@@ -28,7 +28,16 @@ const origens = process.env.CLIENT_URL
 
 app.use(
   cors({
-    origin: origens.length > 0 ? origens : false,
+    origin(origin, callback) {
+      // Apps mobile nativos não enviam Origin.
+      if (!origin) return callback(null, true);
+      if (origens.includes(origin)) return callback(null, true);
+      // Flutter web / dev local em portas variadas.
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   })
