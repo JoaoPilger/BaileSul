@@ -21,9 +21,10 @@ export default function Header() {
   const isActive = (path) => location.pathname === path;
   const contaLink = isAuthenticated ? '/perfil' : '/login';
   const contaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
+  const isEventDetail = location.pathname.startsWith('/eventos/') && location.pathname !== '/eventos';
 
   return (
-    <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+    <nav className={`navbar ${isEventDetail ? 'navbar--solid' : scrolled ? 'navbar--scrolled' : ''}`}>
       <div className="navbar-shell">
         <div className="navbar-zone navbar-zone--logo">
           <Link to="/" className="navbar-logo" aria-label="BaileSul">

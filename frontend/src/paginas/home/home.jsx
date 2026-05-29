@@ -1,39 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Search, MapPin, ArrowRight, Calendar, Trash2 } from 'lucide-react';
 import Header from '../../components/header/Header';
 import Footer from '../../components/footer/Footer';
+import { loadEvents, deleteEventById } from '../../utils/events';
 import './home.css';
-
-const MOCK_EVENTS = [
-  {
-    id: 1,
-    title: 'Baile do Rancho',
-    date: '2025-06-14',
-    city: 'Concórdia',
-    style: 'sertanejo',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-    price: 'R$ 30',
-  },
-  {
-    id: 2,
-    title: 'Forró na Praça',
-    date: '2025-06-21',
-    city: 'Seara',
-    style: 'forro',
-    image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=600&q=80',
-    price: 'Grátis',
-  },
-  {
-    id: 3,
-    title: 'Noite Gaúcha',
-    date: '2025-06-28',
-    city: 'Peritiba',
-    style: 'gaucha',
-    image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80',
-    price: 'R$ 20',
-  },
-];
 
 const STYLES = [
   { value: 'sertanejo', label: 'Sertanejo' , desc: 'Duplas e modão' },
@@ -104,16 +75,17 @@ function HeroSection() {
   );
 }
 
-function EventCard({ event, index }) {
+function EventCard({ event, index, onDelete }) {
+  const navigate = useNavigate();
   const date  = new Date(event.date);
   const day   = date.toLocaleDateString('pt-BR', { day: '2-digit' });
   const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
 
   return (
-    <Link
-      to={`/eventos/${event.id}`}
+    <div
       className="event-card"
       style={{ animationDelay: `${index * 80}ms` }}
+      onClick={() => navigate(`/eventos/${event.id}`)}
     >
       <div className="event-card-img-wrap">
         <img src={event.image} alt={event.title} className="event-card-img" />
@@ -130,8 +102,19 @@ function EventCard({ event, index }) {
           <MapPin size={12} />
           {event.city}
         </div>
+        <button
+          type="button"
+          className="event-card-delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(event.id);
+          }}
+        >
+          <Trash2 size={14} />
+          Apagar
+        </button>
       </div>
-    </Link>
+    </div>
   );
 }
 
@@ -231,22 +214,13 @@ export default function Home() {
   const [isLoading] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('bailesul_events');
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        // merge parsed (user-created) with mocks, keeping unique ids (parsed first)
-        const byId = new Map()
-        parsed.forEach((e) => byId.set(e.id, e))
-        MOCK_EVENTS.forEach((e) => { if (!byId.has(e.id)) byId.set(e.id, e) })
-        setEvents(Array.from(byId.values()))
-      } else {
-        setEvents(MOCK_EVENTS);
-      }
-    } catch (e) {
-      setEvents(MOCK_EVENTS);
-    }
+    setEvents(loadEvents())
   }, []);
+
+  function handleDelete(id) {
+    deleteEventById(id)
+    setEvents(loadEvents())
+  }
 
   return (
     <>
