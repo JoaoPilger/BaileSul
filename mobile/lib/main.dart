@@ -3,6 +3,7 @@
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/home.dart';
 import 'paginas/login.dart';
+import 'paginas/pagina_evento.dart';
 
 void main() {
   runApp(const MyApp());
@@ -27,6 +28,10 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (_) => const LoginScreen(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
+        '/evento': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          return PaginaEvento(event: args! as EventItem);
+        },
       },
     );
   }
