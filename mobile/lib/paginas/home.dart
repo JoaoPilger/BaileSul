@@ -96,8 +96,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const List<_EventItem> _events = [
-    _EventItem(
+  static const List<EventItem> _events = [
+    EventItem(
       title: 'Eletrônica Night',
       genre: 'Eletrônica',
       location: 'Concórdia, SC',
@@ -106,7 +106,7 @@ class _HomePageState extends State<HomePage> {
       imageUrl:
           'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
     ),
-    _EventItem(
+    EventItem(
       title: 'Funk Party',
       genre: 'Funk',
       location: 'Seara, SC',
@@ -115,7 +115,7 @@ class _HomePageState extends State<HomePage> {
       imageUrl:
           'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=600&q=80',
     ),
-    _EventItem(
+    EventItem(
       title: 'Pagode ao Vivo',
       genre: 'Pagode',
       location: 'Peritiba, SC',
@@ -532,7 +532,7 @@ class _SectionHeader extends StatelessWidget {
 class _UpcomingEventsSection extends StatelessWidget {
   const _UpcomingEventsSection({required this.events});
 
-  final List<_EventItem> events;
+  final List<EventItem> events;
 
   @override
   Widget build(BuildContext context) {
@@ -612,7 +612,7 @@ class _PrimaryOutlineButton extends StatelessWidget {
 class _EventCard extends StatelessWidget {
   const _EventCard({required this.event});
 
-  final _EventItem event;
+  final EventItem event;
 
   @override
   Widget build(BuildContext context) {
@@ -626,7 +626,11 @@ class _EventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () {},
+          onTap: () => Navigator.pushNamed(
+                context,
+                '/evento',
+                arguments: event,
+              ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -921,8 +925,8 @@ class _StyleTile extends StatelessWidget {
   }
 }
 
-class _EventItem {
-  const _EventItem({
+class EventItem {
+  const EventItem({
     required this.title,
     required this.genre,
     required this.location,
