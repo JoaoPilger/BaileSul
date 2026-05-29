@@ -1,4 +1,5 @@
 import { useNavigate, Link } from 'react-router-dom'
+import HeaderCal from '../../components/header/HeaderCal'
 import './cadastro.css'
 
 const tipos = [
@@ -45,19 +46,7 @@ export default function CadastroSelecao() {
 
   return (
     <>
-      <header className="header">
-        <div className="header-inner">
-          <Link to="/login" className="logo-area" aria-label="BaileSul — início">
-            <img
-              src="/imagens/BaileSul.png"
-              alt=""
-              className="header-logo"
-              decoding="sync"
-              fetchPriority="high"
-            />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="cadastro-page">
         <div className="selecao-card">

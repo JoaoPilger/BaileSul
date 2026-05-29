@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import HeaderCal from '../../components/header/HeaderCal'
+import FooterCal from '../../components/footer/FooterCal'
 import './criar_evento.css'
 
 export default function CriarEvento() {
@@ -25,14 +27,6 @@ export default function CriarEvento() {
   const [vendors, setVendors] = useState([])
 
   const contaLink = isAuthenticated ? '/perfil' : '/login'
-  const footerLinks = [
-    { to: '/eventos', label: 'Eventos' },
-    { to: '/calendario', label: 'Calendário' },
-    { to: '/mapa', label: 'Mapa' },
-    { to: '/meus-eventos', label: 'Meus Eventos' },
-    { to: '/criar-evento', label: 'Criar Evento' },
-    { to: contaLink, label: 'Perfil' },
-  ]
 
   function addVendor() {
     if (!vendorName) return
@@ -80,16 +74,7 @@ export default function CriarEvento() {
 
   return (
     <div className="create-shell">
-      <header className="create-header">
-        <div className="create-header-inner">
-          <Link to="/" className="create-logo-link" aria-label="BaileSul">
-            <img src="/imagens/BaileSul.png" alt="BaileSul" className="create-logo-img" />
-          </Link>
-          <Link to={contaLink} className="create-user-btn" aria-label={isAuthenticated ? 'Minha conta' : 'Entrar'}>
-            <User size={20} strokeWidth={1.8} />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="create-main">
         <div className="create-card">
@@ -208,35 +193,7 @@ export default function CriarEvento() {
         </div>
       </main>
 
-      <footer className="create-footer">
-        <div className="create-footer-inner">
-          <div className="create-footer-brand">
-            <Link to="/" aria-label="BaileSul">
-              <img src="/imagens/BaileSul.png" alt="BaileSul" className="create-footer-logo" />
-            </Link>
-          </div>
-
-          <div className="create-footer-copy-block">
-            <p className="create-footer-copy">© BaileSul – Todos os direitos reservados.</p>
-          </div>
-
-          <nav className="create-footer-nav-block" aria-label="Navegação do rodapé">
-            <h4 className="create-footer-heading">Navegação</h4>
-            <div className="create-footer-nav">
-              <div className="create-footer-nav-col">
-                {footerLinks.slice(0, 3).map((item) => (
-                  <Link key={item.to} to={item.to}>{item.label}</Link>
-                ))}
-              </div>
-              <div className="create-footer-nav-col">
-                {footerLinks.slice(3).map((item) => (
-                  <Link key={item.to} to={item.to}>{item.label}</Link>
-                ))}
-              </div>
-            </div>
-          </nav>
-        </div>
-      </footer>
+      <FooterCal />
     </div>
   )
 }

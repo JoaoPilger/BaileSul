@@ -91,19 +91,7 @@ export default function CadastroPessoal() {
 
   return (
     <>
-      <header className="header">
-        <div className="header-inner">
-          <Link to="/login" className="logo-area" aria-label="BaileSul — início">
-            <img
-              src="/imagens/BaileSul.png"
-              alt=""
-              className="header-logo"
-              decoding="sync"
-              fetchPriority="high"
-            />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="cadastro-page">
         <div className="cadastro-card">

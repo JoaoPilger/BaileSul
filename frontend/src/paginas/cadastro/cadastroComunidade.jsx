@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import HeaderCal from '../../components/header/HeaderCal'
 import './cadastro.css'
 
 const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
@@ -127,13 +128,7 @@ export default function CadastroComunidade() {
 
   return (
     <>
-      <header className="header">
-        <div className="header-inner">
-          <Link to="/login" className="logo-area" aria-label="BaileSul — início">
-            <img src="/imagens/BaileSul.png" alt="" className="header-logo" decoding="sync" fetchPriority="high" />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="cadastro-page">
         <div className="cadastro-card cadastro-card--wide">

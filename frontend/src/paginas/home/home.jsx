@@ -1,30 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import {
-  Search, MapPin, ArrowRight, Music,
-  Calendar, Menu, X, User, Plus, ListMusic, Ticket,
-} from 'lucide-react';
-import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import { Search, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import Header from '../../components/header/Header';
+import Footer from '../../components/footer/Footer';
 import './home.css';
-
-function getNavConfig(tipo) {
-  const base = [
-    { to: '/',        label: 'Início',  icon: Music },
-    { to: '/eventos', label: 'Eventos', icon: Calendar },
-    { to: '/mapa',    label: 'Mapa',    icon: MapPin },
-  ];
-
-  if (tipo === 'pessoal') {
-    base.push({ to: '/meus-ingressos', label: 'Meus Ingressos', icon: Ticket });
-  } else {
-    base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
-  }
-
-  return {
-    links: base,
-    podeCriarEvento: !tipo || tipo === 'comunidade',
-  };
-}
 
 const MOCK_EVENTS = [
   {
@@ -66,101 +45,6 @@ const STYLES = [
   { value: 'vanera',    label: 'Vanera' , desc: 'Ritmo do sul' },
   { value: 'funk',      label: 'Arrocha', desc: 'Duplas e modão' },
 ];
-
-function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled]     = useState(false);
-  const location = useLocation();
-  const { usuario, isAuthenticated } = useAuth();
-  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10);
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  const isActive = (path) => location.pathname === path;
-  const contaLink = isAuthenticated ? '/perfil' : '/login';
-  const contaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
-
-  return (
-    <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
-      <div className="navbar-shell">
-        <div className="navbar-zone navbar-zone--logo">
-          <Link to="/" className="navbar-logo" aria-label="BaileSul">
-            <img
-              src="/imagens/BaileSul.png"
-              alt="BaileSul"
-              className="navbar-logo-img"
-              decoding="async"
-            />
-          </Link>
-        </div>
-
-        <div className="navbar-zone navbar-zone--nav">
-          {links.map(({ to, label, icon: NavIcon }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`navbar-link ${isActive(to) ? 'navbar-link--active' : ''}`}
-            >
-              <NavIcon size={17} strokeWidth={2} aria-hidden />
-              <span className="navbar-link-text">{label}</span>
-            </Link>
-          ))}
-        </div>
-
-        <div className="navbar-zone navbar-zone--actions">
-          <div className="navbar-actions-desktop">
-            {podeCriarEvento && (
-              <Link to="/criar-evento" className="btn-nav-create">
-                <Plus size={15} strokeWidth={2} aria-hidden />
-                <span>Criar Evento</span>
-              </Link>
-            )}
-            <Link to={contaLink} className="navbar-icon-btn navbar-login-btn" aria-label={contaLabel}>
-              <User size={20} strokeWidth={2} />
-            </Link>
-          </div>
-          <button
-            type="button"
-            className="navbar-hamburger"
-            onClick={() => setMobileOpen(!mobileOpen)}
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-      </div>
-
-      <div className={`navbar-mobile ${mobileOpen ? 'navbar-mobile--open' : ''}`}>
-        {links.map(({ to, label, icon: NavIcon }) => (
-          <Link
-            key={to}
-            to={to}
-            className={`navbar-mobile-link ${isActive(to) ? 'navbar-mobile-link--active' : ''}`}
-            onClick={() => setMobileOpen(false)}
-          >
-            <NavIcon size={18} strokeWidth={2} aria-hidden />
-            <span className="navbar-link-text">{label}</span>
-          </Link>
-        ))}
-        <div className="navbar-mobile-divider" />
-        {podeCriarEvento && (
-          <Link to="/criar-evento" className="btn-nav-create btn-nav-create--mobile" onClick={() => setMobileOpen(false)}>
-            <Plus size={15} strokeWidth={2} aria-hidden />
-            <span>Criar Evento</span>
-          </Link>
-        )}
-        <Link to={contaLink} className="navbar-mobile-link" onClick={() => setMobileOpen(false)}>
-          <User size={18} strokeWidth={2} aria-hidden />
-          <span>{contaLabel}</span>
-        </Link>
-      </div>
-    </nav>
-  );
-}
 
 function HeroSection() {
   const [visible, setVisible] = useState(false);
@@ -342,74 +226,6 @@ function StylesSection() {
   );
 }
 
-function FooterSection() {
-  const { usuario } = useAuth();
-  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
-  const contaLink = usuario ? '/perfil' : '/login';
-
-  const navItems = [
-    { to: '/eventos', label: 'Eventos' },
-    { to: '/calendario', label: 'Calendário' },
-    { to: '/mapa', label: 'Mapa' },
-    ...links
-      .filter((l) => l.to.startsWith('/meus-'))
-      .map((l) => ({ to: l.to, label: l.label })),
-    ...(podeCriarEvento ? [{ to: '/criar-evento', label: 'Criar Evento' }] : []),
-    { to: contaLink, label: 'Perfil' },
-  ];
-
-  const leftItems = navItems.slice(0, 3);
-  const rightItems = navItems.slice(3, 6);
-
-  return (
-    <footer className="footer">
-      <div className="container footer-grid">
-        <div className="footer-brand">
-          <Link to="/" className="footer-logo-link" aria-label="BaileSul">
-            <img
-              src="/imagens/BaileSul.png"
-              alt="BaileSul"
-              className="footer-logo-img"
-              decoding="async"
-            />
-          </Link>
-          <p className="footer-tagline">
-            A plataforma de eventos da região AMAUC. Conectando bandas, comunidades e público.
-          </p>
-        </div>
-
-        <div className="footer-nav-block">
-          <h4 className="footer-heading">Navegação</h4>
-          <nav className="footer-nav">
-            <div className="footer-nav-col">
-              {leftItems.map((item) => (
-                <Link key={item.to} to={item.to}>{item.label}</Link>
-              ))}
-            </div>
-            <div className="footer-nav-col">
-              {rightItems.map((item) => (
-                <Link key={item.to} to={item.to}>{item.label}</Link>
-              ))}
-            </div>
-          </nav>
-        </div>
-
-        <div className="footer-region-block">
-          <h4 className="footer-heading">Região AMAUC</h4>
-          <p className="footer-region">
-            <MapPin size={13} />
-            13 municípios · Santa Catarina
-          </p>
-        </div>
-      </div>
-
-      <div className="footer-bottom">
-        <span>© BaileSul – Todos os direitos reservados.</span>
-      </div>
-    </footer>
-  );
-}
-
 export default function Home() {
   const [events, setEvents] = useState([]);
   const [isLoading] = useState(false);
@@ -434,12 +250,12 @@ export default function Home() {
 
   return (
     <>
-      <Navbar />
+      <Header />
       <div className="page-home">
         <HeroSection />
         <FeaturedEvents events={events} isLoading={isLoading} />
         <StylesSection />
-        <FooterSection />
+        <Footer />
       </div>
     </>
   );
