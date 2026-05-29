@@ -206,6 +206,8 @@ const login = async (req, res) => {
 
   const emailNorm = email.trim().toLowerCase();
 
+  // Busca o usuário antes de abrir transação (operação somente-leitura)
+  let usuario;
   try {
     const { rows } = await pool.query(
       'SELECT id, senha_hash, tipo FROM usuarios WHERE email = $1',
@@ -217,48 +219,62 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    const usuario = rows[0];
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
+    usuario = rows[0];
+  } catch (err) {
+    console.error('Erro no login (busca):', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
 
-    if (!senhaCorreta) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
+  const senhaCorreta = await bcrypt.compare(senha, usuario.senha_hash);
+  if (!senhaCorreta) {
+    return res.status(401).json({ error: 'Credenciais inválidas' });
+  }
 
-    // RF05 – Token JWT com id e tipo (RBAC)
-    const token = jwt.sign(
-      { id: usuario.id, tipo: usuario.tipo },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
-    );
+  // RF05 – Token JWT com id e tipo (RBAC)
+  const token = jwt.sign(
+    { id: usuario.id, tipo: usuario.tipo },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
 
-    await inserirTokenAtivo(pool, usuario.id, token);
+  // Registra o token em transação: se o INSERT falhar o token não é retornado
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await inserirTokenAtivo(client, usuario.id, token);
+    await client.query('COMMIT');
 
     return res.json({ token, tipo: usuario.tipo, usuario_id: usuario.id });
-
   } catch (err) {
-    console.error('Erro no login:', err.message);
+    await client.query('ROLLBACK');
+    console.error('Erro no login (token):', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
   }
 };
 
+/**
+ * POST /api/auth/logout
+ * POST /api/auth/logout/:id
+ * RF03 – Revoga o token atual (ou um token específico por id).
+ * Requer middleware autenticar — req.usuario e o token já foram validados.
+ */
 const logout = async (req, res) => {
-  const authHeader = req.headers.authorization;
+  const token = req.headers.authorization.split(' ')[1]; // garantido pelo middleware
+  const usuario_id = req.usuario.id;
   const tokenId = req.params.id ? parseInt(req.params.id, 10) : null;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(400).json({ error: 'Token não fornecido' });
+  if (tokenId && isNaN(tokenId)) {
+    return res.status(400).json({ error: 'Parâmetro :id inválido' });
   }
 
-  const token = authHeader.split(' ')[1];
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
     const query = tokenId
       ? 'UPDATE auth_tokens SET deleted_at = NOW() WHERE id = $1 AND token = $2 AND usuario_id = $3 AND deleted_at IS NULL RETURNING id'
       : 'UPDATE auth_tokens SET deleted_at = NOW() WHERE token = $1 AND usuario_id = $2 AND deleted_at IS NULL RETURNING id';
 
-    const params = tokenId ? [tokenId, token, decoded.id] : [token, decoded.id];
+    const params = tokenId ? [tokenId, token, usuario_id] : [token, usuario_id];
     const { rows } = await pool.query(query, params);
 
     if (rows.length === 0) {
@@ -267,9 +283,6 @@ const logout = async (req, res) => {
 
     return res.json({ message: 'Logout realizado com sucesso' });
   } catch (err) {
-    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-      return res.status(401).json({ error: 'Token inválido ou expirado' });
-    }
     console.error('Erro no logout:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }

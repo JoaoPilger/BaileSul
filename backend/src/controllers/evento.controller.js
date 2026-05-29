@@ -162,9 +162,6 @@ const buscarPorId = async (req, res) => {
  */
 const criar = async (req, res) => {
 
-  console.log("Headers recebidos:", req.headers);
-  console.log("Corpo recebido:", req.body);
-  
   const {
     titulo, descricao, data_inicio, data_fim,
     local_nome, local_endereco, valor_ingresso, foto_capa_url,
@@ -314,15 +311,15 @@ const atualizar = async (req, res) => {
       return res.status(400).json({ error: 'foto_capa_url deve começar com http:// ou https://' });
     }
 
-    // Re-geocodificar se endereço mudou
-    let lat = undefined;
-    let lng = undefined;
+    // Re-geocodificar apenas se endereço mudou E geocodificação retornar resultado
+    let coordsUpdate = '';
+    const coordParams = [];
     if (local_endereco || local_nome) {
       const endGeo = local_endereco || local_nome;
       const coords = await geocodificarEndereco(endGeo + ', Brasil');
-      if (coords) {
-        lat = coords.latitude;
-        lng = coords.longitude;
+      if (coords?.latitude && coords?.longitude) {
+        coordsUpdate = ', latitude = $13, longitude = $14';
+        coordParams.push(coords.latitude, coords.longitude);
       }
     }
 
@@ -334,14 +331,13 @@ const atualizar = async (req, res) => {
          data_fim       = COALESCE($4, data_fim),
          local_nome     = COALESCE($5, local_nome),
          local_endereco = COALESCE($6, local_endereco),
-         latitude       = COALESCE($7, latitude),
-         longitude      = COALESCE($8, longitude),
-         valor_ingresso = COALESCE($9, valor_ingresso),
-         foto_capa_url  = COALESCE($10, foto_capa_url),
-         status         = COALESCE($11, status)
-       WHERE id = $12`,
+         valor_ingresso = COALESCE($7, valor_ingresso),
+         foto_capa_url  = COALESCE($8, foto_capa_url),
+         status         = COALESCE($9, status)
+         ${coordsUpdate}
+       WHERE id = $10`,
       [titulo, descricao, data_inicio, data_fim, local_nome, local_endereco,
-       lat ?? null, lng ?? null, valor_ingresso, foto_capa_url, status, id]
+       valor_ingresso, foto_capa_url, status, id, ...coordParams]
     );
 
     return res.json({ message: 'Evento atualizado com sucesso' });

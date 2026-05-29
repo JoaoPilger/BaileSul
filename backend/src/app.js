@@ -8,7 +8,7 @@ const rateLimit = require('express-rate-limit');
 const ENV_OBRIGATORIAS = ['JWT_SECRET', 'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
 const envFaltando = ENV_OBRIGATORIAS.filter((k) => !process.env[k]);
 if (envFaltando.length > 0) {
-  console.error(`❌ Variáveis de ambiente obrigatórias ausentes: ${envFaltando.join(', ')}`);
+  console.error(`Variáveis de ambiente obrigatórias ausentes: ${envFaltando.join(', ')}`);
   process.exit(1);
 }
 
@@ -76,7 +76,7 @@ const reservaRoutes    = require('./routes/reserva.routes');
 
 app.use(limiterGeral);
 app.use('/api/auth', limiterAuth);
-app.use('/api/eventos/:id/reserva', limiterReservas);
+app.use('/api/reservas/eventos/:evento_id', limiterReservas);
 
 // ── Rotas da API ──────────────────────────────────────────────────────────────
 app.use('/api/auth',        authRoutes);

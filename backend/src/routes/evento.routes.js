@@ -2,7 +2,6 @@ const router = require('express').Router();
 const {
   listar, buscarPorId, criar, atualizar, remover, calendario, responderContrato
 } = require('../controllers/evento.controller');
-const { criar: criarReserva } = require('../controllers/reserva.controller');
 const { autenticar, autorizar } = require('../middlewares/auth.middleware');
 
 // RF06 – Calendário compartilhado (DEVE vir antes de /:id)
@@ -19,8 +18,6 @@ router.post('/',      autenticar, autorizar('comunidade'), criar);
 router.put('/:id',    autenticar, autorizar('comunidade'), atualizar);
 router.delete('/:id', autenticar, autorizar('comunidade'), remover);
 
-// RF11 – Reservar ingresso (somente pessoal)
-router.post('/:id/reserva', autenticar, autorizar('pessoal'), criarReserva);
 
 // Banda responde contrato (aceitar / recusar)
 router.patch('/:id/contratos/:contrato_id', autenticar, autorizar('banda'), responderContrato);

@@ -8,13 +8,13 @@ const RESERVAS_MAX_POR_USUARIO_EVENTO = 1; // um usuário, uma reserva por event
  * RF11 – Usuário pessoal reserva ingresso e recebe contato do vendedor via wa.me
  */
 const criar = async (req, res) => {
-  const evento_id = req.params.id;
+  const evento_id = req.params.evento_id;
   const comprador_id = req.usuario.id;
-  const { quantidade } = req.body;
+  const quantidade = parseInt(req.body.quantidade, 10);
 
-  if (!quantidade || quantidade < 1 || quantidade > QUANTIDADE_MAX) {
+  if (isNaN(quantidade) || quantidade < 1 || quantidade > QUANTIDADE_MAX) {
     return res.status(400).json({
-      error: `Quantidade deve ser entre 1 e ${QUANTIDADE_MAX}`,
+      error: `Quantidade deve ser um número entre 1 e ${QUANTIDADE_MAX}`,
     });
   }
 

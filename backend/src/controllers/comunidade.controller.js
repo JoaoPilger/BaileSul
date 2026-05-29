@@ -100,15 +100,15 @@ const atualizarPerfil = async (req, res) => {
   const { nome_entidade, descricao, whatsapp, endereco, cidade, estado } = req.body;
 
   try {
-    // Re-geocodificar se endereço ou cidade mudou
-    let lat = undefined;
-    let lng = undefined;
+    // Re-geocodificar apenas se endereço ou cidade mudou E geocodificação retornar resultado
+    let coordsUpdate = '';
+    const coordParams = [];
     if (endereco || cidade) {
       const endGeo = [endereco, cidade, estado, 'Brasil'].filter(Boolean).join(', ');
       const coords = await geocodificarEndereco(endGeo);
-      if (coords) {
-        lat = coords.latitude;
-        lng = coords.longitude;
+      if (coords?.latitude && coords?.longitude) {
+        coordsUpdate = ', latitude = $10, longitude = $11';
+        coordParams.push(coords.latitude, coords.longitude);
       }
     }
 
@@ -119,13 +119,12 @@ const atualizarPerfil = async (req, res) => {
          whatsapp      = COALESCE($3, whatsapp),
          endereco      = COALESCE($4, endereco),
          cidade        = COALESCE($5, cidade),
-         estado        = COALESCE($6, estado),
-         latitude      = COALESCE($7, latitude),
-         longitude     = COALESCE($8, longitude)
-       WHERE usuario_id = $9`,
+         estado        = COALESCE($6, estado)
+         ${coordsUpdate}
+       WHERE usuario_id = $7`,
       [nome_entidade || null, descricao || null, whatsapp || null,
        endereco || null, cidade || null, estado || null,
-       lat ?? null, lng ?? null, usuario_id]
+       usuario_id, ...coordParams]
     );
     return res.json({ message: 'Perfil atualizado com sucesso' });
 
