@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../../contexts/AuthContext'
 import './cadastro.css'
+
+const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
 
 function calcForca(senha) {
   if (!senha) return { pct: '0%', label: '', cor: 'transparent' }
@@ -19,13 +22,14 @@ function calcForca(senha) {
   return map[score]
 }
 
-export default function Cadastro() {
+export default function CadastroPessoal() {
+  const navigate = useNavigate()
+  const { register } = useAuth()
   const [form, setForm] = useState({
     nome: '',
     sobrenome: '',
     email: '',
     telefone: '',
-    perfil: '',
     senha: '',
     confirmarSenha: '',
     termos: false,
@@ -56,8 +60,8 @@ export default function Cadastro() {
       setErro('As senhas não coincidem.')
       return
     }
-    if (form.senha.length < 8) {
-      setErro('A senha deve ter pelo menos 8 caracteres.')
+    if (!senhaValida(form.senha)) {
+      setErro('A senha deve ter ao menos 8 caracteres, incluindo letras e números.')
       return
     }
     if (!form.termos) {
@@ -65,12 +69,21 @@ export default function Cadastro() {
       return
     }
 
+    const nomeCompleto = [form.nome, form.sobrenome].filter(Boolean).join(' ').trim()
+
     setCarregando(true)
     try {
-      await new Promise((r) => setTimeout(r, 1400))
+      await register({
+        email: form.email,
+        senha: form.senha,
+        tipo: 'pessoal',
+        perfil: { nome: nomeCompleto },
+      })
       setSucesso(true)
-    } catch {
-      setErro('Erro ao criar conta. Tente novamente.')
+      navigate('/', { replace: true })
+    } catch (err) {
+      const msg = err.response?.data?.error
+      setErro(msg || 'Erro ao criar conta. Tente novamente.')
     } finally {
       setCarregando(false)
     }
@@ -121,9 +134,7 @@ export default function Cadastro() {
           </div>
 
           {sucesso ? (
-            <p className="success-msg">
-              ✓ Conta criada com sucesso!<br />Verifique seu e-mail para ativar.
-            </p>
+            <p className="success-msg">✓ Conta criada com sucesso! Redirecionando...</p>
           ) : (
             <form className="cadastro-form" onSubmit={handleSubmit}>
 
@@ -182,40 +193,21 @@ export default function Cadastro() {
                 </div>
               </div>
 
-              <div className="form-row">
-                <div className="field-group">
-                  <label className="field-label" htmlFor="telefone">Telefone</label>
-                  <div className="input-wrapper">
-                    <input
-                      id="telefone"
-                      name="telefone"
-                      type="tel"
-                      className="field-input"
-                      placeholder="(11) 9 0000-0000"
-                      value={form.telefone}
-                      onChange={handleChange}
-                    />
-                    <svg viewBox="0 0 24 24">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" />
-                    </svg>
-                  </div>
-                </div>
-                <div className="field-group">
-                  <label className="field-label" htmlFor="perfil">Perfil</label>
-                  <div className="input-wrapper">
-                    <select
-                      id="perfil"
-                      name="perfil"
-                      className="field-input no-icon"
-                      value={form.perfil}
-                      onChange={handleChange}
-                    >
-                      <option value="">Selecione</option>
-                      <option value="pessoal">Pessoal</option>
-                      <option value="comunidade">Comunidade</option>
-                      <option value="banda">Banda</option>
-                    </select>
-                  </div>
+              <div className="field-group">
+                <label className="field-label" htmlFor="telefone">Telefone</label>
+                <div className="input-wrapper">
+                  <input
+                    id="telefone"
+                    name="telefone"
+                    type="tel"
+                    className="field-input"
+                    placeholder="(11) 9 0000-0000"
+                    value={form.telefone}
+                    onChange={handleChange}
+                  />
+                  <svg viewBox="0 0 24 24">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" />
+                  </svg>
                 </div>
               </div>
 

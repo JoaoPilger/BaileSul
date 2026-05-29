@@ -233,7 +233,12 @@ const login = async (req, res) => {
 
     await inserirTokenAtivo(pool, usuario.id, token);
 
-    return res.json({ token, tipo: usuario.tipo, usuario_id: usuario.id });
+    return res.json({
+      token,
+      tipo: usuario.tipo,
+      usuario_id: usuario.id,
+      email: emailNorm,
+    });
 
   } catch (err) {
     console.error('Erro no login:', err.message);

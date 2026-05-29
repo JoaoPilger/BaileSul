@@ -17,6 +17,14 @@ function loadStoredAuth() {
   }
 }
 
+function mapUsuario(data, fallbackEmail) {
+  return {
+    id: data.usuario_id ?? data.id,
+    email: data.email ?? fallbackEmail ?? '',
+    tipo: data.tipo,
+  }
+}
+
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(loadStoredAuth)
 
@@ -30,18 +38,30 @@ export function AuthProvider({ children }) {
     const { data } = await api.post('/auth/login', { email, senha })
     return persistAuth({
       token: data.token,
-      usuario: {
-        id: data.id,
-        email: data.email,
-        tipo: data.tipo,
-      },
+      usuario: mapUsuario(data, email),
     })
   }, [persistAuth])
 
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY)
-    setAuth(null)
-  }, [])
+  const register = useCallback(async ({ email, senha, tipo, perfil }) => {
+    const { data } = await api.post('/auth/register', { email, senha, tipo, perfil })
+    return persistAuth({
+      token: data.token,
+      usuario: mapUsuario(data, email),
+    })
+  }, [persistAuth])
+
+  const logout = useCallback(async () => {
+    try {
+      if (auth?.token) {
+        await api.post('/auth/logout')
+      }
+    } catch {
+      /* revoga localmente mesmo se o servidor falhar */
+    } finally {
+      localStorage.removeItem(STORAGE_KEY)
+      setAuth(null)
+    }
+  }, [auth?.token])
 
   const value = useMemo(
     () => ({
@@ -49,9 +69,10 @@ export function AuthProvider({ children }) {
       token: auth?.token ?? null,
       isAuthenticated: Boolean(auth?.token),
       login,
+      register,
       logout,
     }),
-    [auth, login, logout],
+    [auth, login, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
