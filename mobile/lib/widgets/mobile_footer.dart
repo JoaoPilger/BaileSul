@@ -12,8 +12,8 @@ class FooterNavLink {
 class MobileFooter extends StatelessWidget {
   const MobileFooter({
     super.key,
-    this.logoHeight = 88,
-    this.horizontalPadding = 20,
+    this.logoHeight = 40,
+    this.horizontalPadding = 16,
     this.navLinks = const [
       FooterNavLink(label: 'Log in'),
       FooterNavLink(label: 'Log in'),
@@ -47,9 +47,9 @@ class MobileFooter extends StatelessWidget {
         child: Padding(
           padding: EdgeInsets.fromLTRB(
             horizontalPadding,
-            28,
+            14,
             horizontalPadding,
-            20,
+            12,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -59,7 +59,7 @@ class MobileFooter extends StatelessWidget {
                 height: logoHeight,
                 fit: BoxFit.contain,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
               Text(
                 '© BaileSul – Todos os direitos reservados.',
                 textAlign: TextAlign.center,
@@ -68,7 +68,7 @@ class MobileFooter extends StatelessWidget {
                       height: 1.35,
                     ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
