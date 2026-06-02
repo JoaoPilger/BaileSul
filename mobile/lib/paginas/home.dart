@@ -180,7 +180,10 @@ class _HomePageState extends State<HomePage> {
                         logoHeight: 52,
                         horizontalPadding: 24,
                         navLinks: [
-                          const FooterNavLink(label: 'Legal'),
+                          FooterNavLink(
+                            label: 'Calendário',
+                            onTap: () => Navigator.pushNamed(context, '/calendario'),
+                          ),
                           FooterNavLink(
                             label: SessaoUsuario.instance.autenticado
                                 ? 'Sair'

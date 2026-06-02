@@ -2,6 +2,7 @@
 
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/home.dart';
+import 'paginas/calendario.dart';
 import 'paginas/login.dart';
 import 'paginas/configuracoes.dart';
 import 'paginas/meus_eventos.dart';
@@ -34,6 +35,7 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
       routes: {
+        '/calendario': (_) => const CalendarioPage(),
         '/login': (_) => const LoginScreen(),
         '/meus-ingressos': (_) => const MeusIngressosPage(),
         '/meus-eventos': (_) => const MeusEventosPage(),
