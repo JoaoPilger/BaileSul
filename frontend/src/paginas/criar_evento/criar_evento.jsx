@@ -1,199 +1,382 @@
-import React, { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import HeaderCal from '../../components/header/HeaderCal'
-import FooterCal from '../../components/footer/FooterCal'
 import './criar_evento.css'
+
+const ESTILOS = [
+  { value: 'sertanejo', label: 'Sertanejo' },
+  { value: 'forro',     label: 'Forró' },
+  { value: 'pagode',    label: 'Pagode' },
+  { value: 'rock',      label: 'Rock' },
+  { value: 'gaucha',    label: 'Gaúcha' },
+  { value: 'axe',       label: 'Axé' },
+  { value: 'mpb',       label: 'MPB' },
+  { value: 'outro',     label: 'Outro' },
+]
 
 export default function CriarEvento() {
   const { isAuthenticated } = useAuth()
   const navigate = useNavigate()
-  const [title, setTitle] = useState('')
-  const [band, setBand] = useState('')
-  const [style, setStyle] = useState('sertanejo')
-  const [dateStart, setDateStart] = useState('')
-  const [dateEnd, setDateEnd] = useState('')
-  const [timeStart, setTimeStart] = useState('')
-  const [timeEnd, setTimeEnd] = useState('')
-  const [image, setImage] = useState('')
-  const [price, setPrice] = useState('')
-  const [city, setCity] = useState('')
-  const [cep, setCep] = useState('')
-  const [bairro, setBairro] = useState('')
-  const [rua, setRua] = useState('')
-  const [referencia, setReferencia] = useState('')
-  const [vendorName, setVendorName] = useState('')
-  const [vendors, setVendors] = useState([])
+  const fileRef = useRef(null)
 
-  const contaLink = isAuthenticated ? '/perfil' : '/login'
+  const [form, setForm] = useState({
+    title:     '',
+    band:      '',
+    style:     'sertanejo',
+    dateStart: '',
+    dateEnd:   '',
+    timeStart: '',
+    timeEnd:   '',
+    price:     '',
+    cep:       '',
+    city:      '',
+    bairro:    '',
+    rua:       '',
+    referencia:'',
+  })
+  const [imagemFile, setImagemFile]     = useState(null)
+  const [imagemPreview, setImagemPreview] = useState(null)
+  const [vendorName, setVendorName]     = useState('')
+  const [vendors, setVendors]           = useState([])
+  const [cepLoading, setCepLoading]     = useState(false)
 
-  function addVendor() {
-    if (!vendorName) return
-    setVendors((s) => [...s, { id: Date.now(), name: vendorName }])
+  const contaLink   = isAuthenticated ? '/perfil' : '/login'
+  const footerLinks = [
+    { to: '/eventos',      label: 'Eventos' },
+    { to: '/calendario',   label: 'Calendário' },
+    { to: '/mapa',         label: 'Mapa' },
+    { to: '/meus-eventos', label: 'Meus Eventos' },
+    { to: '/criar-evento', label: 'Criar Evento' },
+    { to: contaLink,       label: 'Perfil' },
+  ]
+
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    setForm((p) => ({ ...p, [name]: value }))
+  }
+
+  const handleImagem = (file) => {
+    if (!file) return
+    setImagemFile(file)
+    setImagemPreview(URL.createObjectURL(file))
+  }
+
+  const buscarCep = async () => {
+    const cep = form.cep.replace(/\D/g, '')
+    if (cep.length !== 8) return
+    setCepLoading(true)
+    try {
+      const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+      const data = await res.json()
+      if (!data.erro) {
+        setForm((p) => ({
+          ...p,
+          city:   data.localidade || p.city,
+          bairro: data.bairro     || p.bairro,
+          rua:    data.logradouro || p.rua,
+        }))
+      }
+    } catch {}
+    finally { setCepLoading(false) }
+  }
+
+  const addVendor = () => {
+    if (!vendorName.trim()) return
+    setVendors((s) => [...s, { id: Date.now(), name: vendorName.trim() }])
     setVendorName('')
   }
 
-  function removeVendor(id) {
-    setVendors((s) => s.filter((v) => v.id !== id))
-  }
+  const removeVendor = (id) => setVendors((s) => s.filter((v) => v.id !== id))
 
-  function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault()
     const newEvent = {
-      id: Date.now(),
-      title,
-      band,
-      style,
-      date: dateStart || new Date().toISOString().slice(0, 10),
-      date_end: dateEnd,
-      time_start: timeStart,
-      time_end: timeEnd,
-      image: image || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-      price: price || 'Grátis',
-      city,
-      cep,
-      bairro,
-      rua,
-      referencia,
+      id:         Date.now(),
+      title:      form.title,
+      band:       form.band,
+      style:      form.style,
+      date:       form.dateStart || new Date().toISOString().slice(0, 10),
+      date_end:   form.dateEnd,
+      time_start: form.timeStart,
+      time_end:   form.timeEnd,
+      image:      imagemPreview || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
+      price:      form.price || 'Grátis',
+      city:       form.city,
+      cep:        form.cep,
+      bairro:     form.bairro,
+      rua:        form.rua,
+      referencia: form.referencia,
       vendors,
       created_at: new Date().toISOString(),
     }
-
     try {
-      const raw = localStorage.getItem('bailesul_events')
+      const raw  = localStorage.getItem('bailesul_events')
       const list = raw ? JSON.parse(raw) : []
       list.unshift(newEvent)
       localStorage.setItem('bailesul_events', JSON.stringify(list))
-    } catch (err) {
-      console.error('Erro salvando evento', err)
-    }
-
+    } catch {}
     navigate('/')
   }
 
   return (
-    <div className="create-shell">
-      <HeaderCal />
+    <div className="ce-shell">
 
-      <main className="create-main">
-        <div className="create-card">
-          <h1>Criar Evento</h1>
-          <form onSubmit={handleSubmit} className="create-form">
-            <section className="form-section">
-              <h3>Informações Básicas</h3>
-              <label>
-                Título do Evento *
-                <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-              </label>
+      <header className="ce-header">
+        <div className="ce-header-inner">
+          <Link to="/" className="ce-logo-link" aria-label="BaileSul">
+            <img src="/imagens/BaileSul.png" alt="BaileSul" className="ce-logo-img" />
+          </Link>
+          <Link to={contaLink} className="ce-user-btn" aria-label={isAuthenticated ? 'Minha conta' : 'Entrar'}>
+            <User size={20} strokeWidth={1.8} />
+          </Link>
+        </div>
+      </header>
 
-              <div className="row">
-                <label>
-                  Banda/Artista *
-                  <input value={band} onChange={(e) => setBand(e.target.value)} required />
-                </label>
-                <label>
-                  Estilo Musical *
-                  <select value={style} onChange={(e) => setStyle(e.target.value)}>
-                    <option value="sertanejo">Sertanejo</option>
-                    <option value="forro">Forró</option>
-                    <option value="pagode">Pagode</option>
-                    <option value="rock">Rock</option>
-                    <option value="gaucha">Gaúcha</option>
-                  </select>
-                </label>
-              </div>
-            </section>
+      <main className="ce-main">
+        <div className="ce-card">
 
-            <section className="form-section">
-              <h3>Data e Horários</h3>
-              <div className="row">
-                <label>
-                  Data de Início *
-                  <input type="date" value={dateStart} onChange={(e) => setDateStart(e.target.value)} required />
-                </label>
-                <label>
-                  Data de Término
-                  <input type="date" value={dateEnd} onChange={(e) => setDateEnd(e.target.value)} />
-                </label>
+          <div className="ce-card-header">
+            <h1 className="ce-card-title">Criar Evento</h1>
+          </div>
+
+          <form className="ce-form" onSubmit={handleSubmit}>
+
+            <div className="ce-section">
+              <div className="ce-section-label">Informações Básicas</div>
+
+              <div className="ce-field">
+                <label className="ce-field-label" htmlFor="title">Título do Evento *</label>
+                <div className="ce-input-wrap">
+                  <input id="title" name="title" type="text" className="ce-input" placeholder="Ex: Baile Gaúcho de Verão" value={form.title} onChange={handleChange} required />
+                  <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+                </div>
               </div>
 
-              <div className="row">
-                <label>
-                  Horário de Início
-                  <input type="time" value={timeStart} onChange={(e) => setTimeStart(e.target.value)} />
-                </label>
-                <label>
-                  Horário de Término
-                  <input type="time" value={timeEnd} onChange={(e) => setTimeEnd(e.target.value)} />
-                </label>
-              </div>
-            </section>
-
-            <section className="form-section">
-              <h3>Imagem de Capa</h3>
-              <label>
-                URL da imagem
-                <input value={image} onChange={(e) => setImage(e.target.value)} placeholder="https://..." />
-              </label>
-            </section>
-
-            <section className="form-section">
-              <h3>Vendedores</h3>
-              <div className="vendor-row">
-                <input value={vendorName} onChange={(e) => setVendorName(e.target.value)} placeholder="nome do vendedor" />
-                <button type="button" className="btn-add" onClick={addVendor}>Adicionar</button>
+              <div className="ce-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="band">Banda / Artista *</label>
+                  <div className="ce-input-wrap">
+                    <input id="band" name="band" type="text" className="ce-input" placeholder="Ex: Os Gauchões" value={form.band} onChange={handleChange} required />
+                    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                  </div>
+                </div>
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="style">Estilo Musical *</label>
+                  <div className="ce-input-wrap">
+                    <select id="style" name="style" className="ce-input no-icon" value={form.style} onChange={handleChange}>
+                      {ESTILOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
 
-              <ul className="vendor-list">
-                {vendors.map((v) => (
-                  <li key={v.id} className="vendor-item">
-                    <span>{v.name}</span>
-                    <button type="button" className="btn-remove" onClick={() => removeVendor(v.id)}>Remover</button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="form-section">
-              <h3>Localização</h3>
-              <div className="row">
-                <label>
-                  CEP
-                  <input value={cep} onChange={(e) => setCep(e.target.value)} />
-                </label>
-                <label>
-                  Cidade *
-                  <input value={city} onChange={(e) => setCity(e.target.value)} required />
-                </label>
+              <div className="ce-field">
+                <label className="ce-field-label" htmlFor="price">Ingresso / Entrada</label>
+                <div className="ce-input-wrap">
+                  <input id="price" name="price" type="text" className="ce-input" placeholder="Ex: R$ 20,00 ou Grátis" value={form.price} onChange={handleChange} />
+                  <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                </div>
               </div>
-
-              <div className="row">
-                <label>
-                  Bairro
-                  <input value={bairro} onChange={(e) => setBairro(e.target.value)} />
-                </label>
-                <label>
-                  Rua
-                  <input value={rua} onChange={(e) => setRua(e.target.value)} />
-                </label>
-              </div>
-
-              <label>
-                Referência
-                <input value={referencia} onChange={(e) => setReferencia(e.target.value)} />
-              </label>
-            </section>
-
-            <div className="form-actions">
-              <Link to="/" className="btn btn-cancel">Cancelar</Link>
-              <button type="submit" className="btn btn-primary">Salvar Evento</button>
             </div>
+
+            <div className="ce-section">
+              <div className="ce-section-label">Data e Horários</div>
+
+              <div className="ce-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="dateStart">Data de Início *</label>
+                  <div className="ce-input-wrap">
+                    <input id="dateStart" name="dateStart" type="date" className="ce-input" value={form.dateStart} onChange={handleChange} required />
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  </div>
+                </div>
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="dateEnd">Data de Término</label>
+                  <div className="ce-input-wrap">
+                    <input id="dateEnd" name="dateEnd" type="date" className="ce-input" value={form.dateEnd} onChange={handleChange} />
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="ce-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="timeStart">Horário de Início</label>
+                  <div className="ce-input-wrap">
+                    <input id="timeStart" name="timeStart" type="time" className="ce-input" value={form.timeStart} onChange={handleChange} />
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                  </div>
+                </div>
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="timeEnd">Horário de Término</label>
+                  <div className="ce-input-wrap">
+                    <input id="timeEnd" name="timeEnd" type="time" className="ce-input" value={form.timeEnd} onChange={handleChange} />
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="ce-section">
+              <div className="ce-section-label">Imagem de Capa</div>
+
+              <div
+                className={`ce-upload-area ${imagemPreview ? 'ce-upload-area--filled' : ''}`}
+                onClick={() => fileRef.current?.click()}
+                onDrop={(e) => { e.preventDefault(); handleImagem(e.dataTransfer.files[0]) }}
+                onDragOver={(e) => e.preventDefault()}
+              >
+                {imagemPreview ? (
+                  <>
+                    <img src={imagemPreview} alt="Prévia da capa" className="ce-upload-preview" />
+                    <button
+                      type="button"
+                      className="ce-upload-remove"
+                      onClick={(e) => { e.stopPropagation(); setImagemFile(null); setImagemPreview(null) }}
+                    >
+                      ✕ Remover
+                    </button>
+                  </>
+                ) : (
+                  <div className="ce-upload-placeholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                    <span>Clique para fazer upload de imagens</span>
+                    <small>PNG, JPG ou WEBP · Máx 5 MB</small>
+                  </div>
+                )}
+                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImagem(e.target.files[0])} />
+              </div>
+            </div>
+
+            <div className="ce-section">
+              <div className="ce-section-label">Vendedores</div>
+
+              <div className="ce-vendor-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="vendorName">Nome do Vendedor</label>
+                  <div className="ce-input-wrap">
+                    <input
+                      id="vendorName"
+                      type="text"
+                      className="ce-input"
+                      placeholder="Ex: Bar do João"
+                      value={vendorName}
+                      onChange={(e) => setVendorName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVendor() } }}
+                    />
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                  </div>
+                </div>
+                <button type="button" className="ce-btn-add" onClick={addVendor}>+ Adicionar</button>
+              </div>
+
+              {vendors.length > 0 && (
+                <ul className="ce-vendor-list">
+                  {vendors.map((v) => (
+                    <li key={v.id} className="ce-vendor-item">
+                      <span>{v.name}</span>
+                      <button type="button" className="ce-btn-remove" onClick={() => removeVendor(v.id)}>Remover</button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="ce-section">
+              <div className="ce-section-label">Localização</div>
+
+              <div className="ce-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="cep">CEP</label>
+                  <div className="ce-input-wrap">
+                    <input id="cep" name="cep" type="text" className="ce-input" placeholder="00000-000" value={form.cep} onChange={handleChange} onBlur={buscarCep} />
+                    <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
+                    {cepLoading && <span className="ce-cep-loading">⟳</span>}
+                  </div>
+                </div>
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="city">Cidade *</label>
+                  <div className="ce-input-wrap">
+                    <input id="city" name="city" type="text" className="ce-input no-icon" placeholder="Ex: Florianópolis" value={form.city} onChange={handleChange} required />
+                  </div>
+                </div>
+              </div>
+
+              <div className="ce-row">
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="bairro">Bairro</label>
+                  <div className="ce-input-wrap">
+                    <input id="bairro" name="bairro" type="text" className="ce-input no-icon" placeholder="Ex: Centro" value={form.bairro} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="ce-field">
+                  <label className="ce-field-label" htmlFor="rua">Rua</label>
+                  <div className="ce-input-wrap">
+                    <input id="rua" name="rua" type="text" className="ce-input no-icon" placeholder="Ex: Rua XV de Novembro, 200" value={form.rua} onChange={handleChange} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="ce-field">
+                <label className="ce-field-label" htmlFor="referencia">Referência</label>
+                <div className="ce-input-wrap">
+                  <input id="referencia" name="referencia" type="text" className="ce-input" placeholder="Ex: Próximo à Praça Central" value={form.referencia} onChange={handleChange} />
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                </div>
+              </div>
+
+              <div className="ce-mapa-container">
+                <iframe
+                  title="mapa-localizacao"
+                  src="https://www.openstreetmap.org/export/embed.html?bbox=-53.0,-29.5,-48.0,-26.0&layer=mapnik"
+                  className="ce-mapa-iframe"
+                  loading="lazy"
+                />
+              </div>
+            </div>
+
+            <div className="ce-form-actions">
+              <Link to="/" className="ce-btn-cancel">Cancelar</Link>
+              <button type="submit" className="ce-btn-submit">Salvar Evento</button>
+            </div>
+
           </form>
         </div>
       </main>
 
-      <FooterCal />
+      <footer className="ce-footer">
+        <div className="ce-footer-inner">
+          <div className="ce-footer-brand">
+            <Link to="/" aria-label="BaileSul">
+              <img src="/imagens/BaileSul.png" alt="BaileSul" className="ce-footer-logo" />
+            </Link>
+          </div>
+          <div className="ce-footer-copy-block">
+            <p className="ce-footer-copy">© BaileSul – Todos os direitos reservados.</p>
+          </div>
+          <nav className="ce-footer-nav-block" aria-label="Navegação do rodapé">
+            <h4 className="ce-footer-heading">Navegação</h4>
+            <div className="ce-footer-nav">
+              <div className="ce-footer-nav-col">
+                {footerLinks.slice(0, 3).map((item) => (
+                  <Link key={item.to} to={item.to}>{item.label}</Link>
+                ))}
+              </div>
+              <div className="ce-footer-nav-col">
+                {footerLinks.slice(3).map((item) => (
+                  <Link key={item.to} to={item.to}>{item.label}</Link>
+                ))}
+              </div>
+            </div>
+          </nav>
+        </div>
+      </footer>
+
     </div>
   )
 }
