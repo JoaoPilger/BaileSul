@@ -6,6 +6,7 @@ import 'paginas/calendario.dart';
 import 'paginas/login.dart';
 import 'paginas/configuracoes.dart';
 import 'paginas/meus_eventos.dart';
+import 'paginas/meusEventos_comunidade.dart';
 import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
 import 'navigation/app_navigator.dart';
@@ -39,6 +40,8 @@ class MyApp extends StatelessWidget {
         '/login': (_) => const LoginScreen(),
         '/meus-ingressos': (_) => const MeusIngressosPage(),
         '/meus-eventos': (_) => const MeusEventosPage(),
+        // Exibição temporária de exemplo: passar `comunidadeId` para pré-visualizar a tela
+'/meus-eventos-comunidade': (_) => const MeusEventosComunidadePage(),
         '/configuracoes': (_) => const ConfiguracoesPage(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
         '/evento': (context) {

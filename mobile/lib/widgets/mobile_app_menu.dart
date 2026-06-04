@@ -19,6 +19,7 @@ class MobileMenuEntry {
 
 /// Menu lateral que desce do topo da tela, abaixo da área do cabeçalho.
 abstract final class MobileAppMenu {
+  static const bool _DEV_FORCE_SHOW_COMUNIDADE = true;
   static List<MobileMenuEntry> entries(
     BuildContext context, {
     bool incluirInicio = false,
@@ -58,12 +59,20 @@ abstract final class MobileAppMenu {
             onTap: () => Navigator.pushNamed(context, '/meus-ingressos'),
           ),
         );
-      } else if (tipo == TipoConta.banda || tipo == TipoConta.comunidade) {
+      } else if (tipo == TipoConta.banda) {
         itens.add(
           MobileMenuEntry(
             icon: Icons.list_alt_rounded,
             label: 'Meus Eventos',
             onTap: () => Navigator.pushNamed(context, '/meus-eventos'),
+          ),
+        );
+      } else if (tipo == TipoConta.comunidade || _DEV_FORCE_SHOW_COMUNIDADE) {
+        itens.add(
+          MobileMenuEntry(
+            icon: Icons.list_alt_rounded,
+            label: 'Meus Eventos — Comunidade (Teste)',
+            onTap: () => Navigator.pushNamed(context, '/meus-eventos-comunidade'),
           ),
         );
       }
@@ -76,15 +85,13 @@ abstract final class MobileAppMenu {
         ),
       );
 
-      if (sessao.podeCriarEvento) {
-        itens.add(
-          MobileMenuEntry(
-            icon: Icons.add_box_rounded,
-            label: 'Criar Evento',
-            onTap: () => Navigator.pushNamed(context, '/criar-evento'),
-          ),
-        );
-      }
+      itens.add(
+        MobileMenuEntry(
+          icon: Icons.add_box_rounded,
+          label: 'Criar/Editar Evento',
+          onTap: () => Navigator.pushNamed(context, '/criar-evento'),
+        ),
+      );
 
       itens.add(
         MobileMenuEntry(
@@ -94,6 +101,7 @@ abstract final class MobileAppMenu {
         ),
       );
     } else {
+      // Quando não autenticado, exibimos Login normalmente.
       itens.add(
         MobileMenuEntry(
           icon: Icons.login_rounded,
@@ -101,6 +109,17 @@ abstract final class MobileAppMenu {
           onTap: () => Navigator.pushNamed(context, '/login'),
         ),
       );
+
+      // Modo dev: forçar exibição do item comunidade mesmo sem sessão.
+      if (_DEV_FORCE_SHOW_COMUNIDADE) {
+        itens.add(
+          MobileMenuEntry(
+            icon: Icons.list_alt_rounded,
+            label: 'Meus Eventos — Comunidade (Teste)',
+            onTap: () => Navigator.pushNamed(context, '/meus-eventos-comunidade'),
+          ),
+        );
+      }
     }
 
     return itens;
