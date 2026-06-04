@@ -8,7 +8,9 @@ import '../widgets/mobile_header.dart';
 import 'home.dart';
 
 class CriarEditarEventoPage extends StatefulWidget {
-	const CriarEditarEventoPage({super.key});
+	const CriarEditarEventoPage({super.key, this.isComunidade = false});
+
+	final bool isComunidade;
 
 	@override
 	State<CriarEditarEventoPage> createState() => _CriarEditarEventoPageState();
@@ -46,13 +48,15 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 	@override
 	Widget build(BuildContext context) {
 		if (!SessaoUsuario.instance.podeCriarEvento) {
-			return const Scaffold(
+			return Scaffold(
 				backgroundColor: BaileSulColors.pageBackground,
 				body: Center(
 					child: Text(
-						'Apenas contas Comunidade podem criar eventos.',
+						widget.isComunidade
+							? 'Apenas contas Comunidade podem criar eventos.'
+							: 'Apenas contas Banda podem criar eventos.',
 						textAlign: TextAlign.center,
-						style: TextStyle(
+						style: const TextStyle(
 							color: BaileSulColors.headerText,
 							fontSize: 15,
 							fontWeight: FontWeight.w500,

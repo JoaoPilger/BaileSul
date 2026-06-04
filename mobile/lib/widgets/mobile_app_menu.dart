@@ -20,6 +20,7 @@ class MobileMenuEntry {
 /// Menu lateral que desce do topo da tela, abaixo da área do cabeçalho.
 abstract final class MobileAppMenu {
   static const bool _DEV_FORCE_SHOW_COMUNIDADE = true;
+  static const bool _DEV_FORCE_SHOW_BANDA = true;
   static List<MobileMenuEntry> entries(
     BuildContext context, {
     bool incluirInicio = false,
@@ -63,8 +64,8 @@ abstract final class MobileAppMenu {
         itens.add(
           MobileMenuEntry(
             icon: Icons.list_alt_rounded,
-            label: 'Meus Eventos',
-            onTap: () => Navigator.pushNamed(context, '/meus-eventos'),
+            label: 'Meus Eventos — Banda',
+            onTap: () => Navigator.pushNamed(context, '/meus-eventos-bandas'),
           ),
         );
       } else if (tipo == TipoConta.comunidade || _DEV_FORCE_SHOW_COMUNIDADE) {
@@ -110,7 +111,17 @@ abstract final class MobileAppMenu {
         ),
       );
 
-      // Modo dev: forçar exibição do item comunidade mesmo sem sessão.
+      // Modo dev: forçar exibição dos itens de eventos mesmo sem sessão.
+      if (_DEV_FORCE_SHOW_BANDA) {
+        itens.add(
+          MobileMenuEntry(
+            icon: Icons.list_alt_rounded,
+            label: 'Meus Eventos — Banda (Teste)',
+            onTap: () => Navigator.pushNamed(context, '/meus-eventos-bandas'),
+          ),
+        );
+      }
+
       if (_DEV_FORCE_SHOW_COMUNIDADE) {
         itens.add(
           MobileMenuEntry(

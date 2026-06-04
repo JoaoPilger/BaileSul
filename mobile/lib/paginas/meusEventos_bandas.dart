@@ -11,16 +11,16 @@ import '../widgets/mobile_footer.dart';
 import 'criar_editar_evento.dart';
 import 'home.dart';
 
-class MeusEventosComunidadePage extends StatefulWidget {
-  const MeusEventosComunidadePage({super.key, this.comunidadeId});
+class MeusEventosBandasPage extends StatefulWidget {
+  const MeusEventosBandasPage({super.key, this.bandaId});
 
-  final int? comunidadeId;
+  final int? bandaId;
 
   @override
-  State<MeusEventosComunidadePage> createState() => _MeusEventosComunidadePageState();
+  State<MeusEventosBandasPage> createState() => _MeusEventosBandasPageState();
 }
 
-class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
+class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _eventos = [];
@@ -37,7 +37,8 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
   int _total = 0;
   int _proximos = 0;
   int _realizados = 0;
-  int _cancelados = 0;
+  double? _avaliacaoMedia;
+  String? _defaultImageUrl;
 
   @override
   void initState() {
@@ -50,42 +51,48 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
       _loading = true;
       _error = null;
       _eventos = [];
+      _defaultImageUrl = null;
     });
 
-    final int? id = widget.comunidadeId ?? SessaoUsuario.instance.usuarioId;
+    final int? id = widget.bandaId ?? SessaoUsuario.instance.usuarioId;
     if (id == null) {
       setState(() {
-        _error = 'Comunidade não informada.';
+        _error = 'Banda não informada.';
         _loading = false;
       });
       return;
     }
 
     try {
-      final Uri url = Uri.parse('${ApiConfig.baseUrl}/comunidades/$id');
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/bandas/$id');
       final Map<String, String> headers = {'Content-Type': 'application/json'};
       final String? token = SessaoUsuario.instance.token;
       if (token != null && token.isNotEmpty) headers['Authorization'] = 'Bearer $token';
 
       final http.Response resp = await http.get(url, headers: headers).timeout(const Duration(seconds: 15));
       if (resp.statusCode != 200) {
-        throw Exception('Falha ao carregar comunidade (${resp.statusCode})');
+        throw Exception('Falha ao carregar banda (${resp.statusCode})');
       }
 
       final dynamic decoded = jsonDecode(resp.body);
       final List<dynamic> eventosRaw = decoded is Map && decoded['eventos'] is List ? decoded['eventos'] as List<dynamic> : <dynamic>[];
-
       final List<Map<String, dynamic>> eventos = eventosRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      final List<dynamic> midiasRaw = decoded is Map && decoded['midias'] is List ? decoded['midias'] as List<dynamic> : <dynamic>[];
+      final String? imagem = _extrairImagemBanda(midiasRaw);
+      double? avaliacao = _parseAvaliacao(decoded is Map ? decoded['avaliacao_media'] : null);
+      avaliacao ??= _calcularAvaliacaoMediaDosEventos(eventos);
 
       if (!mounted) return;
       setState(() {
         _eventos = eventos;
+        _defaultImageUrl = imagem;
+        _avaliacaoMedia = avaliacao;
         _recalcularEstatisticas();
       });
     } catch (err) {
       if (!mounted) return;
       setState(() {
-        _error = 'Não foi possível carregar os eventos.';
+        _error = 'Não foi possível carregar os eventos da banda.';
       });
     }
 
@@ -93,6 +100,30 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
     setState(() {
       _loading = false;
     });
+  }
+
+  String? _extrairImagemBanda(List<dynamic> midias) {
+    for (final midia in midias) {
+      if (midia is Map && midia['url'] != null && midia['url'].toString().isNotEmpty) {
+        return midia['url'].toString();
+      }
+    }
+    return null;
+  }
+
+  double? _parseAvaliacao(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is num) return raw.toDouble();
+    return double.tryParse(raw.toString());
+  }
+
+  double? _calcularAvaliacaoMediaDosEventos(List<Map<String, dynamic>> eventos) {
+    final List<double> notas = eventos.map((e) {
+      return _parseAvaliacao(e['avaliacao_media'] ?? e['avaliacao'] ?? e['nota']);
+    }).whereType<double>().toList();
+
+    if (notas.isEmpty) return null;
+    return notas.reduce((value, element) => value + element) / notas.length;
   }
 
   void _recalcularEstatisticas() {
@@ -110,7 +141,6 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
       }
     }).length;
 
-    _cancelados = _eventos.where((e) => (e['status']?.toString() ?? '') == 'cancelado').length;
     _realizados = _eventos.where((e) => (e['status']?.toString() ?? '') == 'finalizado').length;
   }
 
@@ -161,7 +191,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                                 ElevatedButton.icon(
                                   onPressed: () => Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (context) => const CriarEditarEventoPage(isComunidade: true)),
+                                    MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
                                   ),
                                   icon: const Icon(Icons.add, size: 18),
                                   label: const Text('Criar Evento'),
@@ -183,7 +213,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                                     ElevatedButton.icon(
                                       onPressed: () => Navigator.push(
                                         context,
-                                        MaterialPageRoute(builder: (context) => const CriarEditarEventoPage(isComunidade: true)),
+                                        MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
                                       ),
                                       icon: const Icon(Icons.add, size: 18),
                                       label: const Text('Criar Evento'),
@@ -224,7 +254,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                                 Column(
                                   children: [
                                     for (final event in listaFiltrada) ...[
-                                      _EventoListCard(event: event),
+                                      _EventoListCard(event: event, defaultImageUrl: _defaultImageUrl),
                                       const SizedBox(height: 12),
                                     ],
                                   ],
@@ -260,7 +290,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                       filled: true,
                       fillColor: Colors.white,
                       prefixIcon: const Icon(Icons.search),
-                      hintText: 'Buscar eventos',
+                      hintText: 'Buscar bandas',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                     ),
                   ),
@@ -287,7 +317,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                         filled: true,
                         fillColor: Colors.white,
                         prefixIcon: const Icon(Icons.search),
-                        hintText: 'Buscar eventos',
+                        hintText: 'Buscar bandas',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                       ),
                     ),
@@ -420,7 +450,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
             SizedBox(width: itemWidth, child: _buildStatTile('Total de Eventos', '$_total')),
             SizedBox(width: itemWidth, child: _buildStatTile('Próximos', '$_proximos')),
             SizedBox(width: itemWidth, child: _buildStatTile('Realizados', '$_realizados')),
-            SizedBox(width: itemWidth, child: _buildStatTile('Cancelados', '$_cancelados')),
+            SizedBox(width: itemWidth, child: _buildStatTile('Avaliação média', _avaliacaoMedia != null ? _avaliacaoMedia!.toStringAsFixed(1) : '-')),
           ],
         );
       },
@@ -429,9 +459,10 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
 }
 
 class _EventoListCard extends StatelessWidget {
-  const _EventoListCard({required this.event});
+  const _EventoListCard({required this.event, this.defaultImageUrl});
 
   final Map<String, dynamic> event;
+  final String? defaultImageUrl;
 
   String _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return '';
@@ -445,7 +476,11 @@ class _EventoListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String imageUrl = (event['foto_capa_url']?.toString().isNotEmpty == true) ? event['foto_capa_url'].toString() : 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=80';
+    final String imageUrl = (event['foto_capa_url']?.toString().isNotEmpty == true)
+        ? event['foto_capa_url'].toString()
+        : (defaultImageUrl?.isNotEmpty == true
+            ? defaultImageUrl!
+            : 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=80');
 
     return LayoutBuilder(
       builder: (context, constraints) {

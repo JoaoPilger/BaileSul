@@ -5,10 +5,11 @@ import 'paginas/home.dart';
 import 'paginas/calendario.dart';
 import 'paginas/login.dart';
 import 'paginas/configuracoes.dart';
-import 'paginas/meus_eventos.dart';
+import 'paginas/meusEventos_bandas.dart';
 import 'paginas/meusEventos_comunidade.dart';
 import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'models/tipo_conta.dart';
 import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
 
@@ -39,9 +40,20 @@ class MyApp extends StatelessWidget {
         '/calendario': (_) => const CalendarioPage(),
         '/login': (_) => const LoginScreen(),
         '/meus-ingressos': (_) => const MeusIngressosPage(),
-        '/meus-eventos': (_) => const MeusEventosPage(),
+        '/meus-eventos': (context) {
+          final TipoConta? tipo = SessaoUsuario.instance.tipoConta;
+          if (tipo == TipoConta.banda) {
+            return const MeusEventosBandasPage();
+          }
+          return const Scaffold(
+            body: Center(
+              child: Text('Apenas contas de banda podem acessar esta página.'),
+            ),
+          );
+        },
+        '/meus-eventos-bandas': (_) => const MeusEventosBandasPage(),
         // Exibição temporária de exemplo: passar `comunidadeId` para pré-visualizar a tela
-'/meus-eventos-comunidade': (_) => const MeusEventosComunidadePage(),
+        '/meus-eventos-comunidade': (_) => const MeusEventosComunidadePage(),
         '/configuracoes': (_) => const ConfiguracoesPage(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
         '/evento': (context) {
