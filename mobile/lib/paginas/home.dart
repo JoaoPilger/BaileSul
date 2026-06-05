@@ -497,7 +497,7 @@ class _UpcomingEventsSection extends StatelessWidget {
           _PrimaryOutlineButton(
             label: 'Ver todos os eventos',
             icon: Icons.keyboard_arrow_down_rounded,
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
           ),
         ],
       ),

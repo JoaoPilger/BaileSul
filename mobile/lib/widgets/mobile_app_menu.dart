@@ -19,8 +19,8 @@ class MobileMenuEntry {
 
 
 abstract final class MobileAppMenu {
-  static const bool _DEV_FORCE_SHOW_COMUNIDADE = false;
-  static const bool _DEV_FORCE_SHOW_BANDA = false;
+  static const bool _devForceShowComunidade = false;
+  static const bool _devForceShowBanda = false;
 
   static List<MobileMenuEntry> entries(
     BuildContext context, {
@@ -44,7 +44,7 @@ abstract final class MobileAppMenu {
       MobileMenuEntry(
         icon: Icons.event_rounded,
         label: 'Eventos',
-        onTap: onEventos ?? () {},
+        onTap: onEventos ?? () => Navigator.pushNamed(context, '/pesquisa-eventos'),
       ),
     );
 
@@ -69,7 +69,7 @@ abstract final class MobileAppMenu {
             onTap: () => Navigator.pushNamed(context, '/meus-eventos-bandas'),
           ),
         );
-      } else if (tipo == TipoConta.comunidade || _DEV_FORCE_SHOW_COMUNIDADE) {
+      } else if (tipo == TipoConta.comunidade || _devForceShowComunidade) {
         itens.add(
           MobileMenuEntry(
             icon: Icons.list_alt_rounded,
@@ -113,7 +113,7 @@ abstract final class MobileAppMenu {
       );
 
       // Modo dev: forçar exibição dos itens de eventos mesmo sem sessão.
-      if (_DEV_FORCE_SHOW_BANDA) {
+      if (_devForceShowBanda) {
         itens.add(
           MobileMenuEntry(
             icon: Icons.list_alt_rounded,
@@ -123,7 +123,7 @@ abstract final class MobileAppMenu {
         );
       }
 
-      if (_DEV_FORCE_SHOW_COMUNIDADE) {
+      if (_devForceShowComunidade) {
         itens.add(
           MobileMenuEntry(
             icon: Icons.list_alt_rounded,

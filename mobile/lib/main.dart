@@ -9,6 +9,7 @@ import 'paginas/meusEventos_bandas.dart';
 import 'paginas/meusEventos_comunidade.dart';
 import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'paginas/pesquisa_padrao_eventos.dart';
 import 'models/tipo_conta.dart';
 import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
@@ -37,6 +38,8 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
       routes: {
+        '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
+        '/pesquisa-padrao': (_) => const PesquisaPadraoEventos(),
         '/calendario': (_) => const CalendarioPage(),
         '/login': (_) => const LoginScreen(),
         '/meus-ingressos': (_) => const MeusIngressosPage(),
