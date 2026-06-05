@@ -9,7 +9,7 @@ import Home from './paginas/home/home.jsx'
 import Login from './paginas/login/login.jsx'
 import CriarEvento from './paginas/criar_evento/criar_evento.jsx'
 import Eventos from './paginas/eventos/eventos.jsx'
-import EventoDetalhes from './paginas/eventos/eventoDetalhes.jsx'
+import Evento from './paginas/evento/evento.jsx'
 
 function App() {
   return (
@@ -25,7 +25,7 @@ function App() {
           <Route path="/calendario" element={<Calendario />} />
           <Route path="/criar-evento" element={<CriarEvento />} />
           <Route path="/eventos" element={<Eventos />} />
-          <Route path="/eventos/:id" element={<EventoDetalhes />} />
+          <Route path="/eventos/:id" element={<Evento />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

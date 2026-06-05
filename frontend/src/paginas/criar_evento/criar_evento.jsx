@@ -101,7 +101,11 @@ export default function CriarEvento() {
       time_start: form.timeStart,
       time_end:   form.timeEnd,
       image:      imagemPreview || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-      price:      form.price || 'Grátis',
+      price:      form.price
+        ? (/^(grátis|gratis)$/i.test(form.price.trim())
+            ? 'Grátis'
+            : `R$ ${form.price.replace(/^R\$\s*/i, '').trim()}`)
+        : 'Grátis',
       city:       form.city,
       cep:        form.cep,
       bairro:     form.bairro,
