@@ -344,26 +344,6 @@ a { color: inherit; text-decoration: none; }
   margin-top: 4px;
 }
 
-.event-card-delete {
-  align-self: flex-end;
-  margin-top: 1rem;
-  padding: .55rem 1rem;
-  border: 1px solid rgba(13,73,107,.18);
-  background: #fff;
-  color: var(--accent);
-  border-radius: 999px;
-  font-size: .82rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: background .2s, transform .15s;
-}
-
-.event-card-delete:hover {
-  background: rgba(13,73,107,.06);
-}
-
 .skeleton-card {
   background: var(--white);
   border-radius: var(--radius-lg);

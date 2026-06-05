@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, ArrowRight, Calendar, Trash2 } from 'lucide-react';
+import { Search, MapPin, ArrowRight, Calendar } from 'lucide-react';
 import Header from '../../components/header/Header';
 import Footer from '../../components/footer/Footer';
-import { loadEvents, deleteEventById } from '../../utils/events';
+import { loadEvents } from '../../utils/events';
 import './home.css';
 
 const STYLES = [
@@ -75,7 +75,7 @@ function HeroSection() {
   );
 }
 
-function EventCard({ event, index, onDelete }) {
+function EventCard({ event, index }) {
   const navigate = useNavigate();
   const date  = new Date(event.date);
   const day   = date.toLocaleDateString('pt-BR', { day: '2-digit' });
@@ -102,17 +102,6 @@ function EventCard({ event, index, onDelete }) {
           <MapPin size={12} />
           {event.city}
         </div>
-        <button
-          type="button"
-          className="event-card-delete"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete(event.id);
-          }}
-        >
-          <Trash2 size={14} />
-          Apagar
-        </button>
       </div>
     </div>
   );
@@ -216,11 +205,6 @@ export default function Home() {
   useEffect(() => {
     setEvents(loadEvents())
   }, []);
-
-  function handleDelete(id) {
-    deleteEventById(id)
-    setEvents(loadEvents())
-  }
 
   return (
     <>
