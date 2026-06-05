@@ -17,10 +17,11 @@ class MobileMenuEntry {
   final VoidCallback onTap;
 }
 
-/// Menu lateral que desce do topo da tela, abaixo da área do cabeçalho.
+
 abstract final class MobileAppMenu {
-  static const bool _DEV_FORCE_SHOW_COMUNIDADE = true;
-  static const bool _DEV_FORCE_SHOW_BANDA = true;
+  static const bool _DEV_FORCE_SHOW_COMUNIDADE = false;
+  static const bool _DEV_FORCE_SHOW_BANDA = false;
+
   static List<MobileMenuEntry> entries(
     BuildContext context, {
     bool incluirInicio = false,
