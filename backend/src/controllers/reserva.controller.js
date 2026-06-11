@@ -8,7 +8,7 @@ const RESERVAS_MAX_POR_USUARIO_EVENTO = 1; // um usuário, uma reserva por event
  * RF11 – Usuário pessoal reserva ingresso e recebe contato do vendedor via wa.me
  */
 const criar = async (req, res) => {
-  const evento_id = req.params.evento_id;
+  const evento_id = req.params.evento_id ?? req.params.id;
   const comprador_id = req.usuario.id;
   const quantidade = parseInt(req.body.quantidade, 10);
 

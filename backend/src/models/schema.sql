@@ -1,6 +1,7 @@
 -- ============================================================
 --  BaileSul – Schema PostgreSQL  v5
 --  Alterações em relação à v4:
+--    - auth_tokens: persistência e revogação de JWT
 --    - video_url adicionado em perfis_bandas
 --    - vendedores: usuario_id passa a ser FK para usuarios
 --      com tipo 'pessoal' (papel atribuído pela comunidade).
@@ -54,6 +55,20 @@ CREATE TABLE usuarios (
 CREATE TRIGGER trg_usuarios_atualizado_em
   BEFORE UPDATE ON usuarios
   FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
+
+CREATE TABLE auth_tokens (
+  id          BIGSERIAL PRIMARY KEY,
+  usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  token       TEXT NOT NULL UNIQUE,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  deleted_at  TIMESTAMPTZ,
+  criado_em   TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_auth_tokens_usuario ON auth_tokens (usuario_id);
+CREATE INDEX idx_auth_tokens_expires ON auth_tokens (expires_at);
+CREATE INDEX idx_auth_tokens_ativos ON auth_tokens (token, usuario_id)
+  WHERE deleted_at IS NULL;
 
 
 -- ============================================================

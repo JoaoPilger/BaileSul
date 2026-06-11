@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
@@ -39,51 +40,9 @@ class _PaginaEventoState extends State<PaginaEvento> {
   }
 
   void _abrirMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: BaileSulColors.dark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.24),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 16),
-              _MenuTile(
-                icon: Icons.home_rounded,
-                label: 'Início',
-                onTap: () => Navigator.pop(sheetContext),
-              ),
-              _MenuTile(
-                icon: Icons.event_rounded,
-                label: 'Eventos',
-                onTap: () => Navigator.pop(sheetContext),
-              ),
-              _MenuTile(
-                icon: Icons.login_rounded,
-                label: 'Login',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.pushNamed(context, '/login');
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        );
-      },
+    MobileAppMenu.show(
+      context,
+      entries: MobileAppMenu.entries(context, incluirInicio: true),
     );
   }
 
@@ -877,36 +836,6 @@ class _OpcaoPagamento extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: BaileSulColors.accentLight, size: 22),
-      title: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w600,
-          fontSize: 16,
-        ),
-      ),
-      onTap: onTap,
-      minLeadingWidth: 26,
-      visualDensity: const VisualDensity(horizontal: -1, vertical: -1),
     );
   }
 }

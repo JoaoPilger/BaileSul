@@ -1,53 +1,61 @@
 const pool = require('../config/database');
-const { geocodificarEndereco } = require('../services/external.service');
+const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
+const { whatsappValido, urlHttpValida } = require('../utils/validators');
 
 /**
  * GET /api/bandas
  * RF10, RF15 – Listar bandas públicas com filtro opcional: ?estilo=&cidade=
- *
- * Filtro por cidade: aplica sobre eventos contratados da banda
- * (cidade da comunidade organizadora) ou sobre a cidade da
- * comunidade mais próxima associada — como bandas não têm
- * cidade própria no perfil, o filtro busca bandas que já
- * tocaram/tocam em eventos na cidade informada.
  */
 const listar = async (req, res) => {
   const { estilo, cidade } = req.query;
+  const { pagina, limite, offset } = parsePaginacao(req.query);
 
   try {
-    let query = `
-      SELECT DISTINCT pb.usuario_id, pb.nome_artistico, pb.estilo_musical,
-             pb.descricao, pb.whatsapp, pb.cnpj_validado
-      FROM perfis_bandas pb
-      JOIN usuarios u ON u.id = pb.usuario_id
-      WHERE 1=1
-    `;
+    let where = 'WHERE 1=1';
     const params = [];
     let i = 1;
 
     if (estilo) {
-      query += ` AND LOWER(pb.estilo_musical) LIKE LOWER($${i++})`;
+      where += ` AND LOWER(pb.estilo_musical) LIKE LOWER($${i++})`;
       params.push(`%${estilo}%`);
     }
 
-    // Filtro de cidade: bandas com contratos em eventos de comunidades nessa cidade
     if (cidade) {
-      query += `
+      where += `
         AND pb.usuario_id IN (
           SELECT c.banda_id
           FROM contratos c
           JOIN eventos e ON e.id = c.evento_id
           JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
-          WHERE LOWER(pc.cidade) LIKE LOWER($${i++})
+          WHERE c.status_aceite = 'aceito'
+            AND e.status = 'agendado'
+            AND LOWER(pc.cidade) LIKE LOWER($${i++})
         )
       `;
       params.push(`%${cidade}%`);
     }
 
-    query += ' ORDER BY pb.nome_artistico ASC';
+    const countRes = await pool.query(
+      `SELECT COUNT(DISTINCT pb.usuario_id)::int AS total
+       FROM perfis_bandas pb
+       JOIN usuarios u ON u.id = pb.usuario_id
+       ${where}`,
+      params
+    );
+    const total = countRes.rows[0].total;
 
-    const { rows } = await pool.query(query, params);
-    return res.json(rows);
+    const { rows } = await pool.query(
+      `SELECT DISTINCT pb.usuario_id, pb.nome_artistico, pb.estilo_musical,
+             pb.descricao, pb.whatsapp, pb.cnpj_validado
+       FROM perfis_bandas pb
+       JOIN usuarios u ON u.id = pb.usuario_id
+       ${where}
+       ORDER BY pb.nome_artistico ASC
+       LIMIT $${i++} OFFSET $${i++}`,
+      [...params, limite, offset]
+    );
+
+    return res.json(respostaPaginada(rows, pagina, limite, total));
 
   } catch (err) {
     console.error('Erro ao listar bandas:', err.message);
@@ -74,7 +82,6 @@ const buscarPorId = async (req, res) => {
       return res.status(404).json({ error: 'Banda não encontrada' });
     }
 
-    // Eventos futuros contratados (aceitos)
     const eventosRes = await pool.query(
       `SELECT e.id, e.titulo, e.data_inicio, e.data_fim,
               e.local_nome, pc.nome_entidade AS comunidade,
@@ -90,7 +97,6 @@ const buscarPorId = async (req, res) => {
       [id]
     );
 
-    // Mídias da banda
     const midiasRes = await pool.query(
       `SELECT id, tipo, url, titulo, ordem
        FROM perfil_midias
@@ -147,9 +153,16 @@ const atualizarPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
   const { nome_artistico, estilo_musical, descricao, whatsapp, video_url } = req.body;
 
-  // Validação de video_url se fornecida
-  if (video_url && !/^https?:\/\//.test(video_url)) {
-    return res.status(400).json({ error: 'video_url deve começar com http:// ou https://' });
+  if (whatsapp && !whatsappValido(whatsapp)) {
+    return res.status(400).json({
+      error: 'WhatsApp inválido. Use 10 a 15 dígitos (ex.: 5547999999999)',
+    });
+  }
+
+  if (video_url && !urlHttpValida(video_url)) {
+    return res.status(400).json({
+      error: 'video_url deve ser uma URL http(s) válida com domínio completo',
+    });
   }
 
   try {

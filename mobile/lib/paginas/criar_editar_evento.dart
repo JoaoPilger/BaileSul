@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../services/sessao_usuario.dart';
+import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
 class CriarEditarEventoPage extends StatefulWidget {
-	const CriarEditarEventoPage({super.key});
+	const CriarEditarEventoPage({super.key, this.isComunidade = false});
+
+	final bool isComunidade;
 
 	@override
 	State<CriarEditarEventoPage> createState() => _CriarEditarEventoPageState();
@@ -16,59 +20,12 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 	final List<String> _vendedores = <String>['Banda Beta', 'Dj Aurora'];
 
 	void _showMenu() {
-		showModalBottomSheet<void>(
-			context: context,
-			backgroundColor: BaileSulColors.dark,
-			shape: const RoundedRectangleBorder(
-				borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+		MobileAppMenu.show(
+			context,
+			entries: MobileAppMenu.entries(
+				context,
+				onEventos: () => Navigator.pop(context),
 			),
-			builder: (BuildContext sheetContext) {
-				return SafeArea(
-					top: false,
-					child: Column(
-						mainAxisSize: MainAxisSize.min,
-						children: [
-							const SizedBox(height: 10),
-							Container(
-								width: 40,
-								height: 4,
-								decoration: BoxDecoration(
-									color: Colors.white.withValues(alpha: 0.25),
-									borderRadius: BorderRadius.circular(2),
-								),
-							),
-							const SizedBox(height: 16),
-							_MenuTile(
-								icon: Icons.event_rounded,
-								label: 'Eventos',
-								onTap: () {
-									Navigator.pop(sheetContext);
-									Navigator.pop(context);
-								},
-							),
-							_MenuTile(
-								icon: Icons.map_rounded,
-								label: 'Mapa',
-								onTap: () => Navigator.pop(sheetContext),
-							),
-							_MenuTile(
-								icon: Icons.add_box_rounded,
-								label: 'Criar Evento',
-								onTap: () => Navigator.pop(sheetContext),
-							),
-							_MenuTile(
-								icon: Icons.login_rounded,
-								label: 'Login',
-								onTap: () {
-									Navigator.pop(sheetContext);
-									Navigator.pushNamed(context, '/login');
-								},
-							),
-							const SizedBox(height: 12),
-						],
-					),
-				);
-			},
 		);
 	}
 
@@ -90,6 +47,25 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 
 	@override
 	Widget build(BuildContext context) {
+		if (!SessaoUsuario.instance.podeCriarEvento) {
+			return Scaffold(
+				backgroundColor: BaileSulColors.pageBackground,
+				body: Center(
+					child: Text(
+						widget.isComunidade
+							? 'Apenas contas Comunidade podem criar eventos.'
+							: 'Apenas contas Banda podem criar eventos.',
+						textAlign: TextAlign.center,
+						style: const TextStyle(
+							color: BaileSulColors.headerText,
+							fontSize: 15,
+							fontWeight: FontWeight.w500,
+						),
+					),
+				),
+			);
+		}
+
 		return Scaffold(
 			backgroundColor: BaileSulColors.pageBackground,
 			body: Column(
@@ -615,32 +591,4 @@ class _MapGridPainter extends CustomPainter {
 
 	@override
 	bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _MenuTile extends StatelessWidget {
-	const _MenuTile({
-		required this.icon,
-		required this.label,
-		required this.onTap,
-	});
-
-	final IconData icon;
-	final String label;
-	final VoidCallback onTap;
-
-	@override
-	Widget build(BuildContext context) {
-		return ListTile(
-			leading: Icon(icon, color: BaileSulColors.accentLight, size: 22),
-			title: Text(
-				label,
-				style: const TextStyle(
-					color: Colors.white,
-					fontWeight: FontWeight.w500,
-					fontSize: 15,
-				),
-			),
-			onTap: onTap,
-		);
-	}
 }

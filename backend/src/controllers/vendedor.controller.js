@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { whatsappValido } = require('../utils/validators');
 
 /**
  * GET /api/vendedores
@@ -41,6 +42,12 @@ const adicionar = async (req, res) => {
 
   if (!nome || !whatsapp) {
     return res.status(400).json({ error: 'Campos obrigatórios: nome, whatsapp' });
+  }
+
+  if (!whatsappValido(whatsapp)) {
+    return res.status(400).json({
+      error: 'WhatsApp inválido. Use 10 a 15 dígitos (ex.: 5547999999999)',
+    });
   }
 
   try {

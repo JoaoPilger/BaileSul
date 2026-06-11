@@ -2,10 +2,21 @@
 
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/home.dart';
+import 'paginas/calendario.dart';
 import 'paginas/login.dart';
+import 'paginas/configuracoes.dart';
+import 'paginas/meusEventos_bandas.dart';
+import 'paginas/meusEventos_comunidade.dart';
+import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'paginas/pesquisa_padrao_eventos.dart';
+import 'models/tipo_conta.dart';
+import 'navigation/app_navigator.dart';
+import 'services/sessao_usuario.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SessaoUsuario.instance.restaurar();
   runApp(const MyApp());
 }
 
@@ -15,6 +26,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       title: 'BaileSul',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -26,7 +38,26 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
       routes: {
+        '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
+        '/pesquisa-padrao': (_) => const PesquisaPadraoEventos(),
+        '/calendario': (_) => const CalendarioPage(),
         '/login': (_) => const LoginScreen(),
+        '/meus-ingressos': (_) => const MeusIngressosPage(),
+        '/meus-eventos': (context) {
+          final TipoConta? tipo = SessaoUsuario.instance.tipoConta;
+          if (tipo == TipoConta.banda) {
+            return const MeusEventosBandasPage();
+          }
+          return const Scaffold(
+            body: Center(
+              child: Text('Apenas contas de banda podem acessar esta página.'),
+            ),
+          );
+        },
+        '/meus-eventos-bandas': (_) => const MeusEventosBandasPage(),
+        // Exibição temporária de exemplo: passar `comunidadeId` para pré-visualizar a tela
+        '/meus-eventos-comunidade': (_) => const MeusEventosComunidadePage(),
+        '/configuracoes': (_) => const ConfiguracoesPage(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
         '/evento': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;

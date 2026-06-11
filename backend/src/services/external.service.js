@@ -15,11 +15,10 @@
  * @returns {Promise<{valido: boolean, razao_social: string|null, situacao: string|null}>}
  */
 const validarCNPJ = async (cnpj) => {
-  // Normaliza: remove pontos, barras e hífens
   const digits = cnpj.replace(/\D/g, '');
 
   if (digits.length !== 14) {
-    return { valido: false, razao_social: null, situacao: null };
+    return { valido: false, apiDisponivel: true, razao_social: null, situacao: null };
   }
 
   try {
@@ -29,23 +28,24 @@ const validarCNPJ = async (cnpj) => {
     });
 
     if (!res.ok) {
-      // CNPJ não encontrado ou erro na API — trata como inválido
-      return { valido: false, razao_social: null, situacao: null };
+      // 404 = CNPJ não existe; demais erros = API indisponível
+      const apiDisponivel = res.status === 404;
+      return { valido: false, apiDisponivel, razao_social: null, situacao: null };
     }
 
     const data = await res.json();
-
-    // open.cnpja.com retorna status.id = 'ATIVA' quando ativo
-    const situacao = data?.status?.id ?? null;
+    const statusId = data?.status?.id;
+    const statusText = (data?.status?.text || '').toLowerCase();
     const razao_social = data?.company?.name ?? null;
-    const valido = situacao === 'ATIVA';
+    const valido =
+      statusId === 2 ||
+      statusId === 'ATIVA' ||
+      statusText === 'ativa';
 
-    return { valido, razao_social, situacao };
+    return { valido, apiDisponivel: true, razao_social, situacao: statusId ?? null };
   } catch (err) {
     console.error('[CNPJ] Erro ao consultar API:', err.message);
-    // Em caso de falha na API externa, não bloqueia o cadastro;
-    // apenas registra como não validado (cnpj_validado = false).
-    return { valido: false, razao_social: null, situacao: null };
+    return { valido: false, apiDisponivel: false, razao_social: null, situacao: null };
   }
 };
 

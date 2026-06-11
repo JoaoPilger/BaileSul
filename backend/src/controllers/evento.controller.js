@@ -1,5 +1,7 @@
 const pool = require('../config/database');
 const { geocodificarEndereco, calcularDistanciaKm } = require('../services/external.service');
+const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
+const { urlHttpValida } = require('../utils/validators');
 
 // Status válidos para transição manual (comunidade não pode pular para 'finalizado' diretamente)
 const TRANSICOES_VALIDAS = {
@@ -16,37 +18,28 @@ const TRANSICOES_VALIDAS = {
  */
 const listar = async (req, res) => {
   const { data, banda, estilo, cidade, estado, lat, lng, raio_km } = req.query;
+  const { pagina, limite, offset } = parsePaginacao(req.query);
+  const filtroGeo = lat && lng && raio_km;
 
   try {
-    let query = `
-      SELECT
-        e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
-        e.local_nome, e.valor_ingresso, e.status, e.foto_capa_url,
-        e.latitude, e.longitude,
-        pc.nome_entidade AS comunidade_nome,
-        pc.cidade AS comunidade_cidade,
-        pc.estado AS comunidade_estado
-      FROM eventos e
-      JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
-      WHERE e.status = 'agendado'
-    `;
+    let where = `WHERE e.status = 'agendado'`;
     const params = [];
     let i = 1;
 
     if (data) {
-      query += ` AND e.data_inicio::date = $${i++}`;
+      where += ` AND e.data_inicio::date = $${i++}`;
       params.push(data);
     }
     if (cidade) {
-      query += ` AND LOWER(pc.cidade) LIKE LOWER($${i++})`;
+      where += ` AND LOWER(pc.cidade) LIKE LOWER($${i++})`;
       params.push(`%${cidade}%`);
     }
     if (estado) {
-      query += ` AND LOWER(pc.estado) = LOWER($${i++})`;
+      where += ` AND LOWER(pc.estado) = LOWER($${i++})`;
       params.push(estado);
     }
     if (estilo) {
-      query += ` AND e.id IN (
+      where += ` AND e.id IN (
         SELECT c.evento_id FROM contratos c
         JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
         WHERE LOWER(pb.estilo_musical) LIKE LOWER($${i++})
@@ -54,7 +47,7 @@ const listar = async (req, res) => {
       params.push(`%${estilo}%`);
     }
     if (banda) {
-      query += ` AND e.id IN (
+      where += ` AND e.id IN (
         SELECT c.evento_id FROM contratos c
         JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
         WHERE LOWER(pb.nome_artistico) LIKE LOWER($${i++})
@@ -62,28 +55,59 @@ const listar = async (req, res) => {
       params.push(`%${banda}%`);
     }
 
-    query += ' ORDER BY e.data_inicio ASC';
+    const baseFrom = `
+      FROM eventos e
+      JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
+    `;
 
-    const { rows } = await pool.query(query, params);
+    const selectCols = `
+      SELECT
+        e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
+        e.local_nome, e.valor_ingresso, e.status, e.foto_capa_url,
+        e.latitude, e.longitude,
+        pc.nome_entidade AS comunidade_nome,
+        pc.cidade AS comunidade_cidade,
+        pc.estado AS comunidade_estado
+    `;
 
-    // RF16 – Filtro por proximidade geográfica (client-side com geolib/Haversine)
-    // Filtramos após a query para não perder eventos sem coordenadas
-    if (lat && lng && raio_km) {
+    // Filtro geográfico é aplicado em memória; pagina depois
+    if (filtroGeo) {
+      const { rows } = await pool.query(
+        `${selectCols} ${baseFrom} ${where} ORDER BY e.data_inicio ASC`,
+        params
+      );
+
       const latNum = parseFloat(lat);
       const lngNum = parseFloat(lng);
       const raio = parseFloat(raio_km);
 
+      let filtrados = rows;
       if (!isNaN(latNum) && !isNaN(lngNum) && !isNaN(raio)) {
-        const filtrados = rows.filter((e) => {
-          if (!e.latitude || !e.longitude) return true; // inclui sem coords
-          const dist = calcularDistanciaKm(latNum, lngNum, e.latitude, e.longitude);
-          return dist <= raio;
+        filtrados = rows.filter((e) => {
+          if (!e.latitude || !e.longitude) return true;
+          return calcularDistanciaKm(latNum, lngNum, e.latitude, e.longitude) <= raio;
         });
-        return res.json(filtrados);
       }
+
+      const total = filtrados.length;
+      const paginados = filtrados.slice(offset, offset + limite);
+      return res.json(respostaPaginada(paginados, pagina, limite, total));
     }
 
-    return res.json(rows);
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total ${baseFrom} ${where}`,
+      params
+    );
+    const total = countRes.rows[0].total;
+
+    const { rows } = await pool.query(
+      `${selectCols} ${baseFrom} ${where}
+       ORDER BY e.data_inicio ASC
+       LIMIT $${i++} OFFSET $${i++}`,
+      [...params, limite, offset]
+    );
+
+    return res.json(respostaPaginada(rows, pagina, limite, total));
 
   } catch (err) {
     console.error('Erro ao listar eventos:', err.message);
@@ -177,8 +201,10 @@ const criar = async (req, res) => {
     return res.status(400).json({ error: 'data_fim não pode ser anterior a data_inicio' });
   }
 
-  if (foto_capa_url && !/^https?:\/\//.test(foto_capa_url)) {
-    return res.status(400).json({ error: 'foto_capa_url deve começar com http:// ou https://' });
+  if (foto_capa_url && !urlHttpValida(foto_capa_url)) {
+    return res.status(400).json({
+      error: 'foto_capa_url deve ser uma URL http(s) válida com domínio completo',
+    });
   }
 
   const comunidade_id = req.usuario.id;
@@ -191,7 +217,7 @@ const criar = async (req, res) => {
   try {
     await client.query('BEGIN');
 
-    // RF06 – Detectar sobreposição de datas na mesma cidade
+    // RF06 – Bloqueia criação se houver sobreposição de datas na mesma cidade
     const conflito = await client.query(
       `SELECT e.id, e.titulo, pc.cidade
        FROM eventos e
@@ -202,6 +228,14 @@ const criar = async (req, res) => {
          AND (e.data_inicio, e.data_fim) OVERLAPS ($2::date, $3::date)`,
       [comunidade_id, data_inicio, data_fim]
     );
+
+    if (conflito.rows.length > 0) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({
+        error: 'Conflito de datas com outro evento agendado na mesma cidade',
+        conflitos_de_data: conflito.rows,
+      });
+    }
 
     // INSERT evento
     const eventoRes = await client.query(
@@ -261,7 +295,6 @@ const criar = async (req, res) => {
     return res.status(201).json({
       message: 'Evento criado com sucesso',
       evento_id,
-      conflitos_de_data: conflito.rows,
     });
 
   } catch (err) {
@@ -294,10 +327,10 @@ const atualizar = async (req, res) => {
     const statusAtual = dono.rows[0].status;
     const {
       titulo, descricao, data_inicio, data_fim,
-      local_nome, local_endereco, valor_ingresso, foto_capa_url, status
+      local_nome, local_endereco, valor_ingresso, foto_capa_url, status,
+      dias,
     } = req.body;
 
-    // Validar transição de status
     if (status && status !== statusAtual) {
       const transicoesPermitidas = TRANSICOES_VALIDAS[statusAtual] || [];
       if (!transicoesPermitidas.includes(status)) {
@@ -307,40 +340,84 @@ const atualizar = async (req, res) => {
       }
     }
 
-    if (foto_capa_url && !/^https?:\/\//.test(foto_capa_url)) {
-      return res.status(400).json({ error: 'foto_capa_url deve começar com http:// ou https://' });
+    if (foto_capa_url && !urlHttpValida(foto_capa_url)) {
+      return res.status(400).json({
+        error: 'foto_capa_url deve ser uma URL http(s) válida com domínio completo',
+      });
     }
 
-    // Re-geocodificar apenas se endereço mudou E geocodificação retornar resultado
-    let coordsUpdate = '';
-    const coordParams = [];
-    if (local_endereco || local_nome) {
-      const endGeo = local_endereco || local_nome;
-      const coords = await geocodificarEndereco(endGeo + ', Brasil');
-      if (coords?.latitude && coords?.longitude) {
-        coordsUpdate = ', latitude = $13, longitude = $14';
-        coordParams.push(coords.latitude, coords.longitude);
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const params = [
+        titulo ?? null,
+        descricao ?? null,
+        data_inicio ?? null,
+        data_fim ?? null,
+        local_nome ?? null,
+        local_endereco ?? null,
+        valor_ingresso ?? null,
+        foto_capa_url ?? null,
+        status ?? null,
+      ];
+      let coordsUpdate = '';
+
+      if (local_endereco || local_nome) {
+        const endGeo = local_endereco || local_nome;
+        const coords = await geocodificarEndereco(endGeo + ', Brasil');
+        if (coords?.latitude && coords?.longitude) {
+          params.push(coords.latitude, coords.longitude);
+          coordsUpdate = `, latitude = $${params.length - 1}, longitude = $${params.length}`;
+        }
       }
+
+      params.push(id);
+      const whereIdx = params.length;
+
+      await client.query(
+        `UPDATE eventos SET
+           titulo         = COALESCE($1, titulo),
+           descricao      = COALESCE($2, descricao),
+           data_inicio    = COALESCE($3, data_inicio),
+           data_fim       = COALESCE($4, data_fim),
+           local_nome     = COALESCE($5, local_nome),
+           local_endereco = COALESCE($6, local_endereco),
+           valor_ingresso = COALESCE($7, valor_ingresso),
+           foto_capa_url  = COALESCE($8, foto_capa_url),
+           status         = COALESCE($9, status)
+           ${coordsUpdate}
+         WHERE id = $${whereIdx}`,
+        params
+      );
+
+      if (Array.isArray(dias)) {
+        await client.query('DELETE FROM evento_dias WHERE evento_id = $1', [id]);
+        for (const dia of dias) {
+          if (!dia.data || !dia.hora_inicio || !dia.hora_fim) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({
+              error: 'Cada dia deve ter: data, hora_inicio, hora_fim',
+            });
+          }
+          const data_fim_dia = dia.data_fim_dia || dia.data;
+          await client.query(
+            `INSERT INTO evento_dias (evento_id, data, data_fim_dia, hora_inicio, hora_fim, observacao)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [id, dia.data, data_fim_dia, dia.hora_inicio, dia.hora_fim, dia.observacao || null]
+          );
+        }
+      }
+
+      await client.query('COMMIT');
+      return res.json({ message: 'Evento atualizado com sucesso' });
+
+    } catch (err) {
+      await client.query('ROLLBACK');
+      throw err;
+    } finally {
+      client.release();
     }
-
-    await pool.query(
-      `UPDATE eventos SET
-         titulo         = COALESCE($1, titulo),
-         descricao      = COALESCE($2, descricao),
-         data_inicio    = COALESCE($3, data_inicio),
-         data_fim       = COALESCE($4, data_fim),
-         local_nome     = COALESCE($5, local_nome),
-         local_endereco = COALESCE($6, local_endereco),
-         valor_ingresso = COALESCE($7, valor_ingresso),
-         foto_capa_url  = COALESCE($8, foto_capa_url),
-         status         = COALESCE($9, status)
-         ${coordsUpdate}
-       WHERE id = $10`,
-      [titulo, descricao, data_inicio, data_fim, local_nome, local_endereco,
-       valor_ingresso, foto_capa_url, status, id, ...coordParams]
-    );
-
-    return res.json({ message: 'Evento atualizado com sucesso' });
 
   } catch (err) {
     console.error('Erro ao atualizar evento:', err.message);
@@ -436,8 +513,8 @@ const responderContrato = async (req, res) => {
 
     await client.query(
       `UPDATE contratos SET
-         status_aceite   = $1,
-         data_assinatura = CASE WHEN $1 = 'aceito' THEN NOW() ELSE NULL END
+         status_aceite   = $1::status_contrato,
+         data_assinatura = CASE WHEN $1::text = 'aceito' THEN NOW() ELSE NULL END
        WHERE id = $2`,
       [status_aceite, contrato_id]
     );

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { User, ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import HeaderCal from '../../components/header/HeaderCal'
+import FooterCal from '../../components/footer/FooterCal'
 import './calendario.css'
 
 const WEEKDAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
@@ -69,15 +71,6 @@ export default function Calendario() {
   const { usuario, isAuthenticated } = useAuth()
   const podeCriarEvento = !usuario?.tipo || usuario.tipo === 'comunidade' || usuario.tipo === 'banda'
   const contaLink = isAuthenticated ? '/perfil' : '/login'
-
-  const footerLinks = [
-    { to: '/eventos', label: 'Eventos' },
-    { to: '/calendario', label: 'Calendário' },
-    { to: '/mapa', label: 'Mapa' },
-    { to: '/meus-eventos', label: 'Meus Eventos' },
-    { to: '/criar-evento', label: 'Criar Evento' },
-    { to: contaLink, label: 'Perfil' },
-  ]
 
   const [view, setView] = useState({
     year: today.getFullYear(),
@@ -167,16 +160,7 @@ export default function Calendario() {
 
   return (
     <div className="cal-shell">
-      <header className="cal-header">
-        <div className="cal-header-inner">
-          <Link to="/" className="cal-logo-link" aria-label="BaileSul">
-            <img src="/imagens/BaileSul.png" alt="BaileSul" className="cal-logo-img" />
-          </Link>
-          <Link to={contaLink} className="cal-user-btn" aria-label={isAuthenticated ? 'Minha conta' : 'Entrar'}>
-            <User size={20} strokeWidth={1.8} />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="cal-main">
         <div className="cal-layout">
@@ -272,35 +256,7 @@ export default function Calendario() {
         </div>
       </main>
 
-      <footer className="cal-footer">
-        <div className="cal-footer-inner">
-          <div className="cal-footer-brand">
-            <Link to="/" aria-label="BaileSul">
-              <img src="/imagens/BaileSul.png" alt="BaileSul" className="cal-footer-logo" />
-            </Link>
-          </div>
-
-          <div className="cal-footer-copy-block">
-            <p className="cal-footer-copy">© BaileSul – Todos os direitos reservados.</p>
-          </div>
-
-          <nav className="cal-footer-nav-block" aria-label="Navegação do rodapé">
-            <h4 className="cal-footer-heading">Navegação</h4>
-            <div className="cal-footer-nav">
-              <div className="cal-footer-nav-col">
-                {footerLinks.slice(0, 3).map((item) => (
-                  <Link key={item.to} to={item.to}>{item.label}</Link>
-                ))}
-              </div>
-              <div className="cal-footer-nav-col">
-                {footerLinks.slice(3).map((item) => (
-                  <Link key={item.to} to={item.to}>{item.label}</Link>
-                ))}
-              </div>
-            </div>
-          </nav>
-        </div>
-      </footer>
+      <FooterCal />
     </div>
   )
 }

@@ -2,6 +2,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
 const { validarCNPJ, geocodificarEndereco } = require('../services/external.service');
+const { limparTokensExpirados } = require('../services/token.service');
+const { whatsappValido, cnpjFormatoValido } = require('../utils/validators');
 
 const inserirTokenAtivo = async (client, usuario_id, token) => {
   const decoded = jwt.decode(token);
@@ -64,13 +66,28 @@ const register = async (req, res) => {
     return res.status(400).json({ error: 'CNPJ obrigatório para banda e comunidade' });
   }
 
+  if ((tipo === 'banda' || tipo === 'comunidade') && !cnpjFormatoValido(perfil.cnpj)) {
+    return res.status(400).json({ error: 'CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX' });
+  }
+
+  if (perfil.whatsapp && !whatsappValido(perfil.whatsapp)) {
+    return res.status(400).json({
+      error: 'WhatsApp inválido. Use 10 a 15 dígitos (ex.: 5547999999999)',
+    });
+  }
+
   // --- Validação OpenCNPJ (assíncrona, antes da transação) ---
   let cnpjValidado = false;
   if (tipo === 'banda' || tipo === 'comunidade') {
     const resultado = await validarCNPJ(perfil.cnpj);
     cnpjValidado = resultado.valido;
-    // Não bloqueamos o cadastro se a API externa falhar,
-    // mas registramos o status de validação.
+
+    // Bloqueia quando a API respondeu e o CNPJ é inválido/inativo
+    if (resultado.apiDisponivel && !resultado.valido) {
+      return res.status(400).json({
+        error: 'CNPJ inválido ou inativo na Receita Federal',
+      });
+    }
   }
 
   const client = await pool.connect();
@@ -280,6 +297,9 @@ const logout = async (req, res) => {
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Token não encontrado ou já revogado' });
     }
+
+    // Limpeza assíncrona de tokens expirados/revogados antigos
+    limparTokensExpirados().catch(() => {});
 
     return res.json({ message: 'Logout realizado com sucesso' });
   } catch (err) {

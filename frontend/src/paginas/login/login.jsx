@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import HeaderCal from '../../components/header/HeaderCal'
 import './login.css'
 
 export default function Login() {
@@ -33,19 +34,7 @@ export default function Login() {
 
   return (
     <>
-      <header className="header">
-        <div className="header-inner">
-          <Link to="/login" className="logo-area" aria-label="BaileSul — início">
-            <img
-              src="/imagens/BaileSul.png"
-              alt=""
-              className="header-logo"
-              decoding="sync"
-              fetchPriority="high"
-            />
-          </Link>
-        </div>
-      </header>
+      <HeaderCal />
 
       <main className="login-page">
         <div className="login-card">

@@ -1,0 +1,20 @@
+import { Calendar, MapPin, Music, ListMusic, Ticket } from 'lucide-react';
+
+export function getNavConfig(tipo) {
+  const base = [
+    { to: '/',        label: 'Início',  icon: Music },
+    { to: '/eventos', label: 'Eventos', icon: Calendar },
+    { to: '/mapa',    label: 'Mapa',    icon: MapPin },
+  ];
+
+  if (tipo === 'pessoal') {
+    base.push({ to: '/meus-ingressos', label: 'Meus Ingressos', icon: Ticket });
+  } else {
+    base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
+  }
+
+  return {
+    links: base,
+    podeCriarEvento: !tipo || tipo === 'comunidade',
+  };
+}

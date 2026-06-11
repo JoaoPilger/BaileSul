@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/sessao_usuario.dart';
+import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 
@@ -138,137 +140,73 @@ class _HomePageState extends State<HomePage> {
   ];
 
   void _showMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: BaileSulColors.dark,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
-      ),
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          top: false,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    MobileAppMenu.show(
+      context,
+      entries: MobileAppMenu.entries(context),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: SessaoUsuario.instance,
+      builder: (BuildContext context, Widget? child) {
+        return Scaffold(
+          backgroundColor: BaileSulColors.dark,
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 10),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.25),
-                  borderRadius: BorderRadius.circular(2),
+              MobileHeader(
+                logoHeight: 58,
+                horizontalPadding: 16,
+                onMenuPressed: _showMenu,
+              ),
+              Expanded(
+                child: CustomScrollView(
+                  key: const Key('home_scroll'),
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  slivers: [
+                    const SliverToBoxAdapter(child: _HeroBlock()),
+                    SliverToBoxAdapter(
+                      child: _UpcomingEventsSection(events: _events),
+                    ),
+                    SliverToBoxAdapter(
+                      child: _StylesSection(styles: _styles),
+                    ),
+                    SliverToBoxAdapter(
+                      child: MobileFooter(
+                        logoHeight: 52,
+                        horizontalPadding: 24,
+                        navLinks: [
+                          FooterNavLink(
+                            label: 'Calendário',
+                            onTap: () => Navigator.pushNamed(context, '/calendario'),
+                          ),
+                          FooterNavLink(
+                            label: SessaoUsuario.instance.autenticado
+                                ? 'Sair'
+                                : 'Login',
+                            onTap: () {
+                              if (SessaoUsuario.instance.autenticado) {
+                                SessaoUsuario.instance.encerrarSessao();
+                              } else {
+                                Navigator.pushNamed(context, '/login');
+                              }
+                            },
+                          ),
+                          const FooterNavLink(label: 'Contato'),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 16),
-              _MenuTile(
-                icon: Icons.event_rounded,
-                label: 'Eventos',
-                onTap: () => Navigator.pop(sheetContext),
-              ),
-              _MenuTile(
-                icon: Icons.map_rounded,
-                label: 'Mapa',
-                onTap: () => Navigator.pop(sheetContext),
-              ),
-              _MenuTile(
-                icon: Icons.add_box_rounded,
-                label: 'Criar Evento',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.pushNamed(context, '/criar-evento');
-                },
-              ),
-              _MenuTile(
-                icon: Icons.login_rounded,
-                label: 'Login',
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.pushNamed(context, '/login');
-                },
-              ),
-              const SizedBox(height: 12),
             ],
           ),
         );
       },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: BaileSulColors.dark,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          MobileHeader(
-            logoHeight: 58,
-            horizontalPadding: 16,
-            onMenuPressed: _showMenu,
-          ),
-          Expanded(
-            child: CustomScrollView(
-              key: const Key('home_scroll'),
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              slivers: [
-                const SliverToBoxAdapter(child: _HeroBlock()),
-                SliverToBoxAdapter(
-                  child: _UpcomingEventsSection(events: _events),
-                ),
-                SliverToBoxAdapter(
-                  child: _StylesSection(styles: _styles),
-                ),
-                SliverToBoxAdapter(
-                  child: MobileFooter(
-                    logoHeight: 52,
-                    horizontalPadding: 24,
-                    navLinks: [
-                      const FooterNavLink(label: 'Legal'),
-                      FooterNavLink(
-                        label: 'Login',
-                        onTap: () => Navigator.pushNamed(context, '/login'),
-                      ),
-                      const FooterNavLink(label: 'Contato'),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MenuTile extends StatelessWidget {
-  const _MenuTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: BaileSulColors.accentLight, size: 22),
-      title: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-          fontSize: 15,
-        ),
-      ),
-      onTap: onTap,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
     );
   }
 }
@@ -559,7 +497,7 @@ class _UpcomingEventsSection extends StatelessWidget {
           _PrimaryOutlineButton(
             label: 'Ver todos os eventos',
             icon: Icons.keyboard_arrow_down_rounded,
-            onPressed: () {},
+            onPressed: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
           ),
         ],
       ),

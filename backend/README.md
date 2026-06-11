@@ -67,10 +67,17 @@ backend/
     ├── routes/               # Definição de rotas HTTP
     ├── controllers/          # Lógica de negócio + SQL
     ├── services/
-    │   └── external.service.js  # CNPJ + geocodificação
+    │   ├── external.service.js  # CNPJ + geocodificação
+    │   └── token.service.js       # Limpeza de auth_tokens
+    ├── utils/
+    │   ├── validators.js          # WhatsApp, URL, CNPJ
+    │   └── pagination.js
     ├── models/
     │   └── schema.sql        # DDL PostgreSQL v5
-    └── tests.http            # Exemplos REST Client (opcional)
+    ├── documentacao.md       # Referência completa da API
+    ├── tests.http            # Exemplos REST Client (opcional)
+    └── scripts/
+        └── test-routes.js    # Teste integrado de rotas
 ```
 
 **Padrão arquitetural:** rotas → controllers → queries parametrizadas (sem ORM).
@@ -146,6 +153,7 @@ Se faltar alguma variável obrigatória, a aplicação encerra na inicializaçã
 
 ```
 usuarios (pessoal | banda | comunidade)
+    ├── auth_tokens              # JWT persistidos + revogação
     ├── perfis_pessoais
     ├── perfis_bandas
     └── perfis_comunidades
@@ -240,13 +248,15 @@ O middleware `autorizar('comunidade', 'pessoal')` restringe por `req.usuario.tip
 | Medida | Implementação |
 |--------|----------------|
 | Senhas | bcrypt (cost 10); mínimo 8 caracteres, letra + número |
-| JWT | `JWT_SECRET` obrigatório; expiração configurável |
-| CORS | Origens em `CLIENT_URL`; se vazio, browser bloqueado |
+| JWT | Persistido em `auth_tokens`; revogado via logout; validado a cada request |
+| Limpeza tokens | Expirados + revogados >30 dias (boot, 6h, pós-logout) |
+| CORS | Origens em `CLIENT_URL`; localhost permitido em dev |
 | Headers | `helmet()` |
 | Body | `express.json({ limit: '1mb' })` |
 | Rate limit | Global: 120 req/min; auth: 20/15 min; reserva: 10/min |
-| Erros 500 | Mensagem genérica ao cliente (sem vazar `err.message`) |
-| SQL | Queries parametrizadas (`$1`, `$2`, …) |
+| Validações | WhatsApp (10–15 dígitos), URLs com domínio, CNPJ via OpenCNPJ |
+| Erros 500 | Mensagem genérica ao cliente |
+| SQL | Queries parametrizadas |
 | Shutdown | `SIGTERM` / `SIGINT` fecham servidor e pool |
 
 ---
@@ -257,7 +267,7 @@ Arquivo: `src/services/external.service.js`
 
 | Serviço | Função | Comportamento |
 |---------|--------|---------------|
-| [OpenCNPJ](https://open.cnpja.com) | `validarCNPJ` | Valida CNPJ no cadastro de banda/comunidade; grava `cnpj_validado`. Falha da API **não bloqueia** o cadastro |
+| [OpenCNPJ](https://open.cnpja.com) | `validarCNPJ` | Ativo quando `status.id = 2` ou `"Ativa"`. Bloqueia cadastro se inválido quando API responde; falha de rede permite com `cnpj_validado: false` |
 | [Nominatim](https://nominatim.openstreetmap.org) | `geocodificarEndereco` | Latitude/longitude para comunidades e eventos |
 | Haversine (local) | `calcularDistanciaKm` | Filtro `lat`, `lng`, `raio_km` em listagem de eventos |
 
@@ -269,7 +279,10 @@ Arquivo: `src/services/external.service.js`
 
 - IDs de **banda** e **comunidade** = `usuario_id` da tabela `usuarios`.
 - IDs de **evento**, **contrato**, **vendedor**, **reserva** = chaves próprias das tabelas.
-- Campos omitidos em `PUT`/`PATCH` com `COALESCE` não são apagados (permanecem os valores atuais).
+- Campos omitidos em `PUT`/`PATCH` com `COALESCE` não são apagados.
+- Listagens públicas retornam `{ dados, paginacao }` com `?pagina=1&limite=20` (máx. 100).
+
+> Referência detalhada: [`src/documentacao.md`](src/documentacao.md)
 
 ---
 
@@ -344,7 +357,10 @@ Cadastro (RF01). Rate limit: 20 req / 15 min.
 ```json
 {
   "message": "Usuário cadastrado com sucesso",
+  "token": "<jwt>",
+  "tipo": "comunidade",
   "usuario_id": 1,
+  "email": "user@email.com",
   "cnpj_validado": true
 }
 ```
@@ -379,6 +395,7 @@ Público. Lista eventos com `status = agendado` (RF14, RF16).
 | `estilo` | Estilo musical de banda contratada |
 | `banda` | Nome artístico da banda |
 | `lat`, `lng`, `raio_km` | Filtro por proximidade (Haversine) |
+| `pagina`, `limite` | Paginação (padrão 20, máx. 100) |
 
 ---
 
@@ -422,31 +439,23 @@ Auth: `comunidade`. Cria evento (RF07).
 }
 ```
 
-**Resposta `201`:** inclui `conflitos_de_data` (RF06 — aviso de overlap na mesma cidade, não bloqueia criação).
+**Resposta `201`:** `{ "message", "evento_id" }`
+
+**Erro `409`:** conflito de datas na mesma cidade (RF06 **bloqueia** criação).
 
 ---
 
 #### `PUT /api/eventos/:id`
 
-Auth: `comunidade` (somente dona). Atualização parcial.
+Auth: `comunidade` (somente dona). Atualização parcial. Se `dias` for enviado, substitui todos os dias do evento.
 
-**Status:** transições permitidas de `agendado` → `cancelado` apenas. `finalizado` não é setável manualmente por esta rota.
+**Status:** transições permitidas de `agendado` → `cancelado` apenas.
 
 ---
 
 #### `DELETE /api/eventos/:id`
 
 Auth: `comunidade` (somente dona). Soft delete: `status = cancelado`.
-
----
-
-#### `POST /api/eventos/:id/reserva`
-
-Auth: `pessoal`. Cria reserva de ingresso (RF11). Rate limit: 10/min.
-
-**Body:** `{ "quantidade": 2 }` (máx. 10; 1 reserva ativa por usuário/evento)
-
-**Resposta `201`:** `reserva_id`, dados do vendedor e `whatsapp_link` (wa.me).
 
 ---
 
@@ -464,7 +473,7 @@ Registra log em `logs_status_contratos`.
 
 #### `GET /api/bandas`
 
-Público (RF10, RF15). Query: `estilo`, `cidade` (bandas com contratos em eventos da cidade).
+Público (RF10, RF15). Query: `estilo`, `cidade` (contratos **aceitos** em eventos agendados), `pagina`, `limite`.
 
 ---
 
@@ -562,6 +571,14 @@ Atualiza `status_pagamento` para `confirmado` e grava log.
 
 ### Reservas — `/api/reservas`
 
+#### `POST /api/reservas/eventos/:evento_id`
+
+Auth: `pessoal`. Cria reserva (RF11). Rate limit: 10/min.
+
+**Body:** `{ "quantidade": 2 }` (máx. 10; 1 reserva ativa por usuário/evento)
+
+**Resposta `201`:** `reserva_id`, vendedor e `whatsapp_link`.
+
 #### `GET /api/reservas/minhas`
 
 Auth: `pessoal`. Lista reservas do comprador autenticado (RF11).
@@ -600,7 +617,7 @@ Respostas de erro seguem o formato:
 
 **Fluxo reserva → pagamento:**
 
-1. Pessoal reserva em `POST /api/eventos/:id/reserva`.
+1. Pessoal reserva em `POST /api/reservas/eventos/:evento_id`.
 2. Sistema atribui vendedor (round-robin por menor fila de pendentes).
 3. Comprador contata via WhatsApp.
 4. Comunidade ou vendedor vinculado confirma em `PATCH /api/vendedores/reservas/:id/confirmar`.
@@ -616,11 +633,11 @@ Respostas de erro seguem o formato:
 | RF03 | Logout JWT | `POST /api/auth/logout`, `POST /api/auth/logout/:id` |
 | RF04 | CNPJ banda/comunidade | Validação OpenCNPJ no register |
 | RF05 | RBAC por tipo | Middleware `autorizar` |
-| RF06 | Calendário / conflito de datas | `GET /calendario`, aviso em `POST /eventos` |
+| RF06 | Calendário / conflito de datas | `GET /calendario`, bloqueio em `POST /eventos` (`409`) |
 | RF07 | CRUD eventos | `POST`, `PUT`, `DELETE /api/eventos/:id` |
 | RF08 | Gestão vendedores | `/api/vendedores` |
 | RF10 | Listagem bandas | `GET /api/bandas` |
-| RF11 | Reservas | `POST .../reserva`, `GET /api/reservas/minhas` |
+| RF11 | Reservas | `POST /api/reservas/eventos/:id`, `GET /api/reservas/minhas` |
 | RF12 / RF20 | Vitrine perfil | `PUT .../me/perfil` (banda, comunidade) |
 | RF13 | Confirmar pagamento | `PATCH .../confirmar` |
 | RF14 / RF16 / RF17 | Busca e detalhe eventos | `GET /api/eventos` |
@@ -635,7 +652,7 @@ Respostas de erro seguem o formato:
 - **Status `finalizado`:** não há endpoint documentado para marcar evento como finalizado.
 - **Contratos:** criação na criação do evento; resposta via `PATCH` da banda; sem listagem dedicada de contratos pendentes.
 - **Cancelamento de reserva:** não implementado (`status_pagamento = cancelado`).
-- **Testes automatizados:** não incluídos no pacote atual.
+- **Testes automatizados:** `node scripts/test-routes.js` (33 cenários; requer servidor ativo).
 - **Pagamento online:** fluxo manual via WhatsApp; sem gateway de pagamento.
 
 ---
@@ -664,4 +681,6 @@ curl -s -X POST http://localhost:3000/api/eventos \
 
 - Schema: sempre alinhar `src/models/schema.sql` com o banco antes de deploy.
 - Em produção: definir `NODE_ENV=production`, `JWT_SECRET` forte, `CLIENT_URL` explícito e HTTPS no proxy reverso.
-- Arquivo `src/tests.http` pode ser usado com a extensão **REST Client** do VS Code para testes manuais.
+- Arquivo `src/documentacao.md` — referência completa da API.
+- Arquivo `src/tests.http` — testes manuais com REST Client (VS Code).
+- `node scripts/test-routes.js` — teste integrado automatizado.

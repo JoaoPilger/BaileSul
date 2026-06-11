@@ -1,5 +1,7 @@
 const pool = require('../config/database');
 const { geocodificarEndereco } = require('../services/external.service');
+const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
+const { whatsappValido } = require('../utils/validators');
 
 /**
  * GET /api/comunidades
@@ -7,31 +9,40 @@ const { geocodificarEndereco } = require('../services/external.service');
  */
 const listar = async (req, res) => {
   const { cidade, estado } = req.query;
+  const { pagina, limite, offset } = parsePaginacao(req.query);
 
   try {
-    let query = `
-      SELECT pc.usuario_id, pc.nome_entidade, pc.descricao,
-             pc.whatsapp, pc.cidade, pc.estado, pc.endereco,
-             pc.latitude, pc.longitude, pc.cnpj_validado
-      FROM perfis_comunidades pc
-      WHERE 1=1
-    `;
+    let where = 'WHERE 1=1';
     const params = [];
     let i = 1;
 
     if (cidade) {
-      query += ` AND LOWER(pc.cidade) LIKE LOWER($${i++})`;
+      where += ` AND LOWER(pc.cidade) LIKE LOWER($${i++})`;
       params.push(`%${cidade}%`);
     }
     if (estado) {
-      query += ` AND LOWER(pc.estado) = LOWER($${i++})`;
+      where += ` AND LOWER(pc.estado) = LOWER($${i++})`;
       params.push(estado);
     }
 
-    query += ' ORDER BY pc.nome_entidade ASC';
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM perfis_comunidades pc ${where}`,
+      params
+    );
+    const total = countRes.rows[0].total;
 
-    const { rows } = await pool.query(query, params);
-    return res.json(rows);
+    const { rows } = await pool.query(
+      `SELECT pc.usuario_id, pc.nome_entidade, pc.descricao,
+              pc.whatsapp, pc.cidade, pc.estado, pc.endereco,
+              pc.latitude, pc.longitude, pc.cnpj_validado
+       FROM perfis_comunidades pc
+       ${where}
+       ORDER BY pc.nome_entidade ASC
+       LIMIT $${i++} OFFSET $${i++}`,
+      [...params, limite, offset]
+    );
+
+    return res.json(respostaPaginada(rows, pagina, limite, total));
 
   } catch (err) {
     console.error('Erro ao listar comunidades:', err.message);
@@ -99,18 +110,34 @@ const atualizarPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
   const { nome_entidade, descricao, whatsapp, endereco, cidade, estado } = req.body;
 
+  if (whatsapp && !whatsappValido(whatsapp)) {
+    return res.status(400).json({
+      error: 'WhatsApp inválido. Use 10 a 15 dígitos (ex.: 5547999999999)',
+    });
+  }
+
   try {
-    // Re-geocodificar apenas se endereço ou cidade mudou E geocodificação retornar resultado
+    const params = [
+      nome_entidade || null,
+      descricao || null,
+      whatsapp || null,
+      endereco || null,
+      cidade || null,
+      estado || null,
+    ];
     let coordsUpdate = '';
-    const coordParams = [];
+
     if (endereco || cidade) {
       const endGeo = [endereco, cidade, estado, 'Brasil'].filter(Boolean).join(', ');
       const coords = await geocodificarEndereco(endGeo);
       if (coords?.latitude && coords?.longitude) {
-        coordsUpdate = ', latitude = $10, longitude = $11';
-        coordParams.push(coords.latitude, coords.longitude);
+        params.push(coords.latitude, coords.longitude);
+        coordsUpdate = `, latitude = $${params.length - 1}, longitude = $${params.length}`;
       }
     }
+
+    params.push(usuario_id);
+    const whereIdx = params.length;
 
     await pool.query(
       `UPDATE perfis_comunidades SET
@@ -121,10 +148,8 @@ const atualizarPerfil = async (req, res) => {
          cidade        = COALESCE($5, cidade),
          estado        = COALESCE($6, estado)
          ${coordsUpdate}
-       WHERE usuario_id = $7`,
-      [nome_entidade || null, descricao || null, whatsapp || null,
-       endereco || null, cidade || null, estado || null,
-       usuario_id, ...coordParams]
+       WHERE usuario_id = $${whereIdx}`,
+      params
     );
     return res.json({ message: 'Perfil atualizado com sucesso' });
 
