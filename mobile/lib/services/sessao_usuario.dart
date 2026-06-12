@@ -79,6 +79,28 @@ class SessaoUsuario extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> cadastrar({
+    required String email,
+    required String senha,
+    required TipoConta tipo,
+    required Map<String, dynamic> perfil,
+  }) async {
+    final LoginResultado resultado = await AuthService.register(
+      email: email,
+      senha: senha,
+      tipo: tipo,
+      perfil: perfil,
+    );
+
+    _token = resultado.token;
+    _usuarioId = resultado.usuarioId;
+    _email = resultado.email;
+    _tipoConta = resultado.tipo;
+
+    await _persistirSessao();
+    notifyListeners();
+  }
+
   /// Usado após cadastro local; o menu só libera recursos com [autenticado].
   Future<void> definirTipoConta(TipoConta tipo) async {
     if (!autenticado) {
