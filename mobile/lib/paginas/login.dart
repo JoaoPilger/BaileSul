@@ -1,7 +1,6 @@
-import 'dart:typed_data';
-
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/tipo_conta.dart';
@@ -26,16 +25,22 @@ bool _senhaValida(String senha) =>
 
 String _somenteDigitos(String value) => value.replaceAll(RegExp(r'\D'), '');
 
+String _somenteCaracteresCnpj(String value) =>
+    value.replaceAll(RegExp(r'[^0-9A-Za-z]'), '').toUpperCase();
+
 String _formatarCnpj(String value) {
-  final String digits = _somenteDigitos(value);
-  if (digits.length != 14) return value.trim();
-  return '${digits.substring(0, 2)}.${digits.substring(2, 5)}.'
-      '${digits.substring(5, 8)}/${digits.substring(8, 12)}-'
-      '${digits.substring(12, 14)}';
+  final String chars = _somenteCaracteresCnpj(value);
+  if (chars.length != 14) return value.trim().toUpperCase();
+  return '${chars.substring(0, 2)}.${chars.substring(2, 5)}.'
+      '${chars.substring(5, 8)}/${chars.substring(8, 12)}-'
+      '${chars.substring(12, 14)}';
 }
 
-bool _cnpjFormatoValido(String cnpj) =>
-    RegExp(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$').hasMatch(cnpj);
+bool _cnpjFormatoValido(String cnpj) => RegExp(
+      r'^[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}/[0-9A-Z]{4}-[0-9A-Z]{2}$',
+    ).hasMatch(cnpj.trim().toUpperCase());
+
+enum _RegistrationFieldMask { telefone, cpf, cnpj, cep }
 
 Widget _registrationErrorMessage(String? erro) {
   if (erro == null) return const SizedBox.shrink();
@@ -398,6 +403,7 @@ class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen>
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
+  final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
 
   bool _termosAceitos = false;
@@ -409,6 +415,7 @@ class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen>
     _nomeController.dispose();
     _emailController.dispose();
     _telefoneController.dispose();
+    _cpfController.dispose();
     _senhaController.dispose();
     super.dispose();
   }
@@ -421,11 +428,20 @@ class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen>
 
     final String nome = _nomeController.text.trim();
     final String email = _emailController.text.trim();
+    final String cpf = _somenteDigitos(_cpfController.text);
     final String senha = _senhaController.text;
 
-    if (nome.isEmpty || email.isEmpty || senha.isEmpty) {
+    if (nome.isEmpty || email.isEmpty || cpf.isEmpty || senha.isEmpty) {
       setState(() {
         _erro = 'Preencha todos os campos obrigatórios.';
+        _carregando = false;
+      });
+      return;
+    }
+
+    if (cpf.length != 11) {
+      setState(() {
+        _erro = 'Informe um CPF válido.';
         _carregando = false;
       });
       return;
@@ -499,7 +515,13 @@ class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen>
             _RegistrationField(
               label: 'Telefone*',
               controller: _telefoneController,
-              keyboardType: TextInputType.phone,
+              mask: _RegistrationFieldMask.telefone,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'CPF*',
+              controller: _cpfController,
+              mask: _RegistrationFieldMask.cpf,
             ),
             const SizedBox(height: 12),
             _RegistrationField(
@@ -604,7 +626,7 @@ class _CommunityRegistrationScreenState
 
     if (!_cnpjFormatoValido(cnpj)) {
       setState(() {
-        _erro = 'CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX.';
+        _erro = 'CNPJ deve estar no formato AA.AAA.AAA/AAAA-DV.';
         _carregando = false;
       });
       return;
@@ -686,7 +708,7 @@ class _CommunityRegistrationScreenState
                   child: _RegistrationField(
                     label: 'Telefone*',
                     controller: _telefoneController,
-                    keyboardType: TextInputType.phone,
+                    mask: _RegistrationFieldMask.telefone,
                   ),
                 ),
               ],
@@ -706,7 +728,7 @@ class _CommunityRegistrationScreenState
                   child: _RegistrationField(
                     label: 'CNPJ*',
                     controller: _cnpjController,
-                    keyboardType: TextInputType.number,
+                    mask: _RegistrationFieldMask.cnpj,
                   ),
                 ),
               ],
@@ -733,7 +755,7 @@ class _CommunityRegistrationScreenState
                   child: _RegistrationField(
                     label: 'CEP *',
                     controller: _cepController,
-                    keyboardType: TextInputType.number,
+                    mask: _RegistrationFieldMask.cep,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -854,7 +876,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
 
     if (!_cnpjFormatoValido(cnpj)) {
       setState(() {
-        _erro = 'CNPJ deve estar no formato XX.XXX.XXX/XXXX-XX.';
+        _erro = 'CNPJ deve estar no formato AA.AAA.AAA/AAAA-DV.';
         _carregando = false;
       });
       return;
@@ -931,7 +953,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
                   child: _RegistrationField(
                     label: 'Telefone*',
                     controller: _telefoneController,
-                    keyboardType: TextInputType.phone,
+                    mask: _RegistrationFieldMask.telefone,
                   ),
                 ),
               ],
@@ -951,7 +973,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
                   child: _RegistrationField(
                     label: 'CNPJ*',
                     controller: _cnpjController,
-                    keyboardType: TextInputType.number,
+                    mask: _RegistrationFieldMask.cnpj,
                   ),
                 ),
               ],
@@ -973,7 +995,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
                   child: _RegistrationField(
                     label: 'CEP *',
                     controller: _cepController,
-                    keyboardType: TextInputType.number,
+                    mask: _RegistrationFieldMask.cep,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1121,12 +1143,43 @@ class _RegistrationField extends StatelessWidget {
     this.controller,
     this.keyboardType,
     this.obscureText = false,
+    this.mask,
   });
 
   final String label;
   final TextEditingController? controller;
   final TextInputType? keyboardType;
   final bool obscureText;
+  final _RegistrationFieldMask? mask;
+
+  List<TextInputFormatter>? get _inputFormatters {
+    switch (mask) {
+      case _RegistrationFieldMask.telefone:
+        return const <TextInputFormatter>[_TelefoneTextInputFormatter()];
+      case _RegistrationFieldMask.cpf:
+        return const <TextInputFormatter>[_CpfTextInputFormatter()];
+      case _RegistrationFieldMask.cnpj:
+        return const <TextInputFormatter>[_CnpjTextInputFormatter()];
+      case _RegistrationFieldMask.cep:
+        return const <TextInputFormatter>[_CepTextInputFormatter()];
+      case null:
+        return null;
+    }
+  }
+
+  TextInputType? get _effectiveKeyboardType {
+    if (keyboardType != null) return keyboardType;
+    switch (mask) {
+      case _RegistrationFieldMask.telefone:
+      case _RegistrationFieldMask.cpf:
+      case _RegistrationFieldMask.cep:
+        return TextInputType.number;
+      case _RegistrationFieldMask.cnpj:
+        return TextInputType.text;
+      case null:
+        return null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1134,10 +1187,14 @@ class _RegistrationField extends StatelessWidget {
       height: 42,
       child: TextField(
         controller: controller,
-        keyboardType: keyboardType,
+        keyboardType: _effectiveKeyboardType,
+        inputFormatters: _inputFormatters,
         obscureText: obscureText,
         autocorrect: false,
         enableSuggestions: !obscureText,
+        textCapitalization: mask == _RegistrationFieldMask.cnpj
+            ? TextCapitalization.characters
+            : TextCapitalization.none,
         autofillHints: obscureText
             ? const <String>[AutofillHints.newPassword]
             : null,
@@ -1176,6 +1233,135 @@ class _RegistrationField extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TelefoneTextInputFormatter extends TextInputFormatter {
+  const _TelefoneTextInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String trimmed =
+        digits.length > 11 ? digits.substring(0, 11) : digits;
+
+    final StringBuffer result = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 0) {
+        result.write('(');
+      }
+      if (i == 2) {
+        result.write(') ');
+      }
+      if (i == 7) {
+        result.write('-');
+      }
+      result.write(trimmed[i]);
+    }
+
+    final String text = result.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _CpfTextInputFormatter extends TextInputFormatter {
+  const _CpfTextInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String trimmed =
+        digits.length > 11 ? digits.substring(0, 11) : digits;
+
+    final StringBuffer result = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 3 || i == 6) {
+        result.write('.');
+      }
+      if (i == 9) {
+        result.write('-');
+      }
+      result.write(trimmed[i]);
+    }
+
+    final String text = result.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _CnpjTextInputFormatter extends TextInputFormatter {
+  const _CnpjTextInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String chars = newValue.text
+        .replaceAll(RegExp(r'[^0-9A-Za-z]'), '')
+        .toUpperCase();
+    final String trimmed =
+        chars.length > 14 ? chars.substring(0, 14) : chars;
+
+    final StringBuffer result = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 2 || i == 5) {
+        result.write('.');
+      }
+      if (i == 8) {
+        result.write('/');
+      }
+      if (i == 12) {
+        result.write('-');
+      }
+      result.write(trimmed[i]);
+    }
+
+    final String text = result.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
+class _CepTextInputFormatter extends TextInputFormatter {
+  const _CepTextInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String trimmed =
+        digits.length > 8 ? digits.substring(0, 8) : digits;
+
+    final StringBuffer result = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 5) {
+        result.write('-');
+      }
+      result.write(trimmed[i]);
+    }
+
+    final String text = result.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
