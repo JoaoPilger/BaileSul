@@ -7,15 +7,13 @@ import '../models/tipo_conta.dart';
 import '../services/auth_service.dart';
 import '../services/sessao_usuario.dart';
 import '../navigation/app_navigator.dart';
+import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
 void _abrirMenu(BuildContext context) {
-  MobileAppMenu.show(
-    context,
-    entries: MobileAppMenu.entries(context),
-  );
+  MobileAppMenu.show(context, entries: MobileAppMenu.entries(context));
 }
 
 bool _senhaValida(String senha) =>
@@ -37,8 +35,8 @@ String _formatarCnpj(String value) {
 }
 
 bool _cnpjFormatoValido(String cnpj) => RegExp(
-      r'^[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}/[0-9A-Z]{4}-[0-9A-Z]{2}$',
-    ).hasMatch(cnpj.trim().toUpperCase());
+  r'^[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}/[0-9A-Z]{4}-[0-9A-Z]{2}$',
+).hasMatch(cnpj.trim().toUpperCase());
 
 enum _RegistrationFieldMask { telefone, cpf, cnpj, cep }
 
@@ -399,7 +397,8 @@ class PersonalRegistrationScreen extends StatefulWidget {
       _PersonalRegistrationScreenState();
 }
 
-class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen> {
+class _PersonalRegistrationScreenState
+    extends State<PersonalRegistrationScreen> {
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
@@ -475,9 +474,7 @@ class _PersonalRegistrationScreenState extends State<PersonalRegistrationScreen>
       if (!mounted) return;
 
       mostrarSnackBar('Cadastro realizado com sucesso.');
-      Navigator.of(context).popUntil(
-        (Route<dynamic> route) => route.isFirst,
-      );
+      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _erro = e.message);
@@ -579,6 +576,7 @@ class _CommunityRegistrationScreenState
 
   bool _termosAceitos = false;
   bool _carregando = false;
+  MapLocation? _localizacaoSelecionada;
   String? _erro;
 
   @override
@@ -649,8 +647,11 @@ class _CommunityRegistrationScreenState
       return;
     }
 
-    final String endereco =
-        <String>[rua, bairro, referencia].where((String s) => s.isNotEmpty).join(', ');
+    final String endereco = <String>[
+      rua,
+      bairro,
+      referencia,
+    ].where((String s) => s.isNotEmpty).join(', ');
 
     try {
       await SessaoUsuario.instance.cadastrar(
@@ -663,15 +664,17 @@ class _CommunityRegistrationScreenState
           'whatsapp': _somenteDigitos(telefone),
           'endereco': endereco.isNotEmpty ? endereco : rua,
           'cidade': cidade.isNotEmpty ? cidade : null,
+          if (_localizacaoSelecionada != null) ...<String, dynamic>{
+            'latitude': _localizacaoSelecionada!.latitude,
+            'longitude': _localizacaoSelecionada!.longitude,
+          },
         },
       );
 
       if (!mounted) return;
 
       mostrarSnackBar('Cadastro realizado com sucesso.');
-      Navigator.of(context).popUntil(
-        (Route<dynamic> route) => route.isFirst,
-      );
+      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _erro = e.message);
@@ -791,7 +794,13 @@ class _CommunityRegistrationScreenState
               controller: _referenciaController,
             ),
             const SizedBox(height: 12),
-            const _MapPreviewBox(height: 160),
+            MapLocationPicker(
+              height: 190,
+              selectedLocation: _localizacaoSelecionada,
+              onLocationChanged: (MapLocation location) {
+                setState(() => _localizacaoSelecionada = location);
+              },
+            ),
             const SizedBox(height: 8),
             _TermsRow(
               value: _termosAceitos,
@@ -914,9 +923,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
       if (!mounted) return;
 
       mostrarSnackBar('Cadastro realizado com sucesso.');
-      Navigator.of(context).popUntil(
-        (Route<dynamic> route) => route.isFirst,
-      );
+      Navigator.of(context).popUntil((Route<dynamic> route) => route.isFirst);
     } on AuthException catch (e) {
       if (!mounted) return;
       setState(() => _erro = e.message);
@@ -1073,19 +1080,19 @@ class _RegistrationScreenShell extends StatelessWidget {
               top: false,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
-                    horizontal: 22,
-                    vertical: 26,
+                  horizontal: 22,
+                  vertical: 26,
                 ),
                 child: Center(
                   child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 360),
+                    constraints: const BoxConstraints(maxWidth: 360),
                     child: DecoratedBox(
                       decoration: BoxDecoration(
                         color: BaileSulColors.cardBackground,
-                          borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Padding(
-                          padding: const EdgeInsets.fromLTRB(28, 34, 28, 28),
+                        padding: const EdgeInsets.fromLTRB(28, 34, 28, 28),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -1198,10 +1205,7 @@ class _RegistrationField extends StatelessWidget {
         autofillHints: obscureText
             ? const <String>[AutofillHints.newPassword]
             : null,
-        style: const TextStyle(
-          color: BaileSulColors.headerText,
-          fontSize: 14,
-        ),
+        style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
         cursorColor: BaileSulColors.headerText,
         decoration: InputDecoration(
           hintText: label,
@@ -1246,8 +1250,9 @@ class _TelefoneTextInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed =
-        digits.length > 11 ? digits.substring(0, 11) : digits;
+    final String trimmed = digits.length > 11
+        ? digits.substring(0, 11)
+        : digits;
 
     final StringBuffer result = StringBuffer();
     for (int i = 0; i < trimmed.length; i++) {
@@ -1280,8 +1285,9 @@ class _CpfTextInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed =
-        digits.length > 11 ? digits.substring(0, 11) : digits;
+    final String trimmed = digits.length > 11
+        ? digits.substring(0, 11)
+        : digits;
 
     final StringBuffer result = StringBuffer();
     for (int i = 0; i < trimmed.length; i++) {
@@ -1313,8 +1319,7 @@ class _CnpjTextInputFormatter extends TextInputFormatter {
     final String chars = newValue.text
         .replaceAll(RegExp(r'[^0-9A-Za-z]'), '')
         .toUpperCase();
-    final String trimmed =
-        chars.length > 14 ? chars.substring(0, 14) : chars;
+    final String trimmed = chars.length > 14 ? chars.substring(0, 14) : chars;
 
     final StringBuffer result = StringBuffer();
     for (int i = 0; i < trimmed.length; i++) {
@@ -1347,8 +1352,7 @@ class _CepTextInputFormatter extends TextInputFormatter {
     TextEditingValue newValue,
   ) {
     final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed =
-        digits.length > 8 ? digits.substring(0, 8) : digits;
+    final String trimmed = digits.length > 8 ? digits.substring(0, 8) : digits;
 
     final StringBuffer result = StringBuffer();
     for (int i = 0; i < trimmed.length; i++) {
@@ -1395,9 +1399,7 @@ class _UploadBoxState extends State<_UploadBox> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível selecionar a imagem.'),
-        ),
+        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
       );
     }
   }
@@ -1456,10 +1458,7 @@ class _UploadBoxState extends State<_UploadBox> {
           height: widget.height,
           decoration: BoxDecoration(
             color: const Color(0xFFCFD8DF),
-            border: Border.all(
-              color: const Color(0xFF9DB8C8),
-              width: 1,
-            ),
+            border: Border.all(color: const Color(0xFF9DB8C8), width: 1),
             borderRadius: BorderRadius.circular(2),
           ),
           clipBehavior: Clip.antiAlias,
@@ -1467,10 +1466,7 @@ class _UploadBoxState extends State<_UploadBox> {
               ? Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.memory(
-                      _imageBytes!,
-                      fit: BoxFit.cover,
-                    ),
+                    Image.memory(_imageBytes!, fit: BoxFit.cover),
                     Positioned(
                       right: 8,
                       top: 8,
@@ -1504,9 +1500,8 @@ class _UploadBoxState extends State<_UploadBox> {
                         child: Text(
                           widget.label,
                           textAlign: TextAlign.center,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: const Color(0xFF295F83),
-                          ),
+                          style: Theme.of(context).textTheme.bodyMedium
+                              ?.copyWith(color: const Color(0xFF295F83)),
                         ),
                       ),
                     ],
@@ -1518,31 +1513,8 @@ class _UploadBoxState extends State<_UploadBox> {
   }
 }
 
-class _MapPreviewBox extends StatelessWidget {
-  const _MapPreviewBox({required this.height});
-
-  final double height;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEAEAEA),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: const Color(0xFFD8D8D8)),
-      ),
-      alignment: Alignment.center,
-      child: const Icon(Icons.map_outlined, size: 72, color: Color(0xFFFF6A00)),
-    );
-  }
-}
-
 class _TermsRow extends StatelessWidget {
-  const _TermsRow({
-    required this.value,
-    required this.onChanged,
-  });
+  const _TermsRow({required this.value, required this.onChanged});
 
   final bool value;
   final ValueChanged<bool> onChanged;
@@ -1688,10 +1660,7 @@ class _LoginField extends StatelessWidget {
         autofillHints: obscureText
             ? const <String>[AutofillHints.password]
             : const <String>[AutofillHints.email],
-        style: const TextStyle(
-          color: BaileSulColors.headerText,
-          fontSize: 15,
-        ),
+        style: const TextStyle(color: BaileSulColors.headerText, fontSize: 15),
         cursorColor: BaileSulColors.headerText,
         decoration: InputDecoration(
           filled: true,

@@ -149,15 +149,27 @@ const register = async (req, res) => {
       );
 
     } else if (tipo === 'comunidade') {
-      const { nome_entidade, descricao, cnpj, whatsapp, endereco, cidade, estado } = perfil;
+      const { nome_entidade, descricao, cnpj, whatsapp, endereco, cidade, estado, latitude, longitude } = perfil;
       if (!nome_entidade || nome_entidade.trim().length === 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Campo obrigatório: perfil.nome_entidade' });
       }
 
+      const latManual = latitude !== undefined && latitude !== null ? Number(latitude) : null;
+      const lonManual = longitude !== undefined && longitude !== null ? Number(longitude) : null;
+      const coordsManuaisValidas =
+        latManual !== null &&
+        lonManual !== null &&
+        Number.isFinite(latManual) &&
+        Number.isFinite(lonManual) &&
+        latManual >= -90 &&
+        latManual <= 90 &&
+        lonManual >= -180 &&
+        lonManual <= 180;
+
       // Geocodificação do endereço da comunidade
       const enderecoCompleto = [endereco, cidade, estado, 'Brasil'].filter(Boolean).join(', ');
-      const coords = await geocodificarEndereco(enderecoCompleto);
+      const coords = coordsManuaisValidas ? null : await geocodificarEndereco(enderecoCompleto);
 
       await client.query(
         `INSERT INTO perfis_comunidades
@@ -174,8 +186,8 @@ const register = async (req, res) => {
           endereco || null,
           cidade || null,
           estado || null,
-          coords?.latitude ?? null,
-          coords?.longitude ?? null,
+          coordsManuaisValidas ? latManual : coords?.latitude ?? null,
+          coordsManuaisValidas ? lonManual : coords?.longitude ?? null,
         ]
       );
     }
