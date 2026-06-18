@@ -10,6 +10,8 @@ import Login from './paginas/login/login.jsx'
 import CriarEvento from './paginas/criar_evento/criar_evento.jsx'
 import Eventos from './paginas/eventos/eventos.jsx'
 import Evento from './paginas/evento/evento.jsx'
+import Bandas from './paginas/bandas/bandas.jsx'
+import Comunidades from './paginas/comunidades/comunidades.jsx'
 
 function App() {
   return (
@@ -26,6 +28,8 @@ function App() {
           <Route path="/criar-evento" element={<CriarEvento />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/eventos/:id" element={<Evento />} />
+          <Route path="/bandas" element={<Bandas />} />
+          <Route path="/comunidades" element={<Comunidades />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

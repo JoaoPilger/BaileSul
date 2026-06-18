@@ -22,9 +22,11 @@ export default function Header() {
   const contaLink = isAuthenticated ? '/perfil' : '/login';
   const contaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
   const isEventDetail = location.pathname.startsWith('/eventos/') && location.pathname !== '/eventos';
+  const forceSolidPaths = ['/bandas', '/comunidades'];
+  const isSolidPage = isEventDetail || forceSolidPaths.includes(location.pathname);
 
   return (
-    <nav className={`navbar ${isEventDetail ? 'navbar--solid' : scrolled ? 'navbar--scrolled' : ''}`}>
+    <nav className={`navbar ${isSolidPage ? 'navbar--solid' : scrolled ? 'navbar--scrolled' : ''}`}>
       <div className="navbar-shell">
         <div className="navbar-zone navbar-zone--logo">
           <Link to="/" className="navbar-logo" aria-label="BaileSul">

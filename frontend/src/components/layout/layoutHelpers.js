@@ -1,10 +1,12 @@
-import { Calendar, MapPin, Music, ListMusic, Ticket } from 'lucide-react';
+import { Calendar, MapPin, Music, ListMusic, Ticket, Users } from 'lucide-react';
 
 export function getNavConfig(tipo) {
   const base = [
-    { to: '/',        label: 'Início',  icon: Music },
-    { to: '/eventos', label: 'Eventos', icon: Calendar },
-    { to: '/mapa',    label: 'Mapa',    icon: MapPin },
+    { to: '/',        label: 'Início',      icon: Music },
+    { to: '/eventos', label: 'Eventos',     icon: Calendar },
+    { to: '/mapa',    label: 'Mapa',        icon: MapPin },
+    { to: '/bandas',  label: 'Bandas',      icon: Music },
+    { to: '/comunidades', label: 'Comunidades', icon: Users },
   ];
 
   if (tipo === 'pessoal') {
