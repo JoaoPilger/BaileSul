@@ -2,6 +2,17 @@ import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import {
+  formatCep,
+  formatCityField,
+  formatPriceBlur,
+  formatPriceInput,
+  formatTextField,
+  validateField,
+  validateForm,
+  validateImageFile,
+  validateVendorName,
+} from '../../utils/criarEventoValidation'
 import './criar_evento.css'
 
 const ESTILOS = [
@@ -14,6 +25,18 @@ const ESTILOS = [
   { value: 'mpb',       label: 'MPB' },
   { value: 'outro',     label: 'Outro' },
 ]
+
+const TEXT_LIMITS = {
+  title: 120,
+  band: 80,
+  rua: 120,
+  referencia: 150,
+}
+
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className="ce-field-error" role="alert">{message}</p>
+}
 
 export default function CriarEvento() {
   const { isAuthenticated } = useAuth()
@@ -40,6 +63,11 @@ export default function CriarEvento() {
   const [vendorName, setVendorName]     = useState('')
   const [vendors, setVendors]           = useState([])
   const [cepLoading, setCepLoading]     = useState(false)
+  const [errors, setErrors]             = useState({})
+  const [touched, setTouched]           = useState({})
+  const [submitAttempted, setSubmitAttempted] = useState(false)
+  const [vendorError, setVendorError]   = useState('')
+  const [formAlert, setFormAlert]       = useState('')
 
   const contaLink   = isAuthenticated ? '/perfil' : '/login'
   const footerLinks = [
@@ -51,15 +79,74 @@ export default function CriarEvento() {
     { to: contaLink,       label: 'Perfil' },
   ]
 
+  const showError = (field) => (touched[field] || submitAttempted) && errors[field]
+  const inputClass = (field, extra = '') =>
+    `ce-input${extra ? ` ${extra}` : ''}${showError(field) ? ' ce-input--error' : ''}`
+
+  const setFieldErrors = (updatedForm, fields = []) => {
+    setErrors((prev) => {
+      const next = { ...prev }
+      const names = fields.length ? fields : Object.keys(updatedForm)
+      names.forEach((field) => {
+        next[field] = validateField(field, updatedForm[field], updatedForm)
+      })
+      return next
+    })
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm((p) => ({ ...p, [name]: value }))
+    let next = value
+
+    if (name === 'cep') next = formatCep(value)
+    else if (name === 'price') next = formatPriceInput(value)
+    else if (name === 'city' || name === 'bairro') next = formatCityField(value)
+    else if (TEXT_LIMITS[name]) next = formatTextField(value, TEXT_LIMITS[name])
+
+    setForm((prev) => {
+      const updated = { ...prev, [name]: next }
+      const related = [name]
+      if (name === 'dateStart' && updated.dateEnd) related.push('dateEnd')
+      if (name === 'timeStart' && updated.timeEnd) related.push('timeEnd')
+      if (name === 'dateEnd' && updated.timeEnd) related.push('timeEnd')
+      setFieldErrors(updated, related)
+      return updated
+    })
+    setFormAlert('')
+  }
+
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
+
+    if (name === 'price') {
+      const formatted = formatPriceBlur(value)
+      setForm((prev) => {
+        const updated = { ...prev, price: formatted }
+        setFieldErrors(updated, ['price'])
+        return updated
+      })
+    } else {
+      setForm((prev) => {
+        setFieldErrors(prev, [name])
+        return prev
+      })
+    }
+
+    if (name === 'cep') buscarCep()
   }
 
   const handleImagem = (file) => {
     if (!file) return
+    const imageError = validateImageFile(file)
+    if (imageError) {
+      setErrors((prev) => ({ ...prev, image: imageError }))
+      setTouched((prev) => ({ ...prev, image: true }))
+      return
+    }
     setImagemFile(file)
     setImagemPreview(URL.createObjectURL(file))
+    setErrors((prev) => ({ ...prev, image: '' }))
   }
 
   const buscarCep = async () => {
@@ -70,19 +157,28 @@ export default function CriarEvento() {
       const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await res.json()
       if (!data.erro) {
-        setForm((p) => ({
-          ...p,
-          city:   data.localidade || p.city,
-          bairro: data.bairro     || p.bairro,
-          rua:    data.logradouro || p.rua,
-        }))
+        setForm((p) => {
+          const updated = {
+            ...p,
+            city:   data.localidade || p.city,
+            bairro: data.bairro     || p.bairro,
+            rua:    data.logradouro || p.rua,
+          }
+          setFieldErrors(updated, ['city', 'bairro', 'rua'])
+          return updated
+        })
       }
     } catch {}
     finally { setCepLoading(false) }
   }
 
   const addVendor = () => {
-    if (!vendorName.trim()) return
+    const message = validateVendorName(vendorName)
+    if (message) {
+      setVendorError(message)
+      return
+    }
+    setVendorError('')
     setVendors((s) => [...s, { id: Date.now(), name: vendorName.trim() }])
     setVendorName('')
   }
@@ -91,26 +187,42 @@ export default function CriarEvento() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    setSubmitAttempted(true)
+    setFormAlert('')
+
+    const normalizedForm = {
+      ...form,
+      price: formatPriceBlur(form.price),
+    }
+    setForm(normalizedForm)
+
+    const validationErrors = validateForm(normalizedForm)
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      setFormAlert('Revise os campos destacados antes de salvar.')
+      return
+    }
+
     const newEvent = {
       id:         Date.now(),
-      title:      form.title,
-      band:       form.band,
-      style:      form.style,
-      date:       form.dateStart || new Date().toISOString().slice(0, 10),
-      date_end:   form.dateEnd,
-      time_start: form.timeStart,
-      time_end:   form.timeEnd,
+      title:      normalizedForm.title,
+      band:       normalizedForm.band,
+      style:      normalizedForm.style,
+      date:       normalizedForm.dateStart || new Date().toISOString().slice(0, 10),
+      date_end:   normalizedForm.dateEnd,
+      time_start: normalizedForm.timeStart,
+      time_end:   normalizedForm.timeEnd,
       image:      imagemPreview || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-      price:      form.price
-        ? (/^(grátis|gratis)$/i.test(form.price.trim())
+      price:      normalizedForm.price
+        ? (/^(grátis|gratis)$/i.test(normalizedForm.price.trim())
             ? 'Grátis'
-            : `R$ ${form.price.replace(/^R\$\s*/i, '').trim()}`)
+            : `R$ ${normalizedForm.price.replace(/^R\$\s*/i, '').trim()}`)
         : 'Grátis',
-      city:       form.city,
-      cep:        form.cep,
-      bairro:     form.bairro,
-      rua:        form.rua,
-      referencia: form.referencia,
+      city:       normalizedForm.city,
+      cep:        normalizedForm.cep,
+      bairro:     normalizedForm.bairro,
+      rua:        normalizedForm.rua,
+      referencia: normalizedForm.referencia,
       vendors,
       created_at: new Date().toISOString(),
     }
@@ -144,7 +256,11 @@ export default function CriarEvento() {
             <h1 className="ce-card-title">Criar Evento</h1>
           </div>
 
-          <form className="ce-form" onSubmit={handleSubmit}>
+          <form className="ce-form" onSubmit={handleSubmit} noValidate>
+
+            {formAlert && (
+              <div className="ce-form-alert" role="alert">{formAlert}</div>
+            )}
 
             <div className="ce-section">
               <div className="ce-section-label">Informações Básicas</div>
@@ -152,18 +268,42 @@ export default function CriarEvento() {
               <div className="ce-field">
                 <label className="ce-field-label" htmlFor="title">Título do Evento *</label>
                 <div className="ce-input-wrap">
-                  <input id="title" name="title" type="text" className="ce-input" placeholder="Ex: Baile Gaúcho de Verão" value={form.title} onChange={handleChange} required />
+                  <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    className={inputClass('title')}
+                    placeholder="Ex: Baile Gaúcho de Verão"
+                    value={form.title}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    maxLength={TEXT_LIMITS.title}
+                    required
+                  />
                   <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
                 </div>
+                <FieldHint message={showError('title')} />
               </div>
 
               <div className="ce-row">
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="band">Banda / Artista *</label>
                   <div className="ce-input-wrap">
-                    <input id="band" name="band" type="text" className="ce-input" placeholder="Ex: Os Gauchões" value={form.band} onChange={handleChange} required />
+                    <input
+                      id="band"
+                      name="band"
+                      type="text"
+                      className={inputClass('band')}
+                      placeholder="Ex: Os Gauchões"
+                      value={form.band}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={TEXT_LIMITS.band}
+                      required
+                    />
                     <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
                   </div>
+                  <FieldHint message={showError('band')} />
                 </div>
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="style">Estilo Musical *</label>
@@ -178,9 +318,20 @@ export default function CriarEvento() {
               <div className="ce-field">
                 <label className="ce-field-label" htmlFor="price">Ingresso / Entrada</label>
                 <div className="ce-input-wrap">
-                  <input id="price" name="price" type="text" className="ce-input" placeholder="Ex: R$ 20,00 ou Grátis" value={form.price} onChange={handleChange} />
+                  <input
+                    id="price"
+                    name="price"
+                    type="text"
+                    className={inputClass('price')}
+                    placeholder="Ex: 20,00 ou Grátis"
+                    value={form.price}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    inputMode="decimal"
+                  />
                   <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                 </div>
+                <FieldHint message={showError('price')} />
               </div>
             </div>
 
@@ -191,16 +342,36 @@ export default function CriarEvento() {
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="dateStart">Data de Início *</label>
                   <div className="ce-input-wrap">
-                    <input id="dateStart" name="dateStart" type="date" className="ce-input" value={form.dateStart} onChange={handleChange} required />
+                    <input
+                      id="dateStart"
+                      name="dateStart"
+                      type="date"
+                      className={inputClass('dateStart')}
+                      value={form.dateStart}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      required
+                    />
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   </div>
+                  <FieldHint message={showError('dateStart')} />
                 </div>
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="dateEnd">Data de Término</label>
                   <div className="ce-input-wrap">
-                    <input id="dateEnd" name="dateEnd" type="date" className="ce-input" value={form.dateEnd} onChange={handleChange} />
+                    <input
+                      id="dateEnd"
+                      name="dateEnd"
+                      type="date"
+                      className={inputClass('dateEnd')}
+                      value={form.dateEnd}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      min={form.dateStart || undefined}
+                    />
                     <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   </div>
+                  <FieldHint message={showError('dateEnd')} />
                 </div>
               </div>
 
@@ -208,16 +379,34 @@ export default function CriarEvento() {
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="timeStart">Horário de Início</label>
                   <div className="ce-input-wrap">
-                    <input id="timeStart" name="timeStart" type="time" className="ce-input" value={form.timeStart} onChange={handleChange} />
+                    <input
+                      id="timeStart"
+                      name="timeStart"
+                      type="time"
+                      className={inputClass('timeStart')}
+                      value={form.timeStart}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                   </div>
+                  <FieldHint message={showError('timeStart')} />
                 </div>
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="timeEnd">Horário de Término</label>
                   <div className="ce-input-wrap">
-                    <input id="timeEnd" name="timeEnd" type="time" className="ce-input" value={form.timeEnd} onChange={handleChange} />
+                    <input
+                      id="timeEnd"
+                      name="timeEnd"
+                      type="time"
+                      className={inputClass('timeEnd')}
+                      value={form.timeEnd}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                   </div>
+                  <FieldHint message={showError('timeEnd')} />
                 </div>
               </div>
             </div>
@@ -226,7 +415,7 @@ export default function CriarEvento() {
               <div className="ce-section-label">Imagem de Capa</div>
 
               <div
-                className={`ce-upload-area ${imagemPreview ? 'ce-upload-area--filled' : ''}`}
+                className={`ce-upload-area ${imagemPreview ? 'ce-upload-area--filled' : ''}${showError('image') ? ' ce-upload-area--error' : ''}`}
                 onClick={() => fileRef.current?.click()}
                 onDrop={(e) => { e.preventDefault(); handleImagem(e.dataTransfer.files[0]) }}
                 onDragOver={(e) => e.preventDefault()}
@@ -237,7 +426,12 @@ export default function CriarEvento() {
                     <button
                       type="button"
                       className="ce-upload-remove"
-                      onClick={(e) => { e.stopPropagation(); setImagemFile(null); setImagemPreview(null) }}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setImagemFile(null)
+                        setImagemPreview(null)
+                        setErrors((prev) => ({ ...prev, image: '' }))
+                      }}
                     >
                       ✕ Remover
                     </button>
@@ -253,8 +447,9 @@ export default function CriarEvento() {
                     <small>PNG, JPG ou WEBP · Máx 5 MB</small>
                   </div>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => handleImagem(e.target.files[0])} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => handleImagem(e.target.files[0])} />
               </div>
+              <FieldHint message={showError('image')} />
             </div>
 
             <div className="ce-section">
@@ -267,14 +462,18 @@ export default function CriarEvento() {
                     <input
                       id="vendorName"
                       type="text"
-                      className="ce-input"
+                      className={`ce-input${vendorError ? ' ce-input--error' : ''}`}
                       placeholder="Ex: Bar do João"
                       value={vendorName}
-                      onChange={(e) => setVendorName(e.target.value)}
+                      onChange={(e) => {
+                        setVendorName(e.target.value.slice(0, 80))
+                        if (vendorError) setVendorError('')
+                      }}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVendor() } }}
                     />
                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
                   </div>
+                  <FieldHint message={vendorError} />
                 </div>
                 <button type="button" className="ce-btn-add" onClick={addVendor}>+ Adicionar</button>
               </div>
@@ -298,16 +497,40 @@ export default function CriarEvento() {
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="cep">CEP</label>
                   <div className="ce-input-wrap">
-                    <input id="cep" name="cep" type="text" className="ce-input" placeholder="00000-000" value={form.cep} onChange={handleChange} onBlur={buscarCep} />
+                    <input
+                      id="cep"
+                      name="cep"
+                      type="text"
+                      className={inputClass('cep')}
+                      placeholder="00000-000"
+                      value={form.cep}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      inputMode="numeric"
+                      maxLength={9}
+                    />
                     <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                     {cepLoading && <span className="ce-cep-loading">⟳</span>}
                   </div>
+                  <FieldHint message={showError('cep')} />
                 </div>
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="city">Cidade *</label>
                   <div className="ce-input-wrap">
-                    <input id="city" name="city" type="text" className="ce-input no-icon" placeholder="Ex: Florianópolis" value={form.city} onChange={handleChange} required />
+                    <input
+                      id="city"
+                      name="city"
+                      type="text"
+                      className={inputClass('city', 'no-icon')}
+                      placeholder="Ex: Florianópolis"
+                      value={form.city}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={60}
+                      required
+                    />
                   </div>
+                  <FieldHint message={showError('city')} />
                 </div>
               </div>
 
@@ -315,23 +538,56 @@ export default function CriarEvento() {
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="bairro">Bairro</label>
                   <div className="ce-input-wrap">
-                    <input id="bairro" name="bairro" type="text" className="ce-input no-icon" placeholder="Ex: Centro" value={form.bairro} onChange={handleChange} />
+                    <input
+                      id="bairro"
+                      name="bairro"
+                      type="text"
+                      className={inputClass('bairro', 'no-icon')}
+                      placeholder="Ex: Centro"
+                      value={form.bairro}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={60}
+                    />
                   </div>
+                  <FieldHint message={showError('bairro')} />
                 </div>
                 <div className="ce-field">
                   <label className="ce-field-label" htmlFor="rua">Rua</label>
                   <div className="ce-input-wrap">
-                    <input id="rua" name="rua" type="text" className="ce-input no-icon" placeholder="Ex: Rua XV de Novembro, 200" value={form.rua} onChange={handleChange} />
+                    <input
+                      id="rua"
+                      name="rua"
+                      type="text"
+                      className={inputClass('rua', 'no-icon')}
+                      placeholder="Ex: Rua XV de Novembro, 200"
+                      value={form.rua}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={TEXT_LIMITS.rua}
+                    />
                   </div>
+                  <FieldHint message={showError('rua')} />
                 </div>
               </div>
 
               <div className="ce-field">
                 <label className="ce-field-label" htmlFor="referencia">Referência</label>
                 <div className="ce-input-wrap">
-                  <input id="referencia" name="referencia" type="text" className="ce-input" placeholder="Ex: Próximo à Praça Central" value={form.referencia} onChange={handleChange} />
+                  <input
+                    id="referencia"
+                    name="referencia"
+                    type="text"
+                    className={inputClass('referencia')}
+                    placeholder="Ex: Próximo à Praça Central"
+                    value={form.referencia}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    maxLength={TEXT_LIMITS.referencia}
+                  />
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
                 </div>
+                <FieldHint message={showError('referencia')} />
               </div>
 
               <div className="ce-mapa-container">

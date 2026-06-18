@@ -12,6 +12,7 @@ import Eventos from './paginas/eventos/eventos.jsx'
 import Evento from './paginas/evento/evento.jsx'
 import Bandas from './paginas/bandas/bandas.jsx'
 import Comunidades from './paginas/comunidades/comunidades.jsx'
+import VitrineComunidade from './paginas/vitrine_comunidade/vitrine_comunidade.jsx'
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/eventos/:id" element={<Evento />} />
           <Route path="/bandas" element={<Bandas />} />
           <Route path="/comunidades" element={<Comunidades />} />
+          <Route path="/comunidades/:id" element={<VitrineComunidade />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
