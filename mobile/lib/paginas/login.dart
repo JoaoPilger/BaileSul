@@ -223,8 +223,6 @@ class _LoginScreenState extends State<LoginScreen> {
                               const SizedBox(height: 16),
                               const _SocialLoginButton(label: 'Google'),
                               const SizedBox(height: 10),
-                              const _SocialLoginButton(label: 'Facebook'),
-                              const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
@@ -1150,7 +1148,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-class _RegistrationField extends StatelessWidget {
+class _RegistrationField extends StatefulWidget {
   const _RegistrationField({
     required this.label,
     this.controller,
@@ -1165,8 +1163,15 @@ class _RegistrationField extends StatelessWidget {
   final bool obscureText;
   final _RegistrationFieldMask? mask;
 
+  @override
+  State<_RegistrationField> createState() => _RegistrationFieldState();
+}
+
+class _RegistrationFieldState extends State<_RegistrationField> {
+  late bool _obscureText = widget.obscureText;
+
   List<TextInputFormatter>? get _inputFormatters {
-    switch (mask) {
+    switch (widget.mask) {
       case _RegistrationFieldMask.telefone:
         return const <TextInputFormatter>[_TelefoneTextInputFormatter()];
       case _RegistrationFieldMask.cpf:
@@ -1181,8 +1186,8 @@ class _RegistrationField extends StatelessWidget {
   }
 
   TextInputType? get _effectiveKeyboardType {
-    if (keyboardType != null) return keyboardType;
-    switch (mask) {
+    if (widget.keyboardType != null) return widget.keyboardType;
+    switch (widget.mask) {
       case _RegistrationFieldMask.telefone:
       case _RegistrationFieldMask.cpf:
       case _RegistrationFieldMask.cep:
@@ -1199,22 +1204,22 @@ class _RegistrationField extends StatelessWidget {
     return SizedBox(
       height: 42,
       child: TextField(
-        controller: controller,
+        controller: widget.controller,
         keyboardType: _effectiveKeyboardType,
         inputFormatters: _inputFormatters,
-        obscureText: obscureText,
+        obscureText: _obscureText,
         autocorrect: false,
-        enableSuggestions: !obscureText,
-        textCapitalization: mask == _RegistrationFieldMask.cnpj
+        enableSuggestions: !_obscureText,
+        textCapitalization: widget.mask == _RegistrationFieldMask.cnpj
             ? TextCapitalization.characters
             : TextCapitalization.none,
-        autofillHints: obscureText
+        autofillHints: widget.obscureText
             ? const <String>[AutofillHints.newPassword]
             : null,
         style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
         cursorColor: BaileSulColors.headerText,
         decoration: InputDecoration(
-          hintText: label,
+          hintText: widget.label,
           hintStyle: TextStyle(
             color: BaileSulColors.headerText.withValues(alpha: 0.45),
             fontSize: 14,
@@ -1241,6 +1246,19 @@ class _RegistrationField extends StatelessWidget {
             horizontal: 12,
             vertical: 10,
           ),
+          suffixIcon: widget.obscureText
+              ? IconButton(
+                  tooltip: _obscureText ? 'Mostrar senha' : 'Ocultar senha',
+                  icon: Icon(
+                    _obscureText ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                    color: BaileSulColors.headerText.withValues(alpha: 0.65),
+                  ),
+                  onPressed: () {
+                    setState(() => _obscureText = !_obscureText);
+                  },
+                )
+              : null,
         ),
       ),
     );
@@ -1633,7 +1651,7 @@ class _LoginLabel extends StatelessWidget {
   }
 }
 
-class _LoginField extends StatelessWidget {
+class _LoginField extends StatefulWidget {
   const _LoginField({
     required this.controller,
     this.obscureText = false,
@@ -1651,19 +1669,26 @@ class _LoginField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
 
   @override
+  State<_LoginField> createState() => _LoginFieldState();
+}
+
+class _LoginFieldState extends State<_LoginField> {
+  late bool _obscureText = widget.obscureText;
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 48,
       child: TextField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        textInputAction: textInputAction,
-        enabled: enabled,
-        onSubmitted: onSubmitted,
+        controller: widget.controller,
+        obscureText: _obscureText,
+        keyboardType: widget.keyboardType,
+        textInputAction: widget.textInputAction,
+        enabled: widget.enabled,
+        onSubmitted: widget.onSubmitted,
         autocorrect: false,
-        enableSuggestions: !obscureText,
-        autofillHints: obscureText
+        enableSuggestions: !_obscureText,
+        autofillHints: widget.obscureText
             ? const <String>[AutofillHints.password]
             : const <String>[AutofillHints.email],
         style: const TextStyle(color: BaileSulColors.headerText, fontSize: 15),
@@ -1690,6 +1715,21 @@ class _LoginField extends StatelessWidget {
             horizontal: 14,
             vertical: 12,
           ),
+          suffixIcon: widget.obscureText
+              ? IconButton(
+                  tooltip: _obscureText ? 'Mostrar senha' : 'Ocultar senha',
+                  icon: Icon(
+                    _obscureText ? Icons.visibility_off : Icons.visibility,
+                    size: 20,
+                    color: BaileSulColors.headerText.withValues(alpha: 0.65),
+                  ),
+                  onPressed: widget.enabled
+                      ? () {
+                          setState(() => _obscureText = !_obscureText);
+                        }
+                      : null,
+                )
+              : null,
         ),
       ),
     );
