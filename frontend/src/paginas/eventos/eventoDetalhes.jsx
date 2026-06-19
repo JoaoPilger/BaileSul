@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
+import { cn } from '../../utils/cn';
 import { useNavigate, useParams } from 'react-router-dom'
 import { MapPin, Calendar, Clock, Tag, ArrowLeft } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
-import './eventos.css'
+import styles from './eventos.module.css';
 
 function formatDate(dateValue) {
   if (!dateValue) return 'Não informado'
@@ -27,11 +28,11 @@ export default function EventoDetalhes() {
     return (
       <>
         <Header />
-        <main className="event-detail-page">
-          <div className="event-detail-empty">
+        <main className={styles['event-detail-page']}>
+          <div className={styles['event-detail-empty']}>
             <h2>Evento não encontrado</h2>
             <p>Esse evento pode ter sido removido ou não existe mais.</p>
-            <button className="btn btn-primary" onClick={() => navigate('/eventos')}>
+            <button className={cn(styles['btn'], styles['btn-primary'])} onClick={() => navigate('/eventos')}>
               Voltar para eventos
             </button>
           </div>
@@ -44,30 +45,30 @@ export default function EventoDetalhes() {
   return (
     <>
       <Header />
-      <main className="event-detail-page">
-        <section className="event-cover" style={{ backgroundImage: `url(${event.image})` }}>
-          <div className="event-cover-overlay" />
-          <button className="event-cover-back" onClick={() => navigate(-1)}>
+      <main className={styles['event-detail-page']}>
+        <section className={styles['event-cover']} style={{ backgroundImage: `url(${event.image})` }}>
+          <div className={styles['event-cover-overlay']} />
+          <button className={styles['event-cover-back']} onClick={() => navigate(-1)}>
             <ArrowLeft size={16} /> Voltar
           </button>
         </section>
 
-        <section className="event-detail-content">
-          <div className="event-detail-left">
-            <span className="event-type">{event.style || 'Evento'}</span>
+        <section className={styles['event-detail-content']}>
+          <div className={styles['event-detail-left']}>
+            <span className={styles['event-type']}>{event.style || 'Evento'}</span>
             <h1>{event.title}</h1>
-            <p className="event-subtitle">{event.band || 'Detalhes do evento'}</p>
+            <p className={styles['event-subtitle']}>{event.band || 'Detalhes do evento'}</p>
 
-            <div className="event-detail-panel">
-              <div className="event-detail-panel-header">
+            <div className={styles['event-detail-panel']}>
+              <div className={styles['event-detail-panel-header']}>
                 <div>
-                  <span className="panel-label">Sobre o Evento</span>
-                  <p className="panel-title">Informações do evento</p>
+                  <span className={styles['panel-label']}>Sobre o Evento</span>
+                  <p className={styles['panel-title']}>Informações do evento</p>
                 </div>
-                <button type="button" className="btn btn-primary btn-share">Compartilhar evento</button>
+                <button type="button" className={cn(styles['btn'], styles['btn-primary'], styles['btn-share'])}>Compartilhar evento</button>
               </div>
 
-              <div className="event-detail-panel-body">
+              <div className={styles['event-detail-panel-body']}>
                 <p>
                   {event.description || `Esse evento está localizado em ${event.city || 'cidade não informada'} e foi cadastrado como um baile de ${event.style}.`}
                   {event.referencia ? ` A referência é: ${event.referencia}.` : ''}
@@ -75,7 +76,7 @@ export default function EventoDetalhes() {
               </div>
 
               {event.vendors?.length > 0 && (
-                <div className="event-detail-vendors">
+                <div className={styles['event-detail-vendors']}>
                   <h2>Vendedores</h2>
                   <ul>
                     {event.vendors.map((vendor) => (
@@ -87,9 +88,9 @@ export default function EventoDetalhes() {
             </div>
           </div>
 
-          <aside className="event-detail-right">
-            <div className="event-detail-info-card">
-              <ul className="event-detail-info-list">
+          <aside className={styles['event-detail-right']}>
+            <div className={styles['event-detail-info-card']}>
+              <ul className={styles['event-detail-info-list']}>
                 <li>
                   <span>Data</span>
                   <strong>{formatDate(event.date)}</strong>
@@ -117,11 +118,11 @@ export default function EventoDetalhes() {
               </ul>
             </div>
 
-            <div className="event-detail-price-card">
-              <div className="event-detail-price-label">Valor do ingresso</div>
-              <div className="event-detail-price-row">
+            <div className={styles['event-detail-price-card']}>
+              <div className={styles['event-detail-price-label']}>Valor do ingresso</div>
+              <div className={styles['event-detail-price-row']}>
                 <strong>{event.price || 'Grátis'}</strong>
-                <button type="button" className="btn btn-primary btn-reserve">Reservar</button>
+                <button type="button" className={cn(styles['btn'], styles['btn-primary'], styles['btn-reserve'])}>Reservar</button>
               </div>
             </div>
           </aside>

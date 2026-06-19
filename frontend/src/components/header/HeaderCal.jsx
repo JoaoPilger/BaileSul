@@ -1,8 +1,9 @@
 import React from 'react';
+import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom';
 import { User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import './HeaderCal.css';
+import styles from './HeaderCal.module.css';
 
 export default function HeaderCal() {
   const { isAuthenticated } = useAuth();
@@ -10,12 +11,12 @@ export default function HeaderCal() {
   const ariaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
 
   return (
-    <header className="cal-header">
-      <div className="cal-header-inner">
-        <Link to="/" className="cal-logo-link" aria-label="BaileSul">
-          <img src="/imagens/BaileSul.png" alt="BaileSul" className="cal-logo-img" />
+    <header className={styles['cal-header']}>
+      <div className={styles['cal-header-inner']}>
+        <Link to="/" className={styles['cal-logo-link']} aria-label="BaileSul">
+          <img src="/imagens/BaileSul.png" alt="BaileSul" className={styles['cal-logo-img']} />
         </Link>
-        <Link to={contaLink} className="cal-user-btn" aria-label={ariaLabel}>
+        <Link to={contaLink} className={styles['cal-user-btn']} aria-label={ariaLabel}>
           <User size={20} strokeWidth={1.8} />
         </Link>
       </div>

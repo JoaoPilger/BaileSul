@@ -1,8 +1,9 @@
 import { useState } from 'react'
+import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
-import './login.css'
+import styles from './login.module.css';
 
 export default function Login() {
   const navigate = useNavigate()
@@ -36,29 +37,29 @@ export default function Login() {
     <>
       <HeaderCal />
 
-      <main className="login-page">
-        <div className="login-card">
+      <main className={styles['login-page']}>
+        <div className={styles['login-card']}>
 
-          <div className="card-header">
-            <div className="card-icon">
+          <div className={styles['card-header']}>
+            <div className={styles['card-icon']}>
               <svg viewBox="0 0 24 24">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
             </div>
-            <h1 className="card-title">Bem-vindo de volta</h1>
-            <p className="card-subtitle">Entre com suas credenciais para continuar</p>
+            <h1 className={styles['card-title']}>Bem-vindo de volta</h1>
+            <p className={styles['card-subtitle']}>Entre com suas credenciais para continuar</p>
           </div>
 
-          <form className="login-form" onSubmit={handleSubmit}>
+          <form className={styles['login-form']} onSubmit={handleSubmit}>
 
-            <div className="field-group">
-              <label className="field-label" htmlFor="email">E-mail</label>
-              <div className="input-wrapper">
+            <div className={styles['field-group']}>
+              <label className={styles['field-label']} htmlFor="email">E-mail</label>
+              <div className={styles['input-wrapper']}>
                 <input
                   id="email"
                   type="email"
-                  className="field-input"
+                  className={styles['field-input']}
                   placeholder="seu@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -71,13 +72,13 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="field-group">
-              <label className="field-label" htmlFor="senha">Senha</label>
-              <div className="input-wrapper">
+            <div className={styles['field-group']}>
+              <label className={styles['field-label']} htmlFor="senha">Senha</label>
+              <div className={styles['input-wrapper']}>
                 <input
                   id="senha"
                   type={mostrarSenha ? 'text' : 'password'}
-                  className="field-input"
+                  className={styles['field-input']}
                   placeholder="••••••••"
                   value={senha}
                   onChange={(e) => setSenha(e.target.value)}
@@ -89,7 +90,7 @@ export default function Login() {
                 </svg>
                 <button
                   type="button"
-                  className="toggle-password"
+                  className={styles['toggle-password']}
                   onClick={() => setMostrar(!mostrarSenha)}
                   aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                 >
@@ -107,17 +108,17 @@ export default function Login() {
                   )}
                 </button>
               </div>
-              <a href="/esqueci-senha" className="forgot-link">Esqueci minha senha</a>
+              <a href="/esqueci-senha" className={styles['forgot-link']}>Esqueci minha senha</a>
             </div>
 
-            {erro && <p className="error-msg">{erro}</p>}
+            {erro && <p className={styles['error-msg']}>{erro}</p>}
 
-            <button type="submit" className="btn-primary" disabled={carregando}>
+            <button type="submit" className={styles['btn-primary']} disabled={carregando}>
               {carregando ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
 
-          <div className="card-footer">
+          <div className={styles['card-footer']}>
             Não tem uma conta? <Link to="/cadastro">Cadastre-se</Link>
           </div>
         </div>

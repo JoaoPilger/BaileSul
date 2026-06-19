@@ -16,7 +16,7 @@
   --error:        #A32D2D;
   --error-bg:     rgba(163, 45, 45, 0.07);
   --header-height: 64px;
-  --logo-height:   64px;
+  --logo-height:   56px;
   --font-head:    'Playfair Display', Georgia, serif;
   --font-body:    'DM Sans', system-ui, sans-serif;
 }

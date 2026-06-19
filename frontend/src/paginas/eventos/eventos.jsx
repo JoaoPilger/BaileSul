@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, ArrowRight, Calendar, Trash2 } from 'lucide-react'
+import { MapPin, Calendar, Trash2 } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEvents, deleteEventById } from '../../utils/events'
-import './eventos.css'
+import { cn } from '../../utils/cn'
+import shared from '../../styles/shared.module.css'
+import styles from './eventos.module.css'
 
 function EventCard({ event, onDelete }) {
   const navigate = useNavigate()
@@ -13,25 +15,25 @@ function EventCard({ event, onDelete }) {
   const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className="event-card" onClick={() => navigate(`/eventos/${event.id}`)}>
-      <div className="event-card-img-wrap">
-        <img src={event.image} alt={event.title} className="event-card-img" />
-        <div className="event-card-date-badge">
-          <span className="event-card-day">{day}</span>
-          <span className="event-card-month">{month}</span>
+    <div className={styles['event-card']} onClick={() => navigate(`/eventos/${event.id}`)}>
+      <div className={styles['event-card-img-wrap']}>
+        <img src={event.image} alt={event.title} className={styles['event-card-img']} />
+        <div className={styles['event-card-date-badge']}>
+          <span className={styles['event-card-day']}>{day}</span>
+          <span className={styles['event-card-month']}>{month}</span>
         </div>
-        <div className="event-card-price">{event.price}</div>
+        <div className={styles['event-card-price']}>{event.price}</div>
       </div>
 
-      <div className="event-card-body">
-        <span className="event-card-style">{event.style}</span>
-        <h3 className="event-card-title">{event.title}</h3>
-        <div className="event-card-location">
+      <div className={styles['event-card-body']}>
+        <span className={styles['event-card-style']}>{event.style}</span>
+        <h3 className={styles['event-card-title']}>{event.title}</h3>
+        <div className={styles['event-card-location']}>
           <MapPin size={12} />
           {event.city}
         </div>
         <button
-          className="event-card-delete"
+          className={styles['event-card-delete']}
           type="button"
           onClick={(e) => {
             e.stopPropagation()
@@ -60,33 +62,33 @@ export default function Eventos() {
   return (
     <>
       <Header />
-      <main className="events-page">
-        <section className="events-hero">
-          <div className="events-hero-content">
-            <span className="events-eyebrow">Eventos</span>
+      <main className={styles['events-page']}>
+        <section className={styles['events-hero']}>
+          <div className={styles['events-hero-content']}>
+            <span className={styles['events-eyebrow']}>Eventos</span>
             <h1>Todos os eventos disponíveis</h1>
             <p>Veja os eventos que estão cadastrados e clique para ver todos os detalhes.</p>
           </div>
         </section>
 
-        <section className="section section--light">
-          <div className="container">
-            <div className="section-header">
+        <section className={cn(shared.section, shared.sectionLight)}>
+          <div className={shared.container}>
+            <div className={shared.sectionHeader}>
               <div>
-                <h2 className="section-title">Eventos Cadastrados</h2>
-                <p className="section-sub">Toque no card para abrir a página de detalhes.</p>
+                <h2 className={shared.sectionTitle}>Eventos Cadastrados</h2>
+                <p className={shared.sectionSub}>Toque no card para abrir a página de detalhes.</p>
               </div>
-              <span className="events-count">{events.length} eventos</span>
+              <span className={styles['events-count']}>{events.length} eventos</span>
             </div>
 
             {events.length ? (
-              <div className="events-grid">
+              <div className={shared.eventsGrid}>
                 {events.map((event) => (
                   <EventCard key={event.id} event={event} onDelete={handleDelete} />
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
+              <div className={shared.emptyState}>
                 <Calendar size={36} />
                 <p>Nenhum evento disponível</p>
                 <span>Crie um evento para começar a usar</span>

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
+import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
 import FooterCal from '../../components/footer/FooterCal'
-import './calendario.css'
+import styles from './calendario.module.css';
 
 const WEEKDAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
 const MONTHS = [
@@ -159,33 +160,33 @@ export default function Calendario() {
   })
 
   return (
-    <div className="cal-shell">
+    <div className={styles['cal-shell']}>
       <HeaderCal />
 
-      <main className="cal-main">
-        <div className="cal-layout">
-          <section className="cal-card" aria-label="Calendário">
-            <div className="cal-nav">
-              <h1 className="cal-month-title" key={monthTitle}>
+      <main className={styles['cal-main']}>
+        <div className={styles['cal-layout']}>
+          <section className={styles['cal-card']} aria-label="Calendário">
+            <div className={styles['cal-nav']}>
+              <h1 className={styles['cal-month-title']} key={monthTitle}>
                 {monthTitle}
               </h1>
-              <div className="cal-nav-btns">
-                <button type="button" className="cal-nav-btn" onClick={() => goToMonth(-1)} aria-label="Mês anterior">
+              <div className={styles['cal-nav-btns']}>
+                <button type="button" className={styles['cal-nav-btn']} onClick={() => goToMonth(-1)} aria-label="Mês anterior">
                   <ChevronLeft size={16} strokeWidth={2.5} />
                 </button>
-                <button type="button" className="cal-nav-btn" onClick={() => goToMonth(1)} aria-label="Próximo mês">
+                <button type="button" className={styles['cal-nav-btn']} onClick={() => goToMonth(1)} aria-label="Próximo mês">
                   <ChevronRight size={16} strokeWidth={2.5} />
                 </button>
               </div>
             </div>
 
-            <div className="cal-grid" key={`${viewYear}-${viewMonth}`}>
+            <div className={styles['cal-grid']} key={`${viewYear}-${viewMonth}`}>
               {WEEKDAYS.map((w) => (
-                <div key={w} className="cal-weekday">{w}</div>
+                <div key={w} className={styles['cal-weekday']}>{w}</div>
               ))}
               {cells.map((day, i) =>
                 day === null ? (
-                  <div key={`e${i}`} className="cal-cell-empty" />
+                  <div key={`e${i}`} className={styles['cal-cell-empty']} />
                 ) : (
                   <button
                     key={`${viewYear}-${viewMonth}-${day}`}
@@ -201,21 +202,21 @@ export default function Calendario() {
                     aria-pressed={isSelected(day)}
                   >
                     {day}
-                    {eventDates.has(day) && <span className="cal-dot" aria-hidden />}
+                    {eventDates.has(day) && <span className={styles['cal-dot']} aria-hidden />}
                   </button>
                 ),
               )}
             </div>
           </section>
 
-          <aside className="cal-aside" aria-label="Eventos do dia">
-            <div className="cal-aside-head">
+          <aside className={styles['cal-aside']} aria-label="Eventos do dia">
+            <div className={styles['cal-aside-head']}>
               <div>
-                <p className="cal-aside-eyebrow">Agenda</p>
-                <h2 className="cal-aside-date">{dateLabel}</h2>
+                <p className={styles['cal-aside-eyebrow']}>Agenda</p>
+                <h2 className={styles['cal-aside-date']}>{dateLabel}</h2>
               </div>
               {podeCriarEvento && (
-                <Link to="/criar-evento" className="cal-btn-add">
+                <Link to="/criar-evento" className={styles['cal-btn-add']}>
                   <Plus size={15} strokeWidth={2.5} />
                   Criar evento
                 </Link>
@@ -223,28 +224,28 @@ export default function Calendario() {
             </div>
 
             {events.length === 0 ? (
-              <div className="cal-empty">
+              <div className={styles['cal-empty']}>
                 <CalendarDays size={38} strokeWidth={1.3} aria-hidden />
                 <p>Nenhum evento nesta data</p>
                 <span>Selecione outro dia no calendário</span>
               </div>
             ) : (
-              <ul className="cal-event-list">
+              <ul className={styles['cal-event-list']}>
                 {events.map((ev) => (
                   <li key={ev.id}>
-                    <Link to={`/eventos/${ev.id}`} className="cal-event-card">
-                      <div className="cal-event-img-wrap">
-                        <img src={ev.image} alt="" className="cal-event-img" loading="lazy" />
+                    <Link to={`/eventos/${ev.id}`} className={styles['cal-event-card']}>
+                      <div className={styles['cal-event-img-wrap']}>
+                        <img src={ev.image} alt="" className={styles['cal-event-img']} loading="lazy" />
                       </div>
-                      <div className="cal-event-body">
-                        <span className="cal-event-style">{ev.style}</span>
-                        <h3 className="cal-event-title">{ev.title}</h3>
-                        <div className="cal-event-meta">
-                          <span className="cal-event-city">
+                      <div className={styles['cal-event-body']}>
+                        <span className={styles['cal-event-style']}>{ev.style}</span>
+                        <h3 className={styles['cal-event-title']}>{ev.title}</h3>
+                        <div className={styles['cal-event-meta']}>
+                          <span className={styles['cal-event-city']}>
                             <MapPin size={12} strokeWidth={2} aria-hidden />
                             {ev.city}
                           </span>
-                          <span className="cal-event-price">{ev.price}</span>
+                          <span className={styles['cal-event-price']}>{ev.price}</span>
                         </div>
                       </div>
                     </Link>

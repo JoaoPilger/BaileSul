@@ -18,7 +18,7 @@
   --success:       #0F6E56;
   --success-bg:    rgba(15, 110, 86, 0.07);
   --header-height: 64px;
-  --logo-height:   64px;
+  --logo-height:   56px;
   --font-head:     'Playfair Display', Georgia, serif;
   --font-body:     'DM Sans', system-ui, sans-serif;
 }
@@ -272,6 +272,38 @@ body {
 .ce-input:focus {
   border-color: var(--border-focus);
   box-shadow: 0 0 0 3px rgba(13, 73, 107, 0.1);
+}
+
+.ce-input--error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+.ce-input--error:focus {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px var(--error-bg);
+}
+
+.ce-field-error {
+  font-size: 0.76rem;
+  color: var(--error);
+  line-height: 1.35;
+}
+
+.ce-form-alert {
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--error-bg);
+  border: 1px solid rgba(163, 45, 45, 0.22);
+  color: var(--error);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ce-upload-area--error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px var(--error-bg);
 }
 
 .ce-input[type="date"],

@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
-import './cadastro.css'
+import styles from './cadastro.module.css';
+import HeaderCal from "../../components/header/HeaderCal"
 
 const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
 
@@ -93,11 +95,11 @@ export default function CadastroPessoal() {
     <>
       <HeaderCal />
 
-      <main className="cadastro-page">
-        <div className="cadastro-card">
+      <main className={styles['cadastro-page']}>
+        <div className={styles['cadastro-card']}>
 
-          <div className="card-header">
-            <div className="card-icon">
+          <div className={styles['card-header']}>
+            <div className={styles['card-icon']}>
               <svg viewBox="0 0 24 24">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                 <circle cx="9" cy="7" r="4" />
@@ -105,36 +107,36 @@ export default function CadastroPessoal() {
                 <line x1="22" y1="11" x2="16" y2="11" />
               </svg>
             </div>
-            <h1 className="card-title">Criar conta</h1>
-            <p className="card-subtitle">Preencha os dados para começar</p>
+            <h1 className={styles['card-title']}>Criar conta</h1>
+            <p className={styles['card-subtitle']}>Preencha os dados para começar</p>
           </div>
 
-          <div className="steps-bar">
-            <div className={`step-dot ${passo >= 1 ? 'active' : ''} ${passo > 1 ? 'done' : ''}`}>
+          <div className={styles['steps-bar']}>
+            <div className={cn(styles['step-dot'], passo >= 1 && styles.active, passo > 1 && styles.done)}>
               {passo > 1 ? '✓' : '1'}
             </div>
-            <div className={`step-line ${passo > 1 ? 'done' : ''}`} />
-            <div className={`step-dot ${passo >= 2 ? 'active' : ''} ${passo > 2 ? 'done' : ''}`}>
+            <div className={cn(styles['step-line'], passo > 1 && styles.done)} />
+            <div className={cn(styles['step-dot'], passo >= 2 && styles.active, passo > 2 && styles.done)}>
               {passo > 2 ? '✓' : '2'}
             </div>
-            <div className={`step-line ${passo > 2 ? 'done' : ''}`} />
-            <div className={`step-dot ${passo >= 3 ? 'active' : ''}`}>3</div>
+            <div className={cn(styles['step-line'], passo > 2 && styles.done)} />
+            <div className={cn(styles['step-dot'], passo >= 3 && styles.active)}>3</div>
           </div>
 
           {sucesso ? (
-            <p className="success-msg">✓ Conta criada com sucesso! Redirecionando...</p>
+            <p className={styles['success-msg']}>✓ Conta criada com sucesso! Redirecionando...</p>
           ) : (
-            <form className="cadastro-form" onSubmit={handleSubmit}>
+            <form className={styles['cadastro-form']} onSubmit={handleSubmit}>
 
-              <div className="form-row">
-                <div className="field-group">
-                  <label className="field-label" htmlFor="nome">Nome *</label>
-                  <div className="input-wrapper">
+              <div className={styles['form-row']}>
+                <div className={styles['field-group']}>
+                  <label className={styles['field-label']} htmlFor="nome">Nome *</label>
+                  <div className={styles['input-wrapper']}>
                     <input
                       id="nome"
                       name="nome"
                       type="text"
-                      className="field-input"
+                      className={styles['field-input']}
                       placeholder="João"
                       value={form.nome}
                       onChange={handleChange}
@@ -145,14 +147,14 @@ export default function CadastroPessoal() {
                     </svg>
                   </div>
                 </div>
-                <div className="field-group">
-                  <label className="field-label" htmlFor="sobrenome">Sobrenome</label>
-                  <div className="input-wrapper">
+                <div className={styles['field-group']}>
+                  <label className={styles['field-label']} htmlFor="sobrenome">Sobrenome</label>
+                  <div className={styles['input-wrapper']}>
                     <input
                       id="sobrenome"
                       name="sobrenome"
                       type="text"
-                      className="field-input no-icon"
+                      className={cn(styles['field-input'], styles['no-icon'])}
                       placeholder="Silva"
                       value={form.sobrenome}
                       onChange={handleChange}
@@ -161,14 +163,14 @@ export default function CadastroPessoal() {
                 </div>
               </div>
 
-              <div className="field-group">
-                <label className="field-label" htmlFor="email">E-mail *</label>
-                <div className="input-wrapper">
+              <div className={styles['field-group']}>
+                <label className={styles['field-label']} htmlFor="email">E-mail *</label>
+                <div className={styles['input-wrapper']}>
                   <input
                     id="email"
                     name="email"
                     type="email"
-                    className="field-input"
+                    className={styles['field-input']}
                     placeholder="seu@email.com"
                     value={form.email}
                     onChange={handleChange}
@@ -181,14 +183,14 @@ export default function CadastroPessoal() {
                 </div>
               </div>
 
-              <div className="field-group">
-                <label className="field-label" htmlFor="telefone">Telefone</label>
-                <div className="input-wrapper">
+              <div className={styles['field-group']}>
+                <label className={styles['field-label']} htmlFor="telefone">Telefone</label>
+                <div className={styles['input-wrapper']}>
                   <input
                     id="telefone"
                     name="telefone"
                     type="tel"
-                    className="field-input"
+                    className={styles['field-input']}
                     placeholder="(11) 9 0000-0000"
                     value={form.telefone}
                     onChange={handleChange}
@@ -199,14 +201,14 @@ export default function CadastroPessoal() {
                 </div>
               </div>
 
-              <div className="field-group">
-                <label className="field-label" htmlFor="senha">Senha *</label>
-                <div className="input-wrapper">
+              <div className={styles['field-group']}>
+                <label className={styles['field-label']} htmlFor="senha">Senha *</label>
+                <div className={styles['input-wrapper']}>
                   <input
                     id="senha"
                     name="senha"
                     type={mostrarSenha ? 'text' : 'password'}
-                    className="field-input"
+                    className={styles['field-input']}
                     placeholder="Mínimo 8 caracteres"
                     value={form.senha}
                     onChange={handleChange}
@@ -218,7 +220,7 @@ export default function CadastroPessoal() {
                   </svg>
                   <button
                     type="button"
-                    className="toggle-password"
+                    className={styles['toggle-password']}
                     onClick={() => setMostrarSenha(!mostrarSenha)}
                     aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
                   >
@@ -237,23 +239,23 @@ export default function CadastroPessoal() {
                   </button>
                 </div>
                 {form.senha && (
-                  <div className="password-strength">
-                    <div className="strength-bar">
-                      <div className="strength-fill" style={{ width: forca.pct, background: forca.cor }} />
+                  <div className={styles['password-strength']}>
+                    <div className={styles['strength-bar']}>
+                      <div className={styles['strength-fill']} style={{ width: forca.pct, background: forca.cor }} />
                     </div>
-                    <p className="strength-label" style={{ color: forca.cor }}>{forca.label}</p>
+                    <p className={styles['strength-label']} style={{ color: forca.cor }}>{forca.label}</p>
                   </div>
                 )}
               </div>
 
-              <div className="field-group">
-                <label className="field-label" htmlFor="confirmarSenha">Confirmar senha *</label>
-                <div className="input-wrapper">
+              <div className={styles['field-group']}>
+                <label className={styles['field-label']} htmlFor="confirmarSenha">Confirmar senha *</label>
+                <div className={styles['input-wrapper']}>
                   <input
                     id="confirmarSenha"
                     name="confirmarSenha"
                     type={mostrarConfirmar ? 'text' : 'password'}
-                    className="field-input"
+                    className={styles['field-input']}
                     placeholder="Repita a senha"
                     value={form.confirmarSenha}
                     onChange={handleChange}
@@ -265,7 +267,7 @@ export default function CadastroPessoal() {
                   </svg>
                   <button
                     type="button"
-                    className="toggle-password"
+                    className={styles['toggle-password']}
                     onClick={() => setMostrarConfirmar(!mostrarConfirmar)}
                     aria-label={mostrarConfirmar ? 'Ocultar confirmação' : 'Mostrar confirmação'}
                   >
@@ -285,9 +287,9 @@ export default function CadastroPessoal() {
                 </div>
               </div>
 
-              <label className="checkbox-group">
+              <label className={styles['checkbox-group']}>
                 <input type="checkbox" name="termos" checked={form.termos} onChange={handleChange} />
-                <span className="checkbox-label">
+                <span className={styles['checkbox-label']}>
                   Li e aceito os{' '}
                   <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a>
                   {' '}e a{' '}
@@ -295,15 +297,15 @@ export default function CadastroPessoal() {
                 </span>
               </label>
 
-              {erro && <p className="error-msg">{erro}</p>}
+              {erro && <p className={styles['error-msg']}>{erro}</p>}
 
-              <button type="submit" className="btn-primary" disabled={carregando}>
+              <button type="submit" className={styles['btn-primary']} disabled={carregando}>
                 {carregando ? 'Criando conta...' : 'Criar conta'}
               </button>
             </form>
           )}
 
-          <div className="card-footer">
+          <div className={styles['card-footer']}>
             Já tem uma conta? <Link to="/login">Entrar</Link>
           </div>
         </div>

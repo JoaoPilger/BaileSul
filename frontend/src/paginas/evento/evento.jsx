@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
+import { cn } from '../../utils/cn';
 import { useParams, useNavigate } from 'react-router-dom'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
-import './evento.css'
+import styles from './evento.module.css';
 
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80'
@@ -133,11 +134,11 @@ export default function EventoPage() {
     return (
       <>
         <Header />
-        <main className="ev-page">
-          <div className="ev-body ev-body--empty">
+        <main className={styles['ev-page']}>
+          <div className={cn(styles['ev-body'], styles['ev-body--empty'])}>
             <h2>Evento não encontrado</h2>
             <p>Esse evento pode ter sido removido ou não existe mais.</p>
-            <button type="button" className="ev-btn-reservar" onClick={() => navigate('/eventos')}>
+            <button type="button" className={styles['ev-btn-reservar']} onClick={() => navigate('/eventos')}>
               Voltar para eventos
             </button>
           </div>
@@ -168,13 +169,13 @@ export default function EventoPage() {
   return (
     <>
       <Header />
-      <main className="ev-page">
-        <div className="ev-hero">
-          <img src={imageSrc} alt={evento.title} className="ev-hero-img" />
+      <main className={styles['ev-page']}>
+        <div className={styles['ev-hero']}>
+          <img src={imageSrc} alt={evento.title} className={styles['ev-hero-img']} />
         </div>
 
-        <div className="ev-body">
-          <button type="button" className="ev-back-btn" onClick={() => navigate(-1)}>
+        <div className={styles['ev-body']}>
+          <button type="button" className={styles['ev-back-btn']} onClick={() => navigate(-1)}>
             <svg viewBox="0 0 24 24" aria-hidden>
               <line x1="19" y1="12" x2="5" y2="12" />
               <polyline points="12 19 5 12 12 5" />
@@ -182,10 +183,10 @@ export default function EventoPage() {
             Voltar
           </button>
 
-          <div className="ev-content">
-            <div className="ev-left">
+          <div className={styles['ev-content']}>
+            <div className={styles['ev-left']}>
               {styleLabel && (
-                <div className="ev-tag">
+                <div className={styles['ev-tag']}>
                   <svg viewBox="0 0 24 24" aria-hidden>
                     <path d="M9 18V5l12-2v13" />
                     <circle cx="6" cy="18" r="3" />
@@ -195,11 +196,11 @@ export default function EventoPage() {
                 </div>
               )}
 
-              <h1 className="ev-title">{evento.title}</h1>
+              <h1 className={styles['ev-title']}>{evento.title}</h1>
 
-              <div className="ev-organizer-row">
-                <span className="ev-organizer">{evento.band || evento.organizer || 'Evento'}</span>
-                <button type="button" className="ev-share-btn" onClick={handleShare}>
+              <div className={styles['ev-organizer-row']}>
+                <span className={styles['ev-organizer']}>{evento.band || evento.organizer || 'Evento'}</span>
+                <button type="button" className={styles['ev-share-btn']} onClick={handleShare}>
                   <svg viewBox="0 0 24 24" aria-hidden>
                     <circle cx="18" cy="5" r="3" />
                     <circle cx="6" cy="12" r="3" />
@@ -211,14 +212,14 @@ export default function EventoPage() {
                 </button>
               </div>
 
-              <div className="ev-about">
-                <div className="ev-about-title">Sobre o Evento</div>
-                <p className="ev-about-text">{getDescription(evento)}</p>
+              <div className={styles['ev-about']}>
+                <div className={styles['ev-about-title']}>Sobre o Evento</div>
+                <p className={styles['ev-about-text']}>{getDescription(evento)}</p>
               </div>
 
               {evento.vendors?.length > 0 && (
-                <div className="ev-vendors">
-                  <div className="ev-about-title">Vendedores</div>
+                <div className={styles['ev-vendors']}>
+                  <div className={styles['ev-about-title']}>Vendedores</div>
                   <ul>
                     {evento.vendors.map((vendor) => (
                       <li key={vendor.id}>{vendor.name}</li>
@@ -228,12 +229,12 @@ export default function EventoPage() {
               )}
             </div>
 
-            <aside className="ev-right">
-              <section className="ev-info-card" aria-label="Informações do evento">
-                <div className="ev-info-list">
+            <aside className={styles['ev-right']}>
+              <section className={styles['ev-info-card']} aria-label="Informações do evento">
+                <div className={styles['ev-info-list']}>
                   {evento.date && (
-                    <div className="ev-info-item">
-                      <div className="ev-info-icon" aria-hidden>
+                    <div className={styles['ev-info-item']}>
+                      <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
                           <rect x="3" y="4" width="18" height="18" rx="2" />
                           <line x1="16" y1="2" x2="16" y2="6" />
@@ -241,24 +242,24 @@ export default function EventoPage() {
                           <line x1="3" y1="10" x2="21" y2="10" />
                         </svg>
                       </div>
-                      <div className="ev-info-text">
-                        <span className="ev-info-label">Data</span>
-                        <span className="ev-info-value">{formatDate(evento.date)}</span>
+                      <div className={styles['ev-info-text']}>
+                        <span className={styles['ev-info-label']}>Data</span>
+                        <span className={styles['ev-info-value']}>{formatDate(evento.date)}</span>
                       </div>
                     </div>
                   )}
 
                   {(evento.time_start || evento.timeStart) && (
-                    <div className="ev-info-item">
-                      <div className="ev-info-icon" aria-hidden>
+                    <div className={styles['ev-info-item']}>
+                      <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
                           <circle cx="12" cy="12" r="10" />
                           <polyline points="12 6 12 12 16 14" />
                         </svg>
                       </div>
-                      <div className="ev-info-text">
-                        <span className="ev-info-label">Horário</span>
-                        <span className="ev-info-value">
+                      <div className={styles['ev-info-text']}>
+                        <span className={styles['ev-info-label']}>Horário</span>
+                        <span className={styles['ev-info-value']}>
                           {evento.time_start || evento.timeStart}
                           {(evento.time_end || evento.timeEnd) &&
                             ` – ${evento.time_end || evento.timeEnd}`}
@@ -268,23 +269,23 @@ export default function EventoPage() {
                   )}
 
                   {localDisplay && (
-                    <div className="ev-info-item">
-                      <div className="ev-info-icon" aria-hidden>
+                    <div className={styles['ev-info-item']}>
+                      <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
                           <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
                           <circle cx="12" cy="10" r="3" />
                         </svg>
                       </div>
-                      <div className="ev-info-text">
-                        <span className="ev-info-label">Local</span>
-                        <span className="ev-info-value">{localDisplay}</span>
+                      <div className={styles['ev-info-text']}>
+                        <span className={styles['ev-info-label']}>Local</span>
+                        <span className={styles['ev-info-value']}>{localDisplay}</span>
                       </div>
                     </div>
                   )}
 
                   {evento.capacity && (
-                    <div className="ev-info-item">
-                      <div className="ev-info-icon" aria-hidden>
+                    <div className={styles['ev-info-item']}>
+                      <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
                           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
                           <circle cx="9" cy="7" r="4" />
@@ -292,36 +293,36 @@ export default function EventoPage() {
                           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                         </svg>
                       </div>
-                      <div className="ev-info-text">
-                        <span className="ev-info-label">Capacidade</span>
-                        <span className="ev-info-value">{evento.capacity}</span>
+                      <div className={styles['ev-info-text']}>
+                        <span className={styles['ev-info-label']}>Capacidade</span>
+                        <span className={styles['ev-info-value']}>{evento.capacity}</span>
                       </div>
                     </div>
                   )}
 
                   {(evento.band || evento.organizer) && (
-                    <div className="ev-info-item">
-                      <div className="ev-info-icon" aria-hidden>
+                    <div className={styles['ev-info-item']}>
+                      <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
                           <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                           <polyline points="9 22 9 12 15 12 15 22" />
                         </svg>
                       </div>
-                      <div className="ev-info-text">
-                        <span className="ev-info-label">Organização</span>
-                        <span className="ev-info-value">{evento.band || evento.organizer}</span>
+                      <div className={styles['ev-info-text']}>
+                        <span className={styles['ev-info-label']}>Organização</span>
+                        <span className={styles['ev-info-value']}>{evento.band || evento.organizer}</span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                <div className="ev-ticket-area">
-                  <span className="ev-ticket-label">Valor do Ingresso</span>
-                  <div className="ev-ticket-row">
-                    <span className={`ev-price ${isFree ? 'ev-price--free' : ''}`}>
+                <div className={styles['ev-ticket-area']}>
+                  <span className={styles['ev-ticket-label']}>Valor do Ingresso</span>
+                  <div className={styles['ev-ticket-row']}>
+                    <span className={cn(styles['ev-price'], isFree && styles['ev-price--free'])}>
                       {priceDisplay}
                     </span>
-                    <button type="button" className="ev-btn-reservar">
+                    <button type="button" className={styles['ev-btn-reservar']}>
                       Reservar
                     </button>
                   </div>
@@ -330,14 +331,14 @@ export default function EventoPage() {
             </aside>
           </div>
 
-          <section className="ev-location" aria-label="Localização do evento">
-            <div className="ev-location-title">Localização</div>
-            {addressQuery && <p className="ev-location-address">{addressQuery.replace(', Brasil', '')}</p>}
-            <div className="ev-mapa-container">
+          <section className={styles['ev-location']} aria-label="Localização do evento">
+            <div className={styles['ev-location-title']}>Localização</div>
+            {addressQuery && <p className={styles['ev-location-address']}>{addressQuery.replace(', Brasil', '')}</p>}
+            <div className={styles['ev-mapa-container']}>
               <iframe
                 title={`Mapa — ${evento.title}`}
                 src={mapSrc}
-                className="ev-mapa-iframe"
+                className={styles['ev-mapa-iframe']}
                 loading="lazy"
               />
             </div>
