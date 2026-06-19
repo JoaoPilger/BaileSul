@@ -1,24 +1,14 @@
 import 'package:flutter/material.dart';
 
-/// Item de navegação exibido na linha inferior do rodapé.
-class FooterNavLink {
-  const FooterNavLink({required this.label, this.onTap});
+import '../navigation/app_navigator.dart';
+import '../services/sessao_usuario.dart';
 
-  final String label;
-  final VoidCallback? onTap;
-}
-
-/// Rodapé mobile: logo centralizada, copyright e três links distribuídos.
-class MobileFooter extends StatelessWidget {
+/// Rodapé mobile padrão: logo, copyright e acesso de sessão.
+class MobileFooter extends StatefulWidget {
   const MobileFooter({
     super.key,
     this.logoHeight = 40,
     this.horizontalPadding = 16,
-    this.navLinks = const [
-      FooterNavLink(label: 'Log in'),
-      FooterNavLink(label: 'Log in'),
-      FooterNavLink(label: 'Log in'),
-    ],
   });
 
   static const Color backgroundColor = Color(0xFF0A0C12);
@@ -26,115 +16,91 @@ class MobileFooter extends StatelessWidget {
 
   final double logoHeight;
   final double horizontalPadding;
-  final List<FooterNavLink> navLinks;
+
+  @override
+  State<MobileFooter> createState() => _MobileFooterState();
+}
+
+class _MobileFooterState extends State<MobileFooter> {
+  Future<void> _onSessionTap() async {
+    if (!SessaoUsuario.instance.autenticado) {
+      Navigator.pushNamed(context, '/login');
+      return;
+    }
+
+    await SessaoUsuario.instance.encerrarSessao();
+
+    final NavigatorState? navigator = appNavigatorKey.currentState;
+    if (navigator != null) {
+      navigator.popUntil((Route<dynamic> route) => route.isFirst);
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    assert(
-      navLinks.length == 3,
-      'MobileFooter espera exatamente 3 links (esquerda, centro, direita).',
-    );
+    return AnimatedBuilder(
+      animation: SessaoUsuario.instance,
+      builder: (BuildContext context, _) {
+        final bool autenticado = SessaoUsuario.instance.autenticado;
+        final TextStyle? linkStyle =
+            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                );
 
-    final TextStyle? linkStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: Colors.white,
-          fontWeight: FontWeight.w500,
-        );
-
-    return Material(
-      color: backgroundColor,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            14,
-            horizontalPadding,
-            12,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(
-                'images/logo.png',
-                height: logoHeight,
-                fit: BoxFit.contain,
+        return Material(
+          color: MobileFooter.backgroundColor,
+          child: SafeArea(
+            top: false,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                widget.horizontalPadding,
+                14,
+                widget.horizontalPadding,
+                12,
               ),
-              const SizedBox(height: 10),
-              Text(
-                '© BaileSul – Todos os direitos reservados.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: copyrightColor,
-                      height: 1.35,
-                    ),
-              ),
-              const SizedBox(height: 14),
-              Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: _FooterLinkButton(
-                        link: navLinks[0],
-                        style: linkStyle,
-                      ),
-                    ),
+                  Image.asset(
+                    'images/logo.png',
+                    height: widget.logoHeight,
+                    fit: BoxFit.contain,
                   ),
-                  Expanded(
-                    child: Center(
-                      child: _FooterLinkButton(
-                        link: navLinks[1],
-                        style: linkStyle,
-                      ),
-                    ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '© BaileSul – Todos os direitos reservados.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: MobileFooter.copyrightColor,
+                          height: 1.35,
+                        ),
                   ),
-                  Expanded(
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: _FooterLinkButton(
-                        link: navLinks[2],
-                        style: linkStyle,
+                  const SizedBox(height: 14),
+                  TextButton(
+                    onPressed: _onSessionTap,
+                    style: TextButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
+                    child:
+                        Text(autenticado ? 'Sair' : 'Login', style: linkStyle),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FooterLinkButton extends StatelessWidget {
-  const _FooterLinkButton({
-    required this.link,
-    required this.style,
-  });
-
-  final FooterNavLink link;
-  final TextStyle? style;
-
-  @override
-  Widget build(BuildContext context) {
-    final VoidCallback? onTap = link.onTap;
-    if (onTap == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        child: Text(link.label, style: style),
-      );
-    }
-
-    return TextButton(
-      onPressed: onTap,
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-        minimumSize: Size.zero,
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      ),
-      child: Text(link.label, style: style),
+        );
+      },
     );
   }
 }

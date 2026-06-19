@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/mobile_app_menu.dart';
+import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -15,6 +16,7 @@ class PesquisaPadraoBandas extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BaileSulColors.dark,
+      bottomNavigationBar: const MobileFooter(),
       body: SafeArea(
         top: false,
         child: Column(

@@ -50,6 +50,7 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 		if (!SessaoUsuario.instance.podeCriarEvento) {
 			return Scaffold(
 				backgroundColor: BaileSulColors.pageBackground,
+				bottomNavigationBar: const MobileFooter(),
 				body: Center(
 					child: Text(
 						widget.isComunidade
@@ -68,6 +69,7 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 
 		return Scaffold(
 			backgroundColor: BaileSulColors.pageBackground,
+			bottomNavigationBar: const MobileFooter(),
 			body: Column(
 				crossAxisAlignment: CrossAxisAlignment.stretch,
 				children: [
@@ -261,22 +263,6 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 															child: const Text('Salvar Evento'),
 														),
 													),
-												],
-											),
-											const SizedBox(height: 18),
-											MobileFooter(
-												logoHeight: 52,
-												horizontalPadding: 24,
-												navLinks: [
-													FooterNavLink(
-														label: 'Eventos',
-														onTap: () => Navigator.pop(context),
-													),
-													FooterNavLink(
-														label: 'Login',
-														onTap: () => Navigator.pushNamed(context, '/login'),
-													),
-													const FooterNavLink(label: 'Contato'),
 												],
 											),
 										],

@@ -78,11 +78,6 @@ class _PaginaEventoState extends State<PaginaEvento> {
                   child: MobileFooter(
                     logoHeight: 52,
                     horizontalPadding: 24,
-                    navLinks: [
-                      const FooterNavLink(label: 'Log in'),
-                      const FooterNavLink(label: 'Log in'),
-                      const FooterNavLink(label: 'Log in'),
-                    ],
                   ),
                 ),
               ],

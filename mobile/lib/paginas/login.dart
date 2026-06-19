@@ -9,6 +9,7 @@ import '../services/sessao_usuario.dart';
 import '../navigation/app_navigator.dart';
 import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
+import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -109,6 +110,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MobileFooter(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -284,6 +286,7 @@ class CadastroScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MobileFooter(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -491,6 +494,7 @@ class _PersonalRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MobileFooter(),
       body: _RegistrationScreenShell(
         title: 'Cadastro',
         content: Column(
@@ -691,6 +695,7 @@ class _CommunityRegistrationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MobileFooter(),
       body: _RegistrationScreenShell(
         title: 'Cadastro',
         content: Column(
@@ -940,6 +945,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      bottomNavigationBar: const MobileFooter(),
       body: _RegistrationScreenShell(
         title: 'Cadastro',
         content: Column(

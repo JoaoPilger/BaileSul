@@ -238,11 +238,6 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                   child: MobileFooter(
                     logoHeight: 52,
                     horizontalPadding: 24,
-                    navLinks: const [
-                      FooterNavLink(label: 'Calendário'),
-                      FooterNavLink(label: 'Login'),
-                      FooterNavLink(label: 'Contato'),
-                    ],
                   ),
                 ),
               ],
