@@ -2,9 +2,16 @@ import { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
+import { validateImageFile } from '../../utils/criarEventoValidation'
+import {
+  formatCityField,
+  formatCnpj,
+  formatNameField,
+  formatPhone,
+  validateCadastroBandaField,
+  validateCadastroBandaForm,
+} from '../../utils/authFormValidation'
 import './cadastro.css'
-
-const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
 
 const ESTILOS = [
   'Forró', 'Axé', 'Samba', 'Pagode', 'Baile Gaúcho', 'MPB',
@@ -15,6 +22,11 @@ const ESTADOS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG',
   'PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ]
+
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className="field-hint" role="alert">{message}</p>
+}
 
 export default function CadastroBanda() {
   const navigate = useNavigate()
@@ -33,59 +45,92 @@ export default function CadastroBanda() {
     confirmarSenha: '',
     termos: false,
   })
-  const [imagemCapa, setImagemCapa] = useState(null)
   const [imagemPreview, setImagemPreview] = useState(null)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
+
+  const passo = form.nomeBanda && form.email ? (form.estilo ? 3 : 2) : 1
+  const showError = (field) => touched[field] && errors[field]
+  const inputClass = (field, extra = '') =>
+    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
+
+  const updateField = (name, value) => {
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value }
+      if (touched[name]) {
+        setErrors((errs) => ({ ...errs, [name]: validateCadastroBandaField(name, value, updated) }))
+      }
+      return updated
+    })
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }))
+    if (type === 'checkbox') {
+      setForm((prev) => ({ ...prev, [name]: checked }))
+      setErrors((prev) => ({ ...prev, termos: checked ? '' : 'Aceite os termos para continuar.' }))
+      return
+    }
+
+    let next = value
+    if (name === 'nomeBanda') next = formatNameField(value, 80)
+    if (name === 'telefone') next = formatPhone(value)
+    if (name === 'cnpj') next = formatCnpj(value)
+    if (name === 'cidadeCriacao') next = formatCityField(value)
+
+    updateField(name, next)
+    setErro('')
   }
 
-  const handleImagem = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImagemCapa(file)
-    setImagemPreview(URL.createObjectURL(file))
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateCadastroBandaField(name, form[name], form),
+    }))
   }
 
-  const handleDrop = (e) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
+  const handleImagem = (file) => {
     if (!file) return
-    setImagemCapa(file)
+    const imageError = validateImageFile(file)
+    if (imageError) {
+      setErrors((prev) => ({ ...prev, imagem: imageError }))
+      setTouched((prev) => ({ ...prev, imagem: true }))
+      return
+    }
     setImagemPreview(URL.createObjectURL(file))
+    setErrors((prev) => ({ ...prev, imagem: '' }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErro('')
-    if (!form.nomeBanda || !form.email || !form.telefone || !form.estilo || !form.cnpj) {
-      setErro('Preencha todos os campos obrigatórios (incluindo CNPJ).')
+
+    const validationErrors = validateCadastroBandaForm(form)
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      setTouched({
+        nomeBanda: true,
+        telefone: true,
+        email: true,
+        cnpj: true,
+        estilo: true,
+        cidadeCriacao: true,
+        senha: true,
+        confirmarSenha: true,
+        termos: true,
+      })
       return
     }
-    if (!form.senha || !form.confirmarSenha) {
-      setErro('Defina uma senha de acesso.')
-      return
-    }
-    if (form.senha !== form.confirmarSenha) {
-      setErro('As senhas não coincidem.')
-      return
-    }
-    if (!senhaValida(form.senha)) {
-      setErro('A senha deve ter ao menos 8 caracteres, incluindo letras e números.')
-      return
-    }
-    if (!form.termos) {
-      setErro('Você precisa aceitar os termos de uso.')
-      return
-    }
+
     setCarregando(true)
     try {
       await register({
-        email: form.email,
+        email: form.email.trim(),
         senha: form.senha,
         tipo: 'banda',
         perfil: {
@@ -104,8 +149,6 @@ export default function CadastroBanda() {
       setCarregando(false)
     }
   }
-
-  const passo = form.nomeBanda && form.email ? (form.estilo ? 3 : 2) : 1
 
   return (
     <>
@@ -137,7 +180,7 @@ export default function CadastroBanda() {
           {sucesso ? (
             <p className="success-msg">✓ Banda cadastrada com sucesso! Redirecionando...</p>
           ) : (
-            <form className="cadastro-form" onSubmit={handleSubmit}>
+            <form className="cadastro-form" onSubmit={handleSubmit} noValidate>
 
               <div className="section-label">Informações Básicas</div>
 
@@ -145,16 +188,18 @@ export default function CadastroBanda() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="nomeBanda">Nome da Banda *</label>
                   <div className="input-wrapper">
-                    <input id="nomeBanda" name="nomeBanda" type="text" className="field-input" placeholder="Ex: Os Gauchões" value={form.nomeBanda} onChange={handleChange} />
+                    <input id="nomeBanda" name="nomeBanda" type="text" className={inputClass('nomeBanda')} placeholder="Ex: Os Gauchões" value={form.nomeBanda} onChange={handleChange} onBlur={handleBlur} maxLength={80} />
                     <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
                   </div>
+                  <FieldHint message={showError('nomeBanda')} />
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="telefone">Telefone *</label>
                   <div className="input-wrapper">
-                    <input id="telefone" name="telefone" type="tel" className="field-input" placeholder="(48) 9 0000-0000" value={form.telefone} onChange={handleChange} />
+                    <input id="telefone" name="telefone" type="tel" className={inputClass('telefone')} placeholder="(48) 9 0000-0000" value={form.telefone} onChange={handleChange} onBlur={handleBlur} inputMode="tel" />
                     <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" /></svg>
                   </div>
+                  <FieldHint message={showError('telefone')} />
                 </div>
               </div>
 
@@ -162,16 +207,18 @@ export default function CadastroBanda() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="email">E-mail *</label>
                   <div className="input-wrapper">
-                    <input id="email" name="email" type="email" className="field-input" placeholder="contato@banda.com" value={form.email} onChange={handleChange} autoComplete="email" />
+                    <input id="email" name="email" type="email" className={inputClass('email')} placeholder="contato@banda.com" value={form.email} onChange={handleChange} onBlur={handleBlur} autoComplete="email" />
                     <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                   </div>
+                  <FieldHint message={showError('email')} />
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="cnpj">CNPJ *</label>
                   <div className="input-wrapper">
-                    <input id="cnpj" name="cnpj" type="text" className="field-input" placeholder="00.000.000/0000-00" value={form.cnpj} onChange={handleChange} />
+                    <input id="cnpj" name="cnpj" type="text" className={inputClass('cnpj')} placeholder="00.000.000/0000-00" value={form.cnpj} onChange={handleChange} onBlur={handleBlur} inputMode="numeric" maxLength={18} />
                     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                   </div>
+                  <FieldHint message={showError('cnpj')} />
                 </div>
               </div>
 
@@ -179,11 +226,12 @@ export default function CadastroBanda() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="estilo">Estilo da Banda *</label>
                   <div className="input-wrapper">
-                    <select id="estilo" name="estilo" className="field-input no-icon" value={form.estilo} onChange={handleChange}>
+                    <select id="estilo" name="estilo" className={inputClass('estilo', 'no-icon')} value={form.estilo} onChange={handleChange} onBlur={handleBlur}>
                       <option value="">Selecione o estilo</option>
                       {ESTILOS.map((e) => <option key={e} value={e.toLowerCase()}>{e}</option>)}
                     </select>
                   </div>
+                  <FieldHint message={showError('estilo')} />
                 </div>
                 <div className="field-group" />
               </div>
@@ -192,9 +240,10 @@ export default function CadastroBanda() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="cidadeCriacao">Cidade de Criação</label>
                   <div className="input-wrapper">
-                    <input id="cidadeCriacao" name="cidadeCriacao" type="text" className="field-input" placeholder="Ex: Florianópolis" value={form.cidadeCriacao} onChange={handleChange} />
+                    <input id="cidadeCriacao" name="cidadeCriacao" type="text" className={inputClass('cidadeCriacao')} placeholder="Ex: Florianópolis" value={form.cidadeCriacao} onChange={handleChange} onBlur={handleBlur} maxLength={60} />
                     <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                   </div>
+                  <FieldHint message={showError('cidadeCriacao')} />
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="estadoCriacao">Estado</label>
@@ -213,51 +262,31 @@ export default function CadastroBanda() {
                 <div className="field-group">
                   <label className="field-label" htmlFor="senha">Senha *</label>
                   <div className="input-wrapper">
-                    <input
-                      id="senha"
-                      name="senha"
-                      type="password"
-                      className="field-input no-icon"
-                      placeholder="Mínimo 8 caracteres"
-                      value={form.senha}
-                      onChange={handleChange}
-                      autoComplete="new-password"
-                    />
+                    <input id="senha" name="senha" type="password" className={inputClass('senha', 'no-icon')} placeholder="Mínimo 8 caracteres" value={form.senha} onChange={handleChange} onBlur={handleBlur} autoComplete="new-password" />
                   </div>
+                  <FieldHint message={showError('senha')} />
                 </div>
                 <div className="field-group">
                   <label className="field-label" htmlFor="confirmarSenha">Confirmar senha *</label>
                   <div className="input-wrapper">
-                    <input
-                      id="confirmarSenha"
-                      name="confirmarSenha"
-                      type="password"
-                      className="field-input no-icon"
-                      placeholder="Repita a senha"
-                      value={form.confirmarSenha}
-                      onChange={handleChange}
-                      autoComplete="new-password"
-                    />
+                    <input id="confirmarSenha" name="confirmarSenha" type="password" className={inputClass('confirmarSenha', 'no-icon')} placeholder="Repita a senha" value={form.confirmarSenha} onChange={handleChange} onBlur={handleBlur} autoComplete="new-password" />
                   </div>
+                  <FieldHint message={showError('confirmarSenha')} />
                 </div>
               </div>
 
               <div className="section-label">Imagem de Capa</div>
 
               <div
-                className={`upload-area ${imagemPreview ? 'upload-area--filled' : ''}`}
+                className={`upload-area ${imagemPreview ? 'upload-area--filled' : ''}${showError('imagem') ? ' upload-area--error' : ''}`}
                 onClick={() => fileRef.current?.click()}
-                onDrop={handleDrop}
+                onDrop={(e) => { e.preventDefault(); handleImagem(e.dataTransfer.files[0]) }}
                 onDragOver={(e) => e.preventDefault()}
               >
                 {imagemPreview ? (
                   <>
                     <img src={imagemPreview} alt="Prévia da capa" className="upload-preview" />
-                    <button
-                      type="button"
-                      className="upload-remove"
-                      onClick={(e) => { e.stopPropagation(); setImagemCapa(null); setImagemPreview(null) }}
-                    >
+                    <button type="button" className="upload-remove" onClick={(e) => { e.stopPropagation(); setImagemPreview(null); setErrors((prev) => ({ ...prev, imagem: '' })) }}>
                       ✕ Remover
                     </button>
                   </>
@@ -272,10 +301,11 @@ export default function CadastroBanda() {
                     <small>PNG, JPG ou WEBP · Máx 5 MB</small>
                   </div>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImagem} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => handleImagem(e.target.files[0])} />
               </div>
+              <FieldHint message={showError('imagem')} />
 
-              <label className="checkbox-group">
+              <label className={`checkbox-group${showError('termos') ? ' checkbox-group--error' : ''}`}>
                 <input type="checkbox" name="termos" checked={form.termos} onChange={handleChange} />
                 <span className="checkbox-label">
                   Li e aceito os{' '}
@@ -284,6 +314,7 @@ export default function CadastroBanda() {
                   <a href="/privacidade" target="_blank" rel="noreferrer">Política de Privacidade</a>
                 </span>
               </label>
+              <FieldHint message={showError('termos')} />
 
               {erro && <p className="error-msg">{erro}</p>}
 
