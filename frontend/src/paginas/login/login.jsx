@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
+import { formatEmail, validateLoginForm } from '../../utils/authFormValidation'
 import './login.css'
+
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className="field-hint" role="alert">{message}</p>
+}
 
 export default function Login() {
   const navigate = useNavigate()
@@ -12,17 +18,29 @@ export default function Login() {
   const [mostrarSenha, setMostrar] = useState(false)
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
+
+  const showError = (field) => touched[field] && errors[field]
+  const inputClass = (field) => `field-input${showError(field) ? ' field-input--error' : ''}`
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErro('')
-    if (!email || !senha) {
-      setErro('Preencha todos os campos.')
+
+    const normalizedEmail = formatEmail(email)
+    setEmail(normalizedEmail)
+
+    const validationErrors = validateLoginForm({ email: normalizedEmail, senha })
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      setTouched({ email: true, senha: true })
       return
     }
+
     setCarregando(true)
     try {
-      await login(email, senha)
+      await login(normalizedEmail, senha)
       navigate('/', { replace: true })
     } catch (err) {
       const msg = err.response?.data?.error
@@ -50,7 +68,7 @@ export default function Login() {
             <p className="card-subtitle">Entre com suas credenciais para continuar</p>
           </div>
 
-          <form className="login-form" onSubmit={handleSubmit}>
+          <form className="login-form" onSubmit={handleSubmit} noValidate>
 
             <div className="field-group">
               <label className="field-label" htmlFor="email">E-mail</label>
@@ -58,10 +76,24 @@ export default function Login() {
                 <input
                   id="email"
                   type="email"
-                  className="field-input"
+                  className={inputClass('email')}
                   placeholder="seu@email.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value)
+                    if (touched.email) {
+                      setErrors((prev) => ({ ...prev, email: validateLoginForm({ email: e.target.value, senha }).email || '' }))
+                    }
+                  }}
+                  onBlur={() => {
+                    const normalized = formatEmail(email)
+                    setEmail(normalized)
+                    setTouched((prev) => ({ ...prev, email: true }))
+                    setErrors((prev) => ({
+                      ...prev,
+                      email: validateLoginForm({ email: normalized, senha }).email || '',
+                    }))
+                  }}
                   autoComplete="email"
                 />
                 <svg viewBox="0 0 24 24">
@@ -69,6 +101,7 @@ export default function Login() {
                   <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                 </svg>
               </div>
+              <FieldHint message={showError('email')} />
             </div>
 
             <div className="field-group">
@@ -77,10 +110,22 @@ export default function Login() {
                 <input
                   id="senha"
                   type={mostrarSenha ? 'text' : 'password'}
-                  className="field-input"
+                  className={inputClass('senha')}
                   placeholder="••••••••"
                   value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
+                  onChange={(e) => {
+                    setSenha(e.target.value)
+                    if (touched.senha) {
+                      setErrors((prev) => ({ ...prev, senha: validateLoginForm({ email, senha: e.target.value }).senha || '' }))
+                    }
+                  }}
+                  onBlur={() => {
+                    setTouched((prev) => ({ ...prev, senha: true }))
+                    setErrors((prev) => ({
+                      ...prev,
+                      senha: validateLoginForm({ email, senha }).senha || '',
+                    }))
+                  }}
                   autoComplete="current-password"
                 />
                 <svg viewBox="0 0 24 24">
@@ -107,6 +152,7 @@ export default function Login() {
                   )}
                 </button>
               </div>
+              <FieldHint message={showError('senha')} />
               <a href="/esqueci-senha" className="forgot-link">Esqueci minha senha</a>
             </div>
 

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght=700;900&family=DM+Sans:wght=400;500;600&display=swap');
 
 :root {
   --bg:           #D9D9D9;
@@ -266,6 +266,25 @@ body {
 .forgot-link:hover { color: var(--accent); }
 
 .error-msg {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  color: var(--error);
+  font-weight: 600;
+}
+
+.field-input--error {
+  border-color: var(--error) !important;
+  box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.12) !important;
+}
+
+.field-hint {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--error);
+  line-height: 1.35;
+}
+
+.error-banner {
   font-size: 0.8rem;
   color: var(--error);
   padding: 10px 14px;
