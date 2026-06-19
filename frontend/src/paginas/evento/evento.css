@@ -16,6 +16,151 @@
   --font-body:     'DM Sans', system-ui, sans-serif;
 }
 
+.ev-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.ev-modal-card {
+  position: relative;
+  background: var(--bg);
+  border-radius: 18px;
+  padding: 40px 36px 36px;
+  width: 90%;
+  max-width: 460px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ev-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 1.6rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+
+.ev-modal-close:hover {
+  color: var(--text);
+}
+
+.ev-modal-title {
+  font-family: var(--font-head);
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+}
+
+.ev-modal-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.ev-modal-label {
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ev-modal-select {
+  width: 200px;
+  height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #b8bfc4;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--text);
+  cursor: pointer;
+  appearance: auto;
+}
+
+.ev-modal-radios {
+  display: flex;
+  gap: 32px;
+  justify-content: center;
+}
+
+.ev-modal-radio {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.ev-modal-radio input[type="radio"] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.ev-modal-input {
+  width: 80%;
+  max-width: 340px;
+  height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: #b8bfc4;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.ev-modal-input::placeholder {
+  color: var(--text-muted);
+}
+
+.ev-modal-submit {
+  align-self: center;
+  height: 48px;
+  padding: 0 48px;
+  background: var(--accent);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+}
+
+.ev-modal-submit:hover {
+  background: var(--accent-hover);
+  box-shadow: 0 6px 20px var(--accent-glow);
+  transform: translateY(-1px);
+}
+
+.ev-modal-submit:active {
+  transform: translateY(0);
+}
+
 .ev-page {
   min-height: 100vh;
   background: var(--bg);

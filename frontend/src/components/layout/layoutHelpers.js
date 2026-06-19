@@ -11,12 +11,12 @@ export function getNavConfig(tipo) {
 
   if (tipo === 'pessoal') {
     base.push({ to: '/meus-ingressos', label: 'Meus Ingressos', icon: Ticket });
-  } else {
+  } else if (tipo) {
     base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
   }
 
   return {
     links: base,
-    podeCriarEvento: !tipo || tipo === 'comunidade',
+    podeCriarEvento: tipo === 'comunidade',
   };
 }

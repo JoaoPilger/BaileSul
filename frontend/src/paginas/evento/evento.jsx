@@ -87,6 +87,10 @@ export default function EventoPage() {
   const navigate = useNavigate()
   const evento = useMemo(() => loadEventById(id), [id])
   const [mapSrc, setMapSrc] = useState(AMAUC_MAP)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [quantidade, setQuantidade] = useState('1')
+  const [pagamento, setPagamento] = useState('presencial')
+  const [nomeRetirada, setNomeRetirada] = useState('')
 
   const addressQuery = useMemo(
     () => (evento ? buildAddress(evento) : ''),
@@ -164,6 +168,9 @@ export default function EventoPage() {
       navigator.clipboard?.writeText(window.location.href)
     }
   }
+
+  const openModal = () => setModalOpen(true)
+  const closeModal = () => setModalOpen(false)
 
   return (
     <>
@@ -321,7 +328,7 @@ export default function EventoPage() {
                     <span className={`ev-price ${isFree ? 'ev-price--free' : ''}`}>
                       {priceDisplay}
                     </span>
-                    <button type="button" className="ev-btn-reservar">
+                    <button type="button" className="ev-btn-reservar" onClick={() => openModal()}>
                       Reservar
                     </button>
                   </div>
@@ -344,6 +351,75 @@ export default function EventoPage() {
           </section>
         </div>
       </main>
+
+      {modalOpen && (
+        <div className="ev-modal" onClick={closeModal}>
+          <div className="ev-modal-card" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="ev-modal-close" onClick={closeModal} aria-label="Fechar">
+              &times;
+            </button>
+
+            <h2 className="ev-modal-title">Reserve seu Ingresso</h2>
+
+            <div className="ev-modal-field">
+              <label className="ev-modal-label" htmlFor="ev-quantidade">Quantidade:</label>
+              <select
+                id="ev-quantidade"
+                className="ev-modal-select"
+                value={quantidade}
+                onChange={(e) => setQuantidade(e.target.value)}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="ev-modal-field">
+              <span className="ev-modal-label">Forma de pagamento:</span>
+              <div className="ev-modal-radios">
+                <label className="ev-modal-radio">
+                  <input
+                    type="radio"
+                    name="pagamento"
+                    value="presencial"
+                    checked={pagamento === 'presencial'}
+                    onChange={(e) => setPagamento(e.target.value)}
+                  />
+                  Presencial
+                </label>
+                <label className="ev-modal-radio">
+                  <input
+                    type="radio"
+                    name="pagamento"
+                    value="whatsapp"
+                    checked={pagamento === 'whatsapp'}
+                    onChange={(e) => setPagamento(e.target.value)}
+                  />
+                  Via WhatsApp
+                </label>
+              </div>
+            </div>
+
+            <div className="ev-modal-field">
+              <label className="ev-modal-label" htmlFor="ev-nome">Nome para retirada:</label>
+              <input
+                id="ev-nome"
+                type="text"
+                className="ev-modal-input"
+                placeholder="Digite o nome Completo"
+                value={nomeRetirada}
+                onChange={(e) => setNomeRetirada(e.target.value)}
+              />
+            </div>
+
+            <button type="button" className="ev-modal-submit">
+              Prosseguir
+            </button>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   )
