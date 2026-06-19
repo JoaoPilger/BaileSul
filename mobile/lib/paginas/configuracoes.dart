@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
+import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -94,6 +95,7 @@ class ConfiguracoesPage extends StatelessWidget {
     if (!sessao.autenticado || tipo == null) {
       return Scaffold(
         backgroundColor: BaileSulColors.dark,
+        bottomNavigationBar: const MobileFooter(),
         body: Column(
           children: [
             MobileHeader(
@@ -125,6 +127,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: BaileSulColors.dark,
+      bottomNavigationBar: const MobileFooter(),
       body: Column(
         children: [
           MobileHeader(

@@ -145,10 +145,7 @@ class _CalendarioPageState extends State<CalendarioPage> {
   void _showMenu() {
     MobileAppMenu.show(
       context,
-      entries: MobileAppMenu.entries(
-        context,
-        incluirInicio: true,
-      ),
+      entries: MobileAppMenu.entries(context),
     );
   }
 

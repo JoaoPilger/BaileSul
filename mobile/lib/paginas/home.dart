@@ -179,25 +179,6 @@ class _HomePageState extends State<HomePage> {
                       child: MobileFooter(
                         logoHeight: 52,
                         horizontalPadding: 24,
-                        navLinks: [
-                          FooterNavLink(
-                            label: 'Calendário',
-                            onTap: () => Navigator.pushNamed(context, '/calendario'),
-                          ),
-                          FooterNavLink(
-                            label: SessaoUsuario.instance.autenticado
-                                ? 'Sair'
-                                : 'Login',
-                            onTap: () {
-                              if (SessaoUsuario.instance.autenticado) {
-                                SessaoUsuario.instance.encerrarSessao();
-                              } else {
-                                Navigator.pushNamed(context, '/login');
-                              }
-                            },
-                          ),
-                          const FooterNavLink(label: 'Contato'),
-                        ],
                       ),
                     ),
                   ],

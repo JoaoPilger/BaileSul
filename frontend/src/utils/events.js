@@ -4,7 +4,7 @@ const HIDDEN_KEY = 'bailesul_deleted_event_ids'
 const MOCK_EVENTS = [
   {
     id: 1,
-    title: 'Baile do Rancho',
+    title: 'Baile do Rancho' ,
     date: '2025-06-14',
     city: 'Concórdia',
     style: 'sertanejo',

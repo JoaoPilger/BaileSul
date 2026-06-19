@@ -9,10 +9,13 @@ import 'paginas/meusEventos_bandas.dart';
 import 'paginas/meusEventos_comunidade.dart';
 import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'paginas/pesquisa_padrao_bandas.dart';
+import 'paginas/pesquisa_padrao_comunidade.dart';
 import 'paginas/pesquisa_padrao_eventos.dart';
 import 'models/tipo_conta.dart';
 import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
+import 'widgets/mobile_footer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +42,8 @@ class MyApp extends StatelessWidget {
       home: const HomePage(),
       routes: {
         '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
+        '/pesquisa-comunidades': (_) => const PesquisaPadraoComunidade(),
+        '/pesquisa-bandas': (_) => const PesquisaPadraoBandas(),
         '/pesquisa-padrao': (_) => const PesquisaPadraoEventos(),
         '/calendario': (_) => const CalendarioPage(),
         '/login': (_) => const LoginScreen(),
@@ -49,6 +54,7 @@ class MyApp extends StatelessWidget {
             return const MeusEventosBandasPage();
           }
           return const Scaffold(
+            bottomNavigationBar: MobileFooter(),
             body: Center(
               child: Text('Apenas contas de banda podem acessar esta página.'),
             ),

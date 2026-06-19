@@ -110,7 +110,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   void _abrirMenu() {
     MobileAppMenu.show(
       context,
-      entries: MobileAppMenu.entries(context, incluirInicio: true),
+      entries: MobileAppMenu.entries(context),
     );
   }
 
@@ -138,8 +138,6 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _BotaoVoltar(),
-                        const SizedBox(height: 20),
                         const Text(
                           'Eventos',
                           style: TextStyle(
@@ -240,11 +238,6 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                   child: MobileFooter(
                     logoHeight: 52,
                     horizontalPadding: 24,
-                    navLinks: const [
-                      FooterNavLink(label: 'Calendário'),
-                      FooterNavLink(label: 'Login'),
-                      FooterNavLink(label: 'Contato'),
-                    ],
                   ),
                 ),
               ],
@@ -259,44 +252,6 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
 // ---------------------------------------------------------------------------
 // Widgets de UI
 // ---------------------------------------------------------------------------
-
-class _BotaoVoltar extends StatelessWidget {
-  const _BotaoVoltar();
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: BaileSulColors.accent,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: () => Navigator.maybePop(context),
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 12,
-                color: Colors.white.withValues(alpha: 0.95),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Voltar',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _CampoBusca extends StatelessWidget {
   const _CampoBusca({

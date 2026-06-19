@@ -523,6 +523,27 @@ select.field-input option { background: #FFFFFF; color: #111111; }
 .checkbox-label a { color: var(--accent-light); text-decoration: none; transition: color 0.2s; }
 .checkbox-label a:hover { color: var(--accent); }
 
+.field-input--error {
+  border-color: var(--error) !important;
+  box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.12) !important;
+}
+
+.field-hint {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  color: var(--error);
+  line-height: 1.35;
+}
+
+.upload-area--error {
+  border-color: var(--error);
+  box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.12);
+}
+
+.checkbox-group--error .checkbox-label {
+  color: var(--error);
+}
+
 .error-msg {
   font-size: 0.8rem; color: var(--error);
   padding: 10px 14px;

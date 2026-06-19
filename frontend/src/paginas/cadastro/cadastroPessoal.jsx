@@ -5,8 +5,6 @@ import { useAuth } from '../../contexts/AuthContext'
 import styles from './cadastro.module.css';
 import HeaderCal from "../../components/header/HeaderCal"
 
-const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
-
 function calcForca(senha) {
   if (!senha) return { pct: '0%', label: '', cor: 'transparent' }
   let score = 0
@@ -22,6 +20,11 @@ function calcForca(senha) {
     { pct: '100%', label: 'Muito forte', cor: '#4eca8b' },
   ]
   return map[score]
+}
+
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className="field-hint" role="alert">{message}</p>
 }
 
 export default function CadastroPessoal() {
@@ -41,33 +44,68 @@ export default function CadastroPessoal() {
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
 
   const forca = calcForca(form.senha)
-
   const passo = form.nome && form.email ? (form.senha ? 3 : 2) : 1
+
+  const showError = (field) => touched[field] && errors[field]
+  const inputClass = (field, extra = '') =>
+    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
+
+  const updateField = (name, value) => {
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value }
+      if (touched[name]) {
+        setErrors((errs) => ({ ...errs, [name]: validateCadastroPessoalField(name, value, updated) }))
+      }
+      return updated
+    })
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }))
+    if (type === 'checkbox') {
+      setForm((prev) => ({ ...prev, [name]: checked }))
+      if (!checked) setErrors((prev) => ({ ...prev, termos: 'Aceite os termos para continuar.' }))
+      else setErrors((prev) => ({ ...prev, termos: '' }))
+      return
+    }
+
+    let next = value
+    if (name === 'nome' || name === 'sobrenome') next = formatNameField(value)
+    if (name === 'telefone') next = formatPhone(value)
+
+    updateField(name, next)
+    setErro('')
+  }
+
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateCadastroPessoalField(name, form[name], form),
+    }))
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErro('')
-    if (!form.nome || !form.email || !form.senha || !form.confirmarSenha) {
-      setErro('Preencha todos os campos obrigatórios.')
-      return
-    }
-    if (form.senha !== form.confirmarSenha) {
-      setErro('As senhas não coincidem.')
-      return
-    }
-    if (!senhaValida(form.senha)) {
-      setErro('A senha deve ter ao menos 8 caracteres, incluindo letras e números.')
-      return
-    }
-    if (!form.termos) {
-      setErro('Você precisa aceitar os termos de uso.')
+
+    const validationErrors = validateCadastroPessoalForm(form)
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      setTouched({
+        nome: true,
+        sobrenome: true,
+        email: true,
+        telefone: true,
+        senha: true,
+        confirmarSenha: true,
+        termos: true,
+      })
       return
     }
 
@@ -76,7 +114,7 @@ export default function CadastroPessoal() {
     setCarregando(true)
     try {
       await register({
-        email: form.email,
+        email: form.email.trim(),
         senha: form.senha,
         tipo: 'pessoal',
         perfil: { nome: nomeCompleto },
@@ -140,12 +178,15 @@ export default function CadastroPessoal() {
                       placeholder="João"
                       value={form.nome}
                       onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={60}
                     />
                     <svg viewBox="0 0 24 24">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
                   </div>
+                  <FieldHint message={showError('nome')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="sobrenome">Sobrenome</label>
@@ -158,8 +199,11 @@ export default function CadastroPessoal() {
                       placeholder="Silva"
                       value={form.sobrenome}
                       onChange={handleChange}
+                      onBlur={handleBlur}
+                      maxLength={60}
                     />
                   </div>
+                  <FieldHint message={showError('sobrenome')} />
                 </div>
               </div>
 
@@ -174,6 +218,7 @@ export default function CadastroPessoal() {
                     placeholder="seu@email.com"
                     value={form.email}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     autoComplete="email"
                   />
                   <svg viewBox="0 0 24 24">
@@ -181,6 +226,7 @@ export default function CadastroPessoal() {
                     <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                   </svg>
                 </div>
+                <FieldHint message={showError('email')} />
               </div>
 
               <div className={styles['field-group']}>
@@ -194,11 +240,14 @@ export default function CadastroPessoal() {
                     placeholder="(11) 9 0000-0000"
                     value={form.telefone}
                     onChange={handleChange}
+                    onBlur={handleBlur}
+                    inputMode="tel"
                   />
                   <svg viewBox="0 0 24 24">
                     <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" />
                   </svg>
                 </div>
+                <FieldHint message={showError('telefone')} />
               </div>
 
               <div className={styles['field-group']}>
@@ -212,6 +261,7 @@ export default function CadastroPessoal() {
                     placeholder="Mínimo 8 caracteres"
                     value={form.senha}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     autoComplete="new-password"
                   />
                   <svg viewBox="0 0 24 24">
@@ -246,6 +296,7 @@ export default function CadastroPessoal() {
                     <p className={styles['strength-label']} style={{ color: forca.cor }}>{forca.label}</p>
                   </div>
                 )}
+                <FieldHint message={showError('senha')} />
               </div>
 
               <div className={styles['field-group']}>
@@ -259,6 +310,7 @@ export default function CadastroPessoal() {
                     placeholder="Repita a senha"
                     value={form.confirmarSenha}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     autoComplete="new-password"
                   />
                   <svg viewBox="0 0 24 24">
@@ -285,6 +337,7 @@ export default function CadastroPessoal() {
                     )}
                   </button>
                 </div>
+                <FieldHint message={showError('confirmarSenha')} />
               </div>
 
               <label className={styles['checkbox-group']}>
@@ -296,6 +349,7 @@ export default function CadastroPessoal() {
                   <a href="/privacidade" target="_blank" rel="noreferrer">Política de Privacidade</a>
                 </span>
               </label>
+              <FieldHint message={showError('termos')} />
 
               {erro && <p className={styles['error-msg']}>{erro}</p>}
 

@@ -4,8 +4,21 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
 import styles from './cadastro.module.css';
+import { validateImageFile } from '../../utils/criarEventoValidation'
+import {
+  formatCep,
+  formatCityField,
+  formatCnpj,
+  formatNameField,
+  formatPhone,
+  validateCadastroComunidadeField,
+  validateCadastroComunidadeForm,
+} from '../../utils/authFormValidation'
 
-const senhaValida = (senha) => senha.length >= 8 && /[a-zA-Z]/.test(senha) && /\d/.test(senha)
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className="field-hint" role="alert">{message}</p>
+}
 
 export default function CadastroComunidade() {
   const navigate = useNavigate()
@@ -27,31 +40,68 @@ export default function CadastroComunidade() {
     confirmarSenha: '',
     termos: false,
   })
-  const [imagemCapa, setImagemCapa] = useState(null)
   const [imagemPreview, setImagemPreview] = useState(null)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
   const [cepCarregando, setCepCarregando] = useState(false)
+  const [errors, setErrors] = useState({})
+  const [touched, setTouched] = useState({})
+
+  const passo = form.nomeComunidade && form.email ? (form.cep ? 3 : 2) : 1
+  const showError = (field) => touched[field] && errors[field]
+  const inputClass = (field, extra = '') =>
+    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
+
+  const updateField = (name, value) => {
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value }
+      if (touched[name]) {
+        setErrors((errs) => ({ ...errs, [name]: validateCadastroComunidadeField(name, value, updated) }))
+      }
+      return updated
+    })
+  }
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
-    setForm((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }))
+    if (type === 'checkbox') {
+      setForm((prev) => ({ ...prev, [name]: checked }))
+      setErrors((prev) => ({ ...prev, termos: checked ? '' : 'Aceite os termos para continuar.' }))
+      return
+    }
+
+    let next = value
+    if (name === 'nomeComunidade') next = formatNameField(value, 80)
+    if (name === 'telefone') next = formatPhone(value)
+    if (name === 'cnpj') next = formatCnpj(value)
+    if (name === 'cep') next = formatCep(value)
+    if (name === 'cidade' || name === 'bairro') next = formatCityField(value)
+
+    updateField(name, next)
+    setErro('')
   }
 
-  const handleImagem = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImagemCapa(file)
-    setImagemPreview(URL.createObjectURL(file))
+  const handleBlur = (e) => {
+    const { name } = e.target
+    setTouched((prev) => ({ ...prev, [name]: true }))
+    setErrors((prev) => ({
+      ...prev,
+      [name]: validateCadastroComunidadeField(name, form[name], form),
+    }))
+    if (name === 'cep') buscarCep()
   }
 
-  const handleDrop = (e) => {
-    e.preventDefault()
-    const file = e.dataTransfer.files[0]
+  const handleImagem = (file) => {
     if (!file) return
-    setImagemCapa(file)
+    const imageError = validateImageFile(file)
+    if (imageError) {
+      setErrors((prev) => ({ ...prev, imagem: imageError }))
+      setTouched((prev) => ({ ...prev, imagem: true }))
+      return
+    }
     setImagemPreview(URL.createObjectURL(file))
+    setErrors((prev) => ({ ...prev, imagem: '' }))
   }
 
   const buscarCep = async () => {
@@ -62,13 +112,22 @@ export default function CadastroComunidade() {
       const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
       const data = await res.json()
       if (!data.erro) {
-        setForm((p) => ({
-          ...p,
-          cidade: data.localidade || '',
-          estado: data.uf || '',
-          bairro: data.bairro || '',
-          rua: data.logradouro || '',
-        }))
+        setForm((prev) => {
+          const updated = {
+            ...prev,
+            cidade: data.localidade || prev.cidade,
+            estado: data.uf || prev.estado,
+            bairro: data.bairro || prev.bairro,
+            rua: data.logradouro || prev.rua,
+          }
+          setErrors((errs) => ({
+            ...errs,
+            cidade: validateCadastroComunidadeField('cidade', updated.cidade, updated),
+            bairro: validateCadastroComunidadeField('bairro', updated.bairro, updated),
+            rua: validateCadastroComunidadeField('rua', updated.rua, updated),
+          }))
+          return updated
+        })
       }
     } catch {
     } finally {
@@ -79,31 +138,31 @@ export default function CadastroComunidade() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErro('')
-    if (!form.nomeComunidade || !form.email || !form.telefone || !form.cnpj) {
-      setErro('Preencha todos os campos obrigatórios (incluindo CNPJ).')
+
+    const validationErrors = validateCadastroComunidadeForm(form)
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors)
+      setTouched({
+        nomeComunidade: true,
+        telefone: true,
+        email: true,
+        cnpj: true,
+        cep: true,
+        cidade: true,
+        bairro: true,
+        rua: true,
+        senha: true,
+        confirmarSenha: true,
+        termos: true,
+      })
       return
     }
-    if (!form.senha || !form.confirmarSenha) {
-      setErro('Defina uma senha de acesso.')
-      return
-    }
-    if (form.senha !== form.confirmarSenha) {
-      setErro('As senhas não coincidem.')
-      return
-    }
-    if (!senhaValida(form.senha)) {
-      setErro('A senha deve ter ao menos 8 caracteres, incluindo letras e números.')
-      return
-    }
-    if (!form.termos) {
-      setErro('Você precisa aceitar os termos de compartilhamento.')
-      return
-    }
+
     const endereco = [form.rua, form.bairro, form.referencia].filter(Boolean).join(', ')
     setCarregando(true)
     try {
       await register({
-        email: form.email,
+        email: form.email.trim(),
         senha: form.senha,
         tipo: 'comunidade',
         perfil: {
@@ -124,8 +183,6 @@ export default function CadastroComunidade() {
       setCarregando(false)
     }
   }
-
-  const passo = form.nomeComunidade && form.email ? (form.cep ? 3 : 2) : 1
 
   return (
     <>
@@ -169,6 +226,7 @@ export default function CadastroComunidade() {
                     <input id="nomeComunidade" name="nomeComunidade" type="text" className={styles['field-input']} placeholder="Ex: Comunidade Gaúcha" value={form.nomeComunidade} onChange={handleChange} />
                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
                   </div>
+                  <FieldHint message={showError('nomeComunidade')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="telefone">Telefone *</label>
@@ -176,6 +234,7 @@ export default function CadastroComunidade() {
                     <input id="telefone" name="telefone" type="tel" className={styles['field-input']} placeholder="(48) 9 0000-0000" value={form.telefone} onChange={handleChange} />
                     <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.8 12.1 19.79 19.79 0 0 1 1.77 3.47 2 2 0 0 1 3.73 1.32h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.1A16 16 0 0 0 14.9 16.1l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 23 16.92z" /></svg>
                   </div>
+                  <FieldHint message={showError('telefone')} />
                 </div>
               </div>
 
@@ -186,6 +245,7 @@ export default function CadastroComunidade() {
                     <input id="email" name="email" type="email" className={styles['field-input']} placeholder="contato@comunidade.com" value={form.email} onChange={handleChange} autoComplete="email" />
                     <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></svg>
                   </div>
+                  <FieldHint message={showError('email')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="cnpj">CNPJ *</label>
@@ -193,6 +253,7 @@ export default function CadastroComunidade() {
                     <input id="cnpj" name="cnpj" type="text" className={styles['field-input']} placeholder="00.000.000/0000-00" value={form.cnpj} onChange={handleChange} />
                     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                   </div>
+                  <FieldHint message={showError('cnpj')} />
                 </div>
               </div>
 
@@ -213,6 +274,7 @@ export default function CadastroComunidade() {
                       autoComplete="new-password"
                     />
                   </div>
+                  <FieldHint message={showError('senha')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="confirmarSenha">Confirmar senha *</label>
@@ -228,6 +290,7 @@ export default function CadastroComunidade() {
                       autoComplete="new-password"
                     />
                   </div>
+                  <FieldHint message={showError('confirmarSenha')} />
                 </div>
               </div>
 
@@ -236,7 +299,7 @@ export default function CadastroComunidade() {
               <div
                 className={cn(styles['upload-area'], imagemPreview && styles['upload-area--filled'])}
                 onClick={() => fileRef.current?.click()}
-                onDrop={handleDrop}
+                onDrop={(e) => { e.preventDefault(); handleImagem(e.dataTransfer.files[0]) }}
                 onDragOver={(e) => e.preventDefault()}
               >
                 {imagemPreview ? (
@@ -261,8 +324,9 @@ export default function CadastroComunidade() {
                     <small>PNG, JPG ou WEBP · Máx 5 MB</small>
                   </div>
                 )}
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImagem} />
+                <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" style={{ display: 'none' }} onChange={(e) => handleImagem(e.target.files[0])} />
               </div>
+              <FieldHint message={showError('imagem')} />
 
               <div className={styles['section-label']}>Localização</div>
 
@@ -278,12 +342,14 @@ export default function CadastroComunidade() {
                     <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" /></svg>
                     {cepCarregando && <span className={styles['cep-loading']}>⟳</span>}
                   </div>
+                  <FieldHint message={showError('cep')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="cidade">Cidade *</label>
                   <div className={styles['input-wrapper']}>
                     <input id="cidade" name="cidade" type="text" className={cn(styles['field-input'], styles['no-icon'])} placeholder="Ex: Joinville" value={form.cidade} onChange={handleChange} />
                   </div>
+                  <FieldHint message={showError('cidade')} />
                 </div>
               </div>
 
@@ -293,12 +359,14 @@ export default function CadastroComunidade() {
                   <div className={styles['input-wrapper']}>
                     <input id="bairro" name="bairro" type="text" className={cn(styles['field-input'], styles['no-icon'])} placeholder="Ex: Centro" value={form.bairro} onChange={handleChange} />
                   </div>
+                  <FieldHint message={showError('bairro')} />
                 </div>
                 <div className={styles['field-group']}>
                   <label className={styles['field-label']} htmlFor="rua">Rua *</label>
                   <div className={styles['input-wrapper']}>
                     <input id="rua" name="rua" type="text" className={cn(styles['field-input'], styles['no-icon'])} placeholder="Ex: Rua das Flores, 100" value={form.rua} onChange={handleChange} />
                   </div>
+                  <FieldHint message={showError('rua')} />
                 </div>
               </div>
 
@@ -325,6 +393,7 @@ export default function CadastroComunidade() {
                   <a href="/termos" target="_blank" rel="noreferrer">Termos de compartilhamento de informações</a>
                 </span>
               </label>
+              <FieldHint message={showError('termos')} />
 
               {erro && <p className={styles['error-msg']}>{erro}</p>}
 
