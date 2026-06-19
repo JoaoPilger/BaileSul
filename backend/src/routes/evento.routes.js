@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {
-  listar, buscarPorId, criar, atualizar, remover, calendario, responderContrato
+  listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato
 } = require('../controllers/evento.controller');
 const { autenticar, autorizar } = require('../middlewares/auth.middleware');
 
@@ -16,7 +16,7 @@ router.get('/:id', buscarPorId);
 // RF07 – CRUD de eventos (somente comunidade)
 router.post('/',      autenticar, autorizar('comunidade'), criar);
 router.put('/:id',    autenticar, autorizar('comunidade'), atualizar);
-router.delete('/:id', autenticar, autorizar('comunidade'), remover);
+router.delete('/:id', autenticar, autorizar('comunidade'), cancelar);
 
 
 // Banda responde contrato (aceitar / recusar)
