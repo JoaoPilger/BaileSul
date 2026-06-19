@@ -14,6 +14,7 @@ import Bandas from './paginas/bandas/bandas.jsx'
 import Comunidades from './paginas/comunidades/comunidades.jsx'
 import VitrineComunidade from './paginas/vitrine_comunidade/vitrine_comunidade.jsx'
 import VitrineBanda from './paginas/vitrine_banda/vitrine_banda.jsx'
+import Vendedores from './paginas/vendedores/vendedores.jsx'
 
 function App() {
   return (
@@ -34,6 +35,7 @@ function App() {
           <Route path="/comunidades" element={<Comunidades />} />
           <Route path="/comunidades/:id" element={<VitrineComunidade />} />
           <Route path="/bandas/:id" element={<VitrineBanda />} />
+          <Route path="/vendedores" element={<Vendedores />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
