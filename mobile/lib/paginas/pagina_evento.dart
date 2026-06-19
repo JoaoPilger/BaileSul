@@ -42,7 +42,7 @@ class _PaginaEventoState extends State<PaginaEvento> {
   void _abrirMenu() {
     MobileAppMenu.show(
       context,
-      entries: MobileAppMenu.entries(context, incluirInicio: true),
+      entries: MobileAppMenu.entries(context),
     );
   }
 
@@ -110,8 +110,6 @@ class _EventoConteudo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _BotaoVoltar(onPressed: () => Navigator.maybePop(context)),
-        const SizedBox(height: 12),
         _ImagemEvento(imageUrl: event.imageUrl),
         const SizedBox(height: 12),
         _ChipGenero(label: event.genre),
@@ -288,46 +286,6 @@ class _EventoConteudo extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BotaoVoltar extends StatelessWidget {
-  const _BotaoVoltar({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: BaileSulColors.accent,
-      borderRadius: BorderRadius.circular(6),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(6),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.arrow_back_ios_new_rounded,
-                size: 12,
-                color: Colors.white.withValues(alpha: 0.95),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                'Voltar',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.95),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
