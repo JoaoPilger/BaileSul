@@ -14,4 +14,20 @@ abstract final class ApiConfig {
         return 'http://localhost:3000/api';
     }
   }
+
+  static String get serverOrigin {
+    final Uri uri = Uri.parse(baseUrl);
+    final int? port = uri.hasPort ? uri.port : null;
+    if (port != null) {
+      return '${uri.scheme}://${uri.host}:$port';
+    }
+    return '${uri.scheme}://${uri.host}';
+  }
+
+  static String resolveMediaUrl(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    if (raw.startsWith('/')) return '$serverOrigin$raw';
+    return raw;
+  }
 }

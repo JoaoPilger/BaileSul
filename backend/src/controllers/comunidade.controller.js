@@ -103,6 +103,32 @@ const buscarPorId = async (req, res) => {
 };
 
 /**
+ * GET /api/comunidades/me/eventos
+ * Lista todos os eventos da comunidade autenticada (gestão / Meus Eventos).
+ */
+const listarMeusEventos = async (req, res) => {
+  const comunidade_id = req.usuario.id;
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, titulo, descricao, data_inicio, data_fim, local_nome,
+              local_endereco, valor_ingresso, foto_capa_url, status,
+              latitude, longitude
+       FROM eventos
+       WHERE comunidade_id = $1
+       ORDER BY data_inicio DESC`,
+      [comunidade_id]
+    );
+
+    return res.json({ eventos: rows });
+
+  } catch (err) {
+    console.error('Erro ao listar eventos da comunidade:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * PUT /api/comunidades/me/perfil
  * RF12, RF20 – Editar vitrine da comunidade (somente comunidade autenticada)
  */
@@ -159,4 +185,4 @@ const atualizarPerfil = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, atualizarPerfil };
+module.exports = { listar, buscarPorId, listarMeusEventos, atualizarPerfil };

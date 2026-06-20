@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
@@ -40,6 +41,8 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
   final TextEditingController _referenciaController = TextEditingController();
 
   MapLocation? _localizacaoSelecionada;
+  Uint8List? _capaBytes;
+  String _capaFilename = 'capa.jpg';
   bool _salvando = false;
   String? _erroSalvar;
 
@@ -76,6 +79,23 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     final String mesFormatado = mes.toString().padLeft(2, '0');
     final String diaFormatado = dia.toString().padLeft(2, '0');
     return '$ano-$mesFormatado-$diaFormatado';
+  }
+
+  MediaType _mediaTypeFromFilename(String filename) {
+    final String lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return MediaType('image', 'png');
+    if (lower.endsWith('.webp')) return MediaType('image', 'webp');
+    if (lower.endsWith('.gif')) return MediaType('image', 'gif');
+    return MediaType('image', 'jpeg');
+  }
+
+  void _onCapaChanged(Uint8List? bytes, String filename) {
+    setState(() {
+      _capaBytes = bytes;
+      if (filename.isNotEmpty) {
+        _capaFilename = filename;
+      }
+    });
   }
 
   Future<void> _salvarEvento() async {
@@ -132,25 +152,35 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     });
 
     try {
-      final http.Response response = await http
-          .post(
-            Uri.parse('${ApiConfig.baseUrl}/eventos'),
-            headers: <String, String>{
-              'Authorization': 'Bearer $token',
-              'Content-Type': 'application/json',
-            },
-            body: jsonEncode(<String, dynamic>{
-              'titulo': titulo,
-              'data_inicio': dataInicio,
-              'data_fim': dataFim,
-              if (descricao.isNotEmpty) 'descricao': descricao,
-              if (endereco.isNotEmpty) 'local_endereco': endereco,
-              if (_cidadeController.text.trim().isNotEmpty)
-                'local_nome': _cidadeController.text.trim(),
-              if (dias.isNotEmpty) 'dias': dias,
-            }),
-          )
-          .timeout(const Duration(seconds: 20));
+      final http.MultipartRequest request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${ApiConfig.baseUrl}/eventos'),
+      );
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['titulo'] = titulo;
+      request.fields['data_inicio'] = dataInicio;
+      request.fields['data_fim'] = dataFim;
+      if (descricao.isNotEmpty) request.fields['descricao'] = descricao;
+      if (endereco.isNotEmpty) request.fields['local_endereco'] = endereco;
+      if (_cidadeController.text.trim().isNotEmpty) {
+        request.fields['local_nome'] = _cidadeController.text.trim();
+      }
+
+      if (_capaBytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'foto_capa',
+            _capaBytes!,
+            filename: _capaFilename,
+            contentType: _mediaTypeFromFilename(_capaFilename),
+          ),
+        );
+      }
+
+      final http.StreamedResponse streamed = await request.send().timeout(
+        const Duration(seconds: 30),
+      );
+      final http.Response response = await http.Response.fromStream(streamed);
 
       Map<String, dynamic> body = <String, dynamic>{};
       if (response.body.isNotEmpty) {
@@ -334,7 +364,7 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                       const SizedBox(height: 24),
                       const _SectionTitle('Imagem de Capa'),
                       const SizedBox(height: 10),
-                      const _CoverUploadBox(),
+                      _CoverUploadBox(onChanged: _onCapaChanged),
                       const SizedBox(height: 24),
                       const _SectionTitle('Vendedores'),
                       const SizedBox(height: 10),
@@ -623,7 +653,9 @@ class _TimeTextInputFormatter extends TextInputFormatter {
 }
 
 class _CoverUploadBox extends StatefulWidget {
-  const _CoverUploadBox();
+  const _CoverUploadBox({required this.onChanged});
+
+  final void Function(Uint8List? bytes, String filename) onChanged;
 
   @override
   State<_CoverUploadBox> createState() => _CoverUploadBoxState();
@@ -647,6 +679,7 @@ class _CoverUploadBoxState extends State<_CoverUploadBox> {
       final Uint8List bytes = await picked.readAsBytes();
       if (!mounted) return;
       setState(() => _imageBytes = bytes);
+      widget.onChanged(bytes, picked.name);
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -689,6 +722,7 @@ class _CoverUploadBoxState extends State<_CoverUploadBox> {
                   onTap: () {
                     Navigator.pop(sheetContext);
                     setState(() => _imageBytes = null);
+                    widget.onChanged(null, '');
                   },
                 ),
             ],

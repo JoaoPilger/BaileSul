@@ -15,7 +15,7 @@ const { caminhoParaUrl } = require('../middlewares/upload');
  */
 const resolverFotoCapa = (req) => {
   if (req.file) {
-    return caminhoParaUrl(req.file.path);
+    return caminhoParaUrl(req.file.path, req);
   }
   if (typeof req.body?.foto_capa_url === 'string' && req.body.foto_capa_url.trim()) {
     return req.body.foto_capa_url.trim();
@@ -201,7 +201,10 @@ const criar = async (req, res) => {
     return res.status(201).json({ message: 'Evento criado com sucesso', evento: rows[0] });
 
   } catch (err) {
-    console.error('Erro ao criar evento:', err.message);
+    console.error('Erro ao criar evento:', err.message, err.detail || '');
+    if (err.code === '23514') {
+      return res.status(400).json({ error: 'URL da foto de capa inválida.' });
+    }
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };

@@ -1,4 +1,5 @@
 require('dotenv').config();
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -45,6 +46,10 @@ app.use(
 
 // ── Body parser com limite explícito ─────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
+
+// ── Arquivos de mídia (capas, fotos de perfil, etc.) ───────────────────────
+const MEDIA_ROOT = path.resolve(__dirname, 'media');
+app.use('/media', express.static(MEDIA_ROOT));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 

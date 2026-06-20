@@ -24,7 +24,6 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _eventos = [];
-  String _search = '';
   String _selectedFiltro = 'Todos';
   static const List<String> _filtros = [
     'Todos',
@@ -150,15 +149,7 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> listaFiltrada = _eventos.where((e) {
-      if (_search.isNotEmpty) {
-        final titulo = (e['titulo'] ?? '').toString().toLowerCase();
-        if (!titulo.contains(_search.toLowerCase())) {
-          return false;
-        }
-      }
-      return _filtrarPorStatus(e);
-    }).toList();
+    final List<Map<String, dynamic>> listaFiltrada = _eventos.where(_filtrarPorStatus).toList();
 
     return Scaffold(
       backgroundColor: BaileSulColors.dark,
@@ -187,6 +178,8 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
                             children: [
                               if (isNarrow) ...[
                                 Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
+                                const SizedBox(height: 12),
+                                _buildFilterTabs(),
                                 const SizedBox(height: 12),
                                 ElevatedButton.icon(
                                   onPressed: () => Navigator.push(
@@ -226,6 +219,8 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
                                     ),
                                   ],
                                 ),
+                                const SizedBox(height: 12),
+                                _buildFilterTabs(),
                               ],
                               const SizedBox(height: 16),
                             ],
@@ -240,10 +235,6 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
                             children: [
                               _buildStatsGrid(),
                               const SizedBox(height: 16),
-                              _buildSearchBar(),
-                              const SizedBox(height: 12),
-                              _buildFilterTabs(),
-                              const SizedBox(height: 12),
                               if (_loading)
                                 const Center(child: CircularProgressIndicator())
                               else if (_error != null)
@@ -272,71 +263,6 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
         ],
       ),
       bottomNavigationBar: const MobileFooter(),
-    );
-  }
-
-  Widget _buildSearchBar() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isNarrow = constraints.maxWidth < 540;
-
-        return isNarrow
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  TextField(
-                    onChanged: (v) => setState(() => _search = v),
-                    decoration: InputDecoration(
-                      filled: true,
-                      fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.search),
-                      hintText: 'Buscar bandas',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.filter_list),
-                    label: const Text('Filtrar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: BaileSulColors.headerText,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    ),
-                  ),
-                ],
-              )
-            : Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      onChanged: (v) => setState(() => _search = v),
-                      decoration: InputDecoration(
-                        filled: true,
-                        fillColor: Colors.white,
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: 'Buscar bandas',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ElevatedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.filter_list),
-                    label: const Text('Filtrar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: BaileSulColors.headerText,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                    ),
-                  ),
-                ],
-              );
-      },
     );
   }
 
@@ -476,10 +402,12 @@ class _EventoListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String imageUrl = (event['foto_capa_url']?.toString().isNotEmpty == true)
-        ? event['foto_capa_url'].toString()
-        : (defaultImageUrl?.isNotEmpty == true
-            ? defaultImageUrl!
+    final String capaResolvida = ApiConfig.resolveMediaUrl(event['foto_capa_url']?.toString());
+    final String defaultResolvida = ApiConfig.resolveMediaUrl(defaultImageUrl);
+    final String imageUrl = capaResolvida.isNotEmpty
+        ? capaResolvida
+        : (defaultResolvida.isNotEmpty
+            ? defaultResolvida
             : 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=80');
 
     return LayoutBuilder(

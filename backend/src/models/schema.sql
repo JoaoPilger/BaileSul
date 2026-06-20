@@ -203,7 +203,11 @@ CREATE TABLE eventos (
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_datas         CHECK (data_fim >= data_inicio),
   CONSTRAINT chk_ingresso      CHECK (valor_ingresso IS NULL OR valor_ingresso >= 0),
-  CONSTRAINT chk_foto_capa_url CHECK (foto_capa_url IS NULL OR foto_capa_url ~ '^https?://')
+  CONSTRAINT chk_foto_capa_url CHECK (
+    foto_capa_url IS NULL
+    OR foto_capa_url ~ '^https?://'
+    OR foto_capa_url ~ '^/media/'
+  )
 );
 
 CREATE TRIGGER trg_eventos_atualizado_em

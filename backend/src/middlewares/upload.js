@@ -72,14 +72,24 @@ const criarStorage = (destDir) =>
 const filtroMime = (mimesAceitos) => (req, file, cb) => {
   if (mimesAceitos.includes(file.mimetype)) {
     cb(null, true);
-  } else {
-    cb(
-      Object.assign(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`), {
-        status: 415,
-      }),
-      false
-    );
+    return;
   }
+
+  // Alguns clientes mobile enviam imagens como application/octet-stream.
+  if (
+    file.mimetype === 'application/octet-stream'
+    && mimesAceitos === MIME_IMAGENS
+  ) {
+    cb(null, true);
+    return;
+  }
+
+  cb(
+    Object.assign(new Error(`Tipo de arquivo não permitido: ${file.mimetype}`), {
+      status: 415,
+    }),
+    false
+  );
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -141,15 +151,27 @@ const uploadMidiaPerfil = multer({
 
 /**
  * Recebe o caminho absoluto gerado pelo multer e devolve a URL
- * relativa que será persistida no banco.
- *
- * Exemplo:
- *   /projeto/src/media/eventos/capas/1234_ab.jpg
- *   → /media/eventos/capas/1234_ab.jpg
+ * persistida no banco (http(s) absoluta quando possível).
  */
-const caminhoParaUrl = (filePath) => {
+const caminhoParaUrl = (filePath, req) => {
   const rel = path.relative(MEDIA_ROOT, filePath);
-  return '/media/' + rel.split(path.sep).join('/');
+  const pathUrl = '/media/' + rel.split(path.sep).join('/');
+
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host');
+    if (host) {
+      return `${proto}://${host}${pathUrl}`;
+    }
+  }
+
+  const base = process.env.API_PUBLIC_URL
+    || process.env.CLIENT_URL?.split(',')[0]?.trim();
+  if (base) {
+    return `${base.replace(/\/$/, '')}${pathUrl}`;
+  }
+
+  return pathUrl;
 };
 
 // ─────────────────────────────────────────────────────────────
