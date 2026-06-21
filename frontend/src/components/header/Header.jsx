@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, User, Plus } from 'lucide-react';
+import { Menu, X, User, Plus, Settings } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getNavConfig } from '../layout/layoutHelpers';
 import { cn } from '../../utils/cn';
@@ -63,6 +63,11 @@ export default function Header() {
               <Link to="/criar-evento" className={styles['btn-nav-create']}>
                 <Plus size={15} strokeWidth={2} aria-hidden />
                 <span>Criar Evento</span>
+              </Link>
+            )}
+            {isAuthenticated && (
+              <Link to="/configuracoes" className={styles['navbar-icon-btn']} aria-label="Configurações">
+                <Settings size={18} strokeWidth={2} />
               </Link>
             )}
             <Link to={contaLink} className={cn(styles['navbar-icon-btn'], styles['navbar-login-btn'])} aria-label={contaLabel}>

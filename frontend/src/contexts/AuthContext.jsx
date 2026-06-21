@@ -17,6 +17,9 @@ function loadStoredAuth() {
   }
 }
 
+/* Removed development auto-login helper to avoid permanent dev registrations.
+   The provider now only loads stored auth from `localStorage` when present. */
+
 function mapUsuario(data, fallbackEmail) {
   return {
     id: data.usuario_id ?? data.id,
@@ -26,7 +29,7 @@ function mapUsuario(data, fallbackEmail) {
 }
 
 export function AuthProvider({ children }) {
-  const [auth, setAuth] = useState(loadStoredAuth)
+  const [auth, setAuth] = useState(() => loadStoredAuth())
 
   const persistAuth = useCallback((next) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))

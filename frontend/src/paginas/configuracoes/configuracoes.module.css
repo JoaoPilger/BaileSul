@@ -1,0 +1,79 @@
+
+.page {
+  padding-top: 96px;
+  padding-bottom: 48px;
+}
+
+.title {
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: var(--black);
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.infoCard {
+  background: white;
+  border-radius: 12px;
+  padding: 18px;
+  border: 1px solid var(--border);
+}
+
+.tilesGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.tileButton {
+  background: white;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.tileContent {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.icon {
+  color: var(--accent);
+  flex: 0 0 auto;
+}
+
+.textBlock { line-height: 1.1; }
+
+.tileTitle {
+  font-weight: 700;
+  color: var(--black);
+  font-family: var(--font-head);
+  font-size: 1.02rem;
+  margin-top: 0;
+}
+
+.tileSubtitle { color: var(--muted); font-size: 13px; }
+
+.arrow { color: var(--muted); }
+
+.logoutWrap { margin-top: 12px; }
+
+.logoutBtn {
+  width: 100%;
+  justify-content: center;
+  border: 1px solid #d9534f;
+  color: #d9534f;
+  background: #fff;
+}
