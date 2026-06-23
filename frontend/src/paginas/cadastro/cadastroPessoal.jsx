@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import styles from './cadastro.module.css';
 import HeaderCal from "../../components/header/HeaderCal"
+import { validateCadastroPessoalField, validateCadastroPessoalForm, formatNameField, formatPhone } from '../../utils/authFormValidation'
 
 function calcForca(senha) {
   if (!senha) return { pct: '0%', label: '', cor: 'transparent' }
