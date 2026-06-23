@@ -4,36 +4,35 @@ import { MapPin, Calendar, Trash2 } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEvents, deleteEventById } from '../../utils/events'
-import { cn } from '../../utils/cn'
 import shared from '../../styles/shared.module.css'
-import styles from './eventos.module.css'
+import styles from '../../styles/listings.module.css'
 
-function EventCard({ event, onDelete }) {
+function ListingCard({ event, onDelete }) {
   const navigate = useNavigate()
   const date = new Date(event.date)
   const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
   const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className={styles['event-card']} onClick={() => navigate(`/eventos/${event.id}`)}>
-      <div className={styles['event-card-img-wrap']}>
-        <img src={event.image} alt={event.title} className={styles['event-card-img']} />
-        <div className={styles['event-card-date-badge']}>
-          <span className={styles['event-card-day']}>{day}</span>
-          <span className={styles['event-card-month']}>{month}</span>
+    <div className={styles['listing-card']} onClick={() => navigate(`/eventos/${event.id}`)}>
+      <div className={styles['listing-card-img-wrap']}>
+        <img src={event.image} alt={event.title} className={styles['listing-card-img']} />
+        <div className={styles['listing-card-badge']}>
+          <span>{day}</span>
+          <span>{month}</span>
         </div>
-        <div className={styles['event-card-price']}>{event.price}</div>
+        <div className={styles['listing-card-price']}>{event.price}</div>
       </div>
 
-      <div className={styles['event-card-body']}>
-        <span className={styles['event-card-style']}>{event.style}</span>
-        <h3 className={styles['event-card-title']}>{event.title}</h3>
-        <div className={styles['event-card-location']}>
-          <MapPin size={12} />
+      <div className={styles['listing-card-body']}>
+        <span className={styles['listing-card-label']}>{event.style}</span>
+        <h3 className={styles['listing-card-title']}>{event.title}</h3>
+        <div className={styles['listing-card-meta']}>
+          <MapPin size={14} />
           {event.city}
         </div>
         <button
-          className={styles['event-card-delete']}
+          className={styles['listing-card-action']}
           type="button"
           onClick={(e) => {
             e.stopPropagation()
@@ -49,10 +48,48 @@ function EventCard({ event, onDelete }) {
 
 export default function Eventos() {
   const [events, setEvents] = useState([])
+  const [displayed, setDisplayed] = useState([])
+  const [query, setQuery] = useState('')
+  const [dateFilter, setDateFilter] = useState('')
+  const [timeFilter, setTimeFilter] = useState('')
+  const [sortBy, setSortBy] = useState('recent')
 
   useEffect(() => {
     setEvents(loadEvents())
+    setDisplayed(loadEvents())
   }, [])
+
+  function applyFilters() {
+    let filtered = events.slice()
+
+    const lower = query.trim().toLowerCase()
+    if (lower) {
+      filtered = filtered.filter((e) => e.title.toLowerCase().includes(lower))
+    }
+
+    if (dateFilter) {
+      filtered = filtered.filter((e) => {
+        const eventDate = new Date(e.date).toISOString().split('T')[0]
+        return eventDate === dateFilter
+      })
+    }
+
+    if (timeFilter) {
+      filtered = filtered.filter((e) => (e.time || '00:00').startsWith(timeFilter))
+    }
+
+    if (sortBy === 'recent') {
+      filtered.sort((a, b) => new Date(b.date) - new Date(a.date))
+    } else if (sortBy === 'oldest') {
+      filtered.sort((a, b) => new Date(a.date) - new Date(b.date))
+    }
+
+    setDisplayed(filtered)
+  }
+
+  useEffect(() => {
+    applyFilters()
+  }, [query, dateFilter, timeFilter, sortBy, events])
 
   function handleDelete(id) {
     deleteEventById(id)
@@ -62,36 +99,68 @@ export default function Eventos() {
   return (
     <>
       <Header />
-      <main className={styles['events-page']}>
-        <section className={styles['events-hero']}>
-          <div className={styles['events-hero-content']}>
-            <span className={styles['events-eyebrow']}>Eventos</span>
+      <main className={styles['listing-page']}>
+        <section className={styles['listing-hero']}>
+          <div className={styles['listing-hero-content']}>
             <h1>Todos os eventos disponíveis</h1>
-            <p>Veja os eventos que estão cadastrados e clique para ver todos os detalhes.</p>
+            <p>Veja os eventos cadastrados e encontre os melhores da sua região.</p>
           </div>
         </section>
 
-        <section className={cn(shared.section, shared.sectionLight)}>
+        <section className={shared.section}>
           <div className={shared.container}>
             <div className={shared.sectionHeader}>
               <div>
                 <h2 className={shared.sectionTitle}>Eventos Cadastrados</h2>
-                <p className={shared.sectionSub}>Toque no card para abrir a página de detalhes.</p>
               </div>
-              <span className={styles['events-count']}>{events.length} eventos</span>
+              <span className={styles['listing-count']}>{displayed.length} eventos</span>
             </div>
 
-            {events.length ? (
-              <div className={shared.eventsGrid}>
-                {events.map((event) => (
-                  <EventCard key={event.id} event={event} onDelete={handleDelete} />
+            <div style={{ position: 'relative' }}>
+              <div className={styles['listing-filters']}>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  className={styles['listing-search']}
+                  placeholder="Buscar evento..."
+                  style={{ flex: 2 }}
+                />
+
+                <input
+                  type="date"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className={styles['listing-select']}
+                  style={{ flex: 1, minWidth: '110px', padding: '0.7rem 0.8rem', fontSize: '0.9rem' }}
+                />
+
+                <input
+                  type="time"
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value)}
+                  className={styles['listing-select']}
+                  style={{ flex: 1, minWidth: '100px', padding: '0.7rem 0.8rem', fontSize: '0.9rem' }}
+                />
+
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles['listing-select']}>
+                  <option value="recent">Mais recente</option>
+                  <option value="oldest">Mais antigo</option>
+                </select>
+              </div>
+            </div>
+
+            {displayed.length ? (
+              <div className={styles['listing-grid']}>
+                {displayed.map((event) => (
+                  <ListingCard key={event.id} event={event} onDelete={handleDelete} />
                 ))}
               </div>
             ) : (
-              <div className={shared.emptyState}>
-                <Calendar size={36} />
-                <p>Nenhum evento disponível</p>
-                <span>Crie um evento para começar a usar</span>
+              <div className={styles['listing-empty']}>
+                <Calendar size={48} />
+                <p>Nenhum evento encontrado</p>
+                <span>Tente ajustar seus filtros</span>
               </div>
             )}
           </div>
