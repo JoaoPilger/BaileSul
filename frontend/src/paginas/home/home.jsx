@@ -192,10 +192,18 @@ function StylesSection() {
 
 export default function Home() {
   const [events, setEvents] = useState([]);
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    setEvents(loadEvents())
+    setIsLoading(true);
+    loadEvents()
+      .then((data) => {
+        setEvents(data);
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setIsLoading(false);
+      });
   }, []);
 
   return (

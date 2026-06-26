@@ -59,14 +59,15 @@ export default function Bandas() {
   const [selectedCity, setSelectedCity] = useState('')
 
   useEffect(() => {
-    const all = loadEvents()
-    setItems(all)
-    setDisplayed(all)
+    loadEvents().then((all) => {
+      setItems(all)
+      setDisplayed(all)
 
-    const uniqueStyles = Array.from(new Set(all.map((e) => e.style).filter(Boolean)))
-    const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
-    setMusicStyles(uniqueStyles)
-    setCities(uniqueCities)
+      const uniqueStyles = Array.from(new Set(all.map((e) => e.style).filter(Boolean)))
+      const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
+      setMusicStyles(uniqueStyles)
+      setCities(uniqueCities)
+    })
   }, [])
 
   function applyFilters({ q = query, style = selectedStyle, city = selectedCity } = {}) {

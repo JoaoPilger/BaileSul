@@ -55,8 +55,10 @@ export default function Eventos() {
   const [sortBy, setSortBy] = useState('recent')
 
   useEffect(() => {
-    setEvents(loadEvents())
-    setDisplayed(loadEvents())
+    loadEvents().then((data) => {
+      setEvents(data)
+      setDisplayed(data)
+    })
   }, [])
 
   function applyFilters() {
@@ -91,9 +93,10 @@ export default function Eventos() {
     applyFilters()
   }, [query, dateFilter, timeFilter, sortBy, events])
 
-  function handleDelete(id) {
-    deleteEventById(id)
-    setEvents(loadEvents())
+  async function handleDelete(id) {
+    await deleteEventById(id)
+    const data = await loadEvents()
+    setEvents(data)
   }
 
   return (

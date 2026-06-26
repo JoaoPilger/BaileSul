@@ -86,12 +86,20 @@ function getDescription(evento) {
 export default function EventoPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const evento = useMemo(() => loadEventById(id), [id])
+  const [evento, setEvento] = useState(null)
   const [mapSrc, setMapSrc] = useState(AMAUC_MAP)
   const [modalOpen, setModalOpen] = useState(false)
   const [quantidade, setQuantidade] = useState('1')
   const [pagamento, setPagamento] = useState('presencial')
   const [nomeRetirada, setNomeRetirada] = useState('')
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [id])
+
+  useEffect(() => {
+    loadEventById(id).then(setEvento)
+  }, [id])
 
   const addressQuery = useMemo(
     () => (evento ? buildAddress(evento) : ''),
@@ -99,6 +107,15 @@ export default function EventoPage() {
   )
 
   useEffect(() => {
+    if (evento?.latitude && evento?.longitude) {
+      const lat = parseFloat(evento.latitude)
+      const lon = parseFloat(evento.longitude)
+      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+        setMapSrc(buildMapUrl(lat, lon))
+        return
+      }
+    }
+
     if (!addressQuery) {
       setMapSrc(AMAUC_MAP)
       return
@@ -132,7 +149,7 @@ export default function EventoPage() {
       cancelled = true
       controller.abort()
     }
-  }, [addressQuery])
+  }, [addressQuery, evento])
 
   if (!evento) {
     return (
