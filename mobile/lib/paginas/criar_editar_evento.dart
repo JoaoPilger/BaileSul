@@ -239,18 +239,27 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     if (!SessaoUsuario.instance.podeCriarEvento) {
       return Scaffold(
         backgroundColor: BaileSulColors.pageBackground,
-        bottomNavigationBar: const MobileFooter(),
-        body: Center(
-          child: Text(
-            widget.isComunidade
-                ? 'Apenas contas Comunidade podem criar eventos.'
-                : 'Apenas contas Banda podem criar eventos.',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: BaileSulColors.headerText,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
+        body: SingleChildScrollView(
+          child: Column(
+            children: [
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+                  child: Text(
+                    widget.isComunidade
+                        ? 'Apenas contas Comunidade podem criar eventos.'
+                        : 'Apenas contas Banda podem criar eventos.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+              const MobileFooter(),
+            ],
           ),
         ),
       );
@@ -258,7 +267,6 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 
     return Scaffold(
       backgroundColor: BaileSulColors.pageBackground,
-      bottomNavigationBar: const MobileFooter(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -269,258 +277,267 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
           ),
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text(
-                        'Criar Evento',
-                        style: TextStyle(
-                          color: BaileSulColors.headerText,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Container(height: 1, color: BaileSulColors.cardBorder),
-                      const SizedBox(height: 18),
-                      const _SectionTitle('Informacoes Basicas'),
-                      const SizedBox(height: 12),
-                      _FormField(
-                        label: 'Titulo do Evento *',
-                        controller: _tituloController,
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'Banda/Artista *',
-                              controller: _bandaController,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _FormField(
-                              label: 'Estilo Musical *',
-                              controller: _estiloController,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Data e Horarios'),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'Data de Inicio *',
-                              controller: _dataInicioController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
-                              inputFormatters: [_DateTextInputFormatter()],
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _FormField(
-                              label: 'Data de Termino *',
-                              controller: _dataFimController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 10,
-                              inputFormatters: [_DateTextInputFormatter()],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'Horario de Inicio *',
-                              controller: _horaInicioController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 5,
-                              inputFormatters: [_TimeTextInputFormatter()],
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _FormField(
-                              label: 'Horario de Termino *',
-                              controller: _horaFimController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 5,
-                              inputFormatters: [_TimeTextInputFormatter()],
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Imagem de Capa'),
-                      const SizedBox(height: 10),
-                      _CoverUploadBox(onChanged: _onCapaChanged),
-                      const SizedBox(height: 24),
-                      const _SectionTitle('Vendedores'),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'nome do vendedor',
-                              controller: _vendedorController,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            height: 34,
-                            child: FilledButton(
-                              onPressed: _addVendedor,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: BaileSulColors.accent,
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 420),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              'Criar Evento',
+                              style: TextStyle(
+                                color: BaileSulColors.headerText,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
                               ),
-                              child: const Text('Adicionar'),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      ..._vendedores.map(
-                        (String vendedor) => Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _VendorItem(
-                            label: vendedor,
-                            onRemove: () => _removeVendedor(vendedor),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      const _SectionTitle('Localizacao'),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'CEP *',
-                              controller: _cepController,
-                              keyboardType: TextInputType.number,
-                              maxLength: 8,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
+                            const SizedBox(height: 16),
+                            Container(height: 1, color: BaileSulColors.cardBorder),
+                            const SizedBox(height: 18),
+                            const _SectionTitle('Informacoes Basicas'),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Titulo do Evento *',
+                              controller: _tituloController,
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Banda/Artista *',
+                                    controller: _bandaController,
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Estilo Musical *',
+                                    controller: _estiloController,
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: _FormField(
-                              label: 'Cidade *',
-                              controller: _cidadeController,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _FormField(
-                              label: 'Bairro *',
-                              controller: _bairroController,
-                            ),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: _FormField(
-                              label: 'Rua *',
-                              controller: _ruaController,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      _FormField(
-                        label: 'Referencia',
-                        controller: _referenciaController,
-                      ),
-                      const SizedBox(height: 14),
-                      MapLocationPicker(
-                        height: 170,
-                        selectedLocation: _localizacaoSelecionada,
-                        onLocationChanged: (MapLocation location) {
-                          setState(() => _localizacaoSelecionada = location);
-                        },
-                      ),
-                      const SizedBox(height: 22),
-                      if (_erroSalvar != null) ...[
-                        Text(
-                          _erroSalvar!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Color(0xFFB42318),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                      ],
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: BaileSulColors.headerText,
-                                side: const BorderSide(
-                                  color: BaileSulColors.cardBorder,
+                            const SizedBox(height: 24),
+                            const _SectionTitle('Data e Horarios'),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Data de Inicio *',
+                                    controller: _dataInicioController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 10,
+                                    inputFormatters: [_DateTextInputFormatter()],
+                                  ),
                                 ),
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Data de Termino *',
+                                    controller: _dataFimController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 10,
+                                    inputFormatters: [_DateTextInputFormatter()],
+                                  ),
                                 ),
-                              ),
-                              child: const Text('Cancelar'),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: _salvando ? null : _salvarEvento,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: BaileSulColors.accent,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Horario de Inicio *',
+                                    controller: _horaInicioController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 5,
+                                    inputFormatters: [_TimeTextInputFormatter()],
+                                  ),
                                 ),
-                              ),
-                              child: _salvando
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Horario de Termino *',
+                                    controller: _horaFimController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 5,
+                                    inputFormatters: [_TimeTextInputFormatter()],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            const _SectionTitle('Imagem de Capa'),
+                            const SizedBox(height: 10),
+                            _CoverUploadBox(onChanged: _onCapaChanged),
+                            const SizedBox(height: 24),
+                            const _SectionTitle('Vendedores'),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'nome do vendedor',
+                                    controller: _vendedorController,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                SizedBox(
+                                  height: 34,
+                                  child: FilledButton(
+                                    onPressed: _addVendedor,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: BaileSulColors.accent,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
                                       ),
-                                    )
-                                  : const Text('Salvar Evento'),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: const Text('Adicionar'),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: 10),
+                            ..._vendedores.map(
+                              (String vendedor) => Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: _VendorItem(
+                                  label: vendedor,
+                                  onRemove: () => _removeVendedor(vendedor),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            const _SectionTitle('Localizacao'),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'CEP *',
+                                    controller: _cepController,
+                                    keyboardType: TextInputType.number,
+                                    maxLength: 8,
+                                    inputFormatters: [
+                                      FilteringTextInputFormatter.digitsOnly,
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Cidade *',
+                                    controller: _cidadeController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Bairro *',
+                                    controller: _bairroController,
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Rua *',
+                                    controller: _ruaController,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Referencia',
+                              controller: _referenciaController,
+                            ),
+                            const SizedBox(height: 14),
+                            MapLocationPicker(
+                              height: 170,
+                              selectedLocation: _localizacaoSelecionada,
+                              onLocationChanged: (MapLocation location) {
+                                setState(() => _localizacaoSelecionada = location);
+                              },
+                            ),
+                            const SizedBox(height: 22),
+                            if (_erroSalvar != null) ...[
+                              Text(
+                                _erroSalvar!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Color(0xFFB42318),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                            ],
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: BaileSulColors.headerText,
+                                      side: const BorderSide(
+                                        color: BaileSulColors.cardBorder,
+                                      ),
+                                      backgroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: const Text('Cancelar'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: FilledButton(
+                                    onPressed: _salvando ? null : _salvarEvento,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor: BaileSulColors.accent,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                    ),
+                                    child: _salvando
+                                        ? const SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : const Text('Salvar Evento'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const MobileFooter(),
+                ],
               ),
             ),
           ),

@@ -117,7 +117,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
+      backgroundColor: MobileFooter.backgroundColor,
       body: Column(
         children: [
           MobileHeader(
