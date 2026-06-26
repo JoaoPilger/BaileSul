@@ -21,7 +21,7 @@ export default function EventoDetalhes() {
   const [event, setEvent] = useState(null)
 
   useEffect(() => {
-    setEvent(loadEventById(id))
+    loadEventById(id).then(setEvent)
   }, [id])
 
   if (!event) {

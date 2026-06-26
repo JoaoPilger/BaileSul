@@ -57,12 +57,13 @@ export default function Comunidades() {
   const [selectedCity, setSelectedCity] = useState('')
 
   useEffect(() => {
-    const all = loadEvents()
-    setItems(all)
-    setDisplayed(all)
+    loadEvents().then((all) => {
+      setItems(all)
+      setDisplayed(all)
 
-    const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
-    setCities(uniqueCities)
+      const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
+      setCities(uniqueCities)
+    })
   }, [])
 
   function applyFilters({ q = query, city = selectedCity } = {}) {
