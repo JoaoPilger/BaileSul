@@ -9,4 +9,8 @@ const p = new Pool({
 });
 p.query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY 1")
   .then((r) => { console.log(r.rows.map((x) => x.table_name).join('\n') || '(vazio)'); return p.end(); })
-  .catch((e) => { console.error(e.message); return p.end(); });
+.catch((e) => {
+  console.error("ERRO COMPLETO:");
+  console.error(e);
+  return p.end();
+});

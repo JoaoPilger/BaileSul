@@ -17,6 +17,8 @@ import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
 import 'widgets/mobile_footer.dart';
 import 'paginas/notificacoes.dart';
+import 'paginas/perfil_banda.dart';
+import 'paginas/perfil_comunidade.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,6 +73,8 @@ class MyApp extends StatelessWidget {
           final args = ModalRoute.of(context)!.settings.arguments;
           return PaginaEvento(event: args! as EventItem);
         },
+        '/perfil-banda': (_) => const PerfilBandaPage(),
+        '/perfil-comunidade': (_) => const PerfilComunidadePage(),
       },
     );
   }

@@ -54,6 +54,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.music_note_outlined,
             titulo: 'Perfil da banda',
             subtitulo: 'Nome artístico, estilo e descrição',
+            rota: '/perfil-banda',
           ),
           _ConfiguracaoItem(
             icon: Icons.calendar_month_outlined,
@@ -72,6 +73,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.apartment_outlined,
             titulo: 'Perfil da comunidade',
             subtitulo: 'Nome, endereço e descrição',
+            rota: '/perfil-comunidade',
           ),
           _ConfiguracaoItem(
             icon: Icons.location_on_outlined,
@@ -293,11 +295,13 @@ class _ConfiguracaoItem {
     required this.icon,
     required this.titulo,
     required this.subtitulo,
+    this.rota,
   });
 
   final IconData icon;
   final String titulo;
   final String subtitulo;
+  final String? rota;
 }
 
 class _ConfiguracaoTile extends StatelessWidget {
@@ -313,9 +317,13 @@ class _ConfiguracaoTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${item.titulo} em breve.')),
-          );
+          if (item.rota != null) {
+            Navigator.pushNamed(context, item.rota!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${item.titulo} em breve.')),
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
