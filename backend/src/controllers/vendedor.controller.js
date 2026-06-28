@@ -12,10 +12,16 @@ const listar = async (req, res) => {
     const { rows } = await pool.query(
       `SELECT v.id, v.nome, v.whatsapp, v.ativo, v.criado_em,
               v.usuario_id,
-              pp.nome AS usuario_nome
+              pp.nome AS usuario_nome,
+              u.email AS usuario_email,
+              COALESCE(SUM(CASE WHEN r.status_pagamento = 'confirmado' THEN r.quantidade * COALESCE(e.valor_ingresso, 0) ELSE 0 END), 0)::FLOAT AS vendas_totais
        FROM vendedores v
        LEFT JOIN perfis_pessoais pp ON pp.usuario_id = v.usuario_id
-       WHERE v.comunidade_id = $1
+       LEFT JOIN usuarios u ON u.id = v.usuario_id
+       LEFT JOIN reservas r ON r.vendedor_id = v.id
+       LEFT JOIN eventos e ON e.id = r.evento_id
+       WHERE v.comunidade_id = $1 AND v.ativo = true
+       GROUP BY v.id, pp.nome, u.email
        ORDER BY v.nome ASC`,
       [comunidade_id]
     );
@@ -29,19 +35,14 @@ const listar = async (req, res) => {
 
 /**
  * POST /api/vendedores
- * RF08 – Adicionar vendedor à comunidade.
- *
- * Dois modos:
- *   A) Cadastro simples: apenas nome + whatsapp (sem conta na plataforma).
- *   B) Vinculação: fornece usuario_id de um usuário tipo 'pessoal' existente.
- *      Nesse caso, o sistema valida que o usuário existe e é do tipo pessoal.
+ * RF08 – Adicionar ou Reativar vendedor na comunidade via Email.
  */
 const adicionar = async (req, res) => {
   const comunidade_id = req.usuario.id;
-  const { nome, whatsapp, usuario_id } = req.body;
+  const { email, whatsapp } = req.body;
 
-  if (!nome || !whatsapp) {
-    return res.status(400).json({ error: 'Campos obrigatórios: nome, whatsapp' });
+  if (!email || !whatsapp) {
+    return res.status(400).json({ error: 'Campos obrigatórios: email, whatsapp' });
   }
 
   if (!whatsappValido(whatsapp)) {
@@ -51,32 +52,44 @@ const adicionar = async (req, res) => {
   }
 
   try {
-    // Se usuario_id foi fornecido, valida que existe e é pessoal
-    if (usuario_id) {
-      const usuarioRes = await pool.query(
-        "SELECT id, tipo FROM usuarios WHERE id = $1",
-        [usuario_id]
-      );
-      if (usuarioRes.rows.length === 0) {
-        return res.status(404).json({ error: 'Usuário não encontrado' });
-      }
-      if (usuarioRes.rows[0].tipo !== 'pessoal') {
-        return res.status(400).json({ error: 'Apenas usuários do tipo pessoal podem ser vendedores' });
-      }
+    // 1. Busca o usuário do tipo pessoal utilizando o e-mail informado
+    const usuarioRes = await pool.query(
+      `SELECT u.id, u.tipo, pp.nome AS nome_perfil
+       FROM usuarios u
+       LEFT JOIN perfis_pessoais pp ON pp.usuario_id = u.id
+       WHERE LOWER(u.email) = LOWER($1)`,
+      [email.trim()]
+    );
+
+    if (usuarioRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Nenhum usuário pessoal encontrado com esse e-mail.' });
     }
 
+    if (usuarioRes.rows[0].tipo !== 'pessoal') {
+      return res.status(400).json({ error: 'Apenas usuários do tipo pessoal podem ser vendedores.' });
+    }
+
+    const usuario_id = usuarioRes.rows[0].id;
+    const nomeFinal = usuarioRes.rows[0].nome_perfil || 'Usuário Sem Nome';
+    const whatsappFinal = whatsapp.replace(/\D/g, '');
+
+    // 2. Executa o INSERT com a cláusula ON CONFLICT
+    // IMPORTANTE: Assume que sua constraint de unicidade é nas colunas (comunidade_id, usuario_id)
     const { rows } = await pool.query(
-      `INSERT INTO vendedores (comunidade_id, usuario_id, nome, whatsapp)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO vendedores (comunidade_id, usuario_id, nome, whatsapp, ativo)
+       VALUES ($1, $2, $3, $4, true)
+       ON CONFLICT ON CONSTRAINT uq_vendedor_usuario_comunidade 
+       DO UPDATE SET 
+          ativo = true, 
+          nome = EXCLUDED.nome, 
+          whatsapp = EXCLUDED.whatsapp
        RETURNING id, nome, whatsapp, ativo, usuario_id`,
-      [comunidade_id, usuario_id || null, nome.trim(), whatsapp]
+      [comunidade_id, usuario_id, nomeFinal.trim(), whatsappFinal]
     );
-    return res.status(201).json({ message: 'Vendedor adicionado', vendedor: rows[0] });
+
+    return res.status(200).json({ message: 'Vendedor adicionado ou reativado com sucesso', vendedor: rows[0] });
 
   } catch (err) {
-    if (err.code === '23505') {
-      return res.status(409).json({ error: 'Este usuário já é vendedor desta comunidade' });
-    }
     console.error('Erro ao adicionar vendedor:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
@@ -110,23 +123,12 @@ const remover = async (req, res) => {
 
 /**
  * PATCH /api/vendedores/reservas/:reserva_id/confirmar
- * RF13 – Confirmar pagamento de ingresso manualmente.
- *
- * Quem pode confirmar:
- *   1. A própria comunidade dona do evento (autorizar('comunidade'))
- *   2. O usuário pessoal que está vinculado como vendedor da reserva
- *      (autenticado como 'pessoal' e sendo o vendedor_id da reserva)
- *
- * A rota aceita ambos os casos; o middleware de autorização permite
- * comunidade OU pessoal. A lógica aqui restringe o pessoal ao
- * vendedor vinculado.
  */
 const confirmarPagamento = async (req, res) => {
   const { reserva_id } = req.params;
   const { id: usuario_id, tipo: usuario_tipo } = req.usuario;
 
   try {
-    // Busca a reserva com dados do evento e do vendedor vinculado
     const reservaRes = await pool.query(
       `SELECT r.id, r.vendedor_id, r.status_pagamento,
               e.comunidade_id,
@@ -148,9 +150,6 @@ const confirmarPagamento = async (req, res) => {
       return res.status(409).json({ error: 'Reserva já confirmada ou cancelada' });
     }
 
-    // Verificar permissão:
-    // - comunidade: deve ser a dona do evento
-    // - pessoal: deve ser o usuario_id vinculado ao vendedor da reserva
     if (usuario_tipo === 'comunidade') {
       if (reserva.comunidade_id !== usuario_id) {
         return res.status(403).json({ error: 'Acesso não autorizado para este evento' });
@@ -163,7 +162,6 @@ const confirmarPagamento = async (req, res) => {
       return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
     }
 
-    // Confirmar pagamento
     await pool.query(
       `UPDATE reservas
        SET status_pagamento = 'confirmado'
@@ -171,7 +169,6 @@ const confirmarPagamento = async (req, res) => {
       [reserva_id]
     );
 
-    // Log de auditoria
     await pool.query(
       `INSERT INTO logs_status_pagamentos (reserva_id, status_anterior, status_novo, usuario_id)
        VALUES ($1, 'pendente', 'confirmado', $2)`,
@@ -186,4 +183,33 @@ const confirmarPagamento = async (req, res) => {
   }
 };
 
-module.exports = { listar, adicionar, remover, confirmarPagamento };
+/**
+ * GET /api/vendedores/sugestoes?email=...
+ */
+const buscarSugestoes = async (req, res) => {
+  const { email } = req.query;
+
+  if (!email || !email.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, pp.nome, u.email
+       FROM usuarios u
+       INNER JOIN perfis_pessoais pp ON pp.usuario_id = u.id
+       WHERE u.tipo = 'pessoal'
+         AND LOWER(u.email) = LOWER($1)
+       LIMIT 1`,
+      [email.trim()]
+    );
+
+    return res.json(rows);
+
+  } catch (err) {
+    console.error('Erro ao buscar usuário por email:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { listar, adicionar, remover, confirmarPagamento, buscarSugestoes };

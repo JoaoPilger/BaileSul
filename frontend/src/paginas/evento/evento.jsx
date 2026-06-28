@@ -92,6 +92,8 @@ export default function EventoPage() {
   const [quantidade, setQuantidade] = useState('1')
   const [pagamento, setPagamento] = useState('presencial')
   const [nomeRetirada, setNomeRetirada] = useState('')
+  const [reservaLoading, setReservaLoading] = useState(false)
+  const [reservaErro, setReservaErro] = useState('')
 
   const addressQuery = useMemo(
     () => (evento ? buildAddress(evento) : ''),
@@ -162,6 +164,46 @@ export default function EventoPage() {
     evento.city ||
     ''
 
+  const handleReservar = async () => {
+    if (!nomeRetirada.trim()) {
+      setReservaErro('Informe o nome para retirada.')
+      return
+    }
+
+    setReservaErro('')
+    setReservaLoading(true)
+
+    try {
+      const token = localStorage.getItem('token') // ajuste se guardar em outro lugar
+      const res = await fetch(`/api/reservas/eventos/${id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quantidade: Number(quantidade) }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setReservaErro(data.error || 'Erro ao criar reserva.')
+        return
+      }
+
+      // Sucesso: abre o link do WhatsApp do vendedor e fecha o modal
+      if (data.vendedor?.whatsapp_link) {
+        window.open(data.vendedor.whatsapp_link, '_blank', 'noopener,noreferrer')
+      }
+
+      closeModal()
+    } catch {
+      setReservaErro('Erro de conexão. Tente novamente.')
+    } finally {
+      setReservaLoading(false)
+    }
+  }
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({ title: evento.title, url: window.location.href })
@@ -171,7 +213,12 @@ export default function EventoPage() {
   }
 
   const openModal = () => setModalOpen(true)
-  const closeModal = () => setModalOpen(false)
+  
+  const closeModal = () => {
+  setModalOpen(false)
+  setReservaErro('')
+  setReservaLoading(false)
+}
 
   return (
     <>
@@ -329,7 +376,7 @@ export default function EventoPage() {
                     <span className={cn(styles['ev-price'], isFree && styles['ev-price--free'])}>
                       {priceDisplay}
                     </span>
-                    <button type="button" className={styles['ev-btn-reservar']}>
+                    <button type="button" className={styles['ev-btn-reservar']} onClick={openModal}>
                       Reservar
                     </button>
                   </div>
@@ -354,19 +401,19 @@ export default function EventoPage() {
       </main>
 
       {modalOpen && (
-        <div className="ev-modal" onClick={closeModal}>
-          <div className="ev-modal-card" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="ev-modal-close" onClick={closeModal} aria-label="Fechar">
+        <div className={styles['ev-modal']} onClick={closeModal}>
+          <div className={styles['ev-modal-card']} onClick={(e) => e.stopPropagation()}>
+            <button type="button" className={styles['ev-modal-close']} onClick={closeModal} aria-label="Fechar">
               &times;
             </button>
 
-            <h2 className="ev-modal-title">Reserve seu Ingresso</h2>
+            <h2 className={styles['ev-modal-title']}>Reserve seu Ingresso</h2>
 
-            <div className="ev-modal-field">
-              <label className="ev-modal-label" htmlFor="ev-quantidade">Quantidade:</label>
+            <div className={styles['ev-modal-field']}>
+              <label className={styles['ev-modal-label']} htmlFor="ev-quantidade">Quantidade:</label>
               <select
                 id="ev-quantidade"
-                className="ev-modal-select"
+                className={styles['ev-modal-select']}
                 value={quantidade}
                 onChange={(e) => setQuantidade(e.target.value)}
               >
@@ -376,10 +423,10 @@ export default function EventoPage() {
               </select>
             </div>
 
-            <div className="ev-modal-field">
-              <span className="ev-modal-label">Forma de pagamento:</span>
-              <div className="ev-modal-radios">
-                <label className="ev-modal-radio">
+            <div className={styles['ev-modal-field']}>
+              <span className={styles['ev-modal-label']}>Forma de pagamento:</span>
+              <div className={styles['ev-modal-radios']}>
+                <label className={styles['ev-modal-radio']}>
                   <input
                     type="radio"
                     name="pagamento"
@@ -389,7 +436,7 @@ export default function EventoPage() {
                   />
                   Presencial
                 </label>
-                <label className="ev-modal-radio">
+                <label className={styles['ev-modal-radio']}>
                   <input
                     type="radio"
                     name="pagamento"
@@ -402,20 +449,28 @@ export default function EventoPage() {
               </div>
             </div>
 
-            <div className="ev-modal-field">
-              <label className="ev-modal-label" htmlFor="ev-nome">Nome para retirada:</label>
+            <div className={styles['ev-modal-field']}>
+              <label className={styles['ev-modal-label']} htmlFor="ev-nome">Nome para retirada:</label>
               <input
                 id="ev-nome"
                 type="text"
-                className="ev-modal-input"
+                className={styles['ev-modal-input']}
                 placeholder="Digite o nome Completo"
                 value={nomeRetirada}
                 onChange={(e) => setNomeRetirada(e.target.value)}
               />
             </div>
 
-            <button type="button" className="ev-modal-submit">
-              Prosseguir
+            {reservaErro && (
+              <p className={styles['ev-modal-erro']}>{reservaErro}</p>
+            )}
+            <button
+              type="button"
+              className={styles['ev-modal-submit']}
+              onClick={handleReservar}
+              disabled={reservaLoading}
+            >
+              {reservaLoading ? 'Aguarde...' : 'Prosseguir'}
             </button>
           </div>
         </div>

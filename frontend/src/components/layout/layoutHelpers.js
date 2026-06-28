@@ -10,8 +10,11 @@ export function getNavConfig(tipo) {
 
   if (tipo === 'pessoal') {
     base.push({ to: '/meus-ingressos', label: 'Meus Ingressos', icon: Ticket });
-  } else if (tipo === 'banda' || tipo === 'comunidade'){
+  } else if (tipo === 'banda') {
     base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
+  } else if (tipo === 'comunidade') {
+    base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
+    base.push({ to: '/vendedores',   label: 'Vendedores',   icon: Users });
   }
 
   return {

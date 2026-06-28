@@ -40,7 +40,7 @@ function FieldHint({ message }) {
 }
 
 export default function CriarEvento() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, token } = useAuth()
   const navigate = useNavigate()
   const fileRef = useRef(null)
 
@@ -190,7 +190,7 @@ export default function CriarEvento() {
 
   const removeVendor = (id) => setVendors((s) => s.filter((v) => v.id !== id))
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitAttempted(true)
     setFormAlert('')
@@ -208,36 +208,55 @@ export default function CriarEvento() {
       return
     }
 
-    const newEvent = {
-      id:         Date.now(),
-      title:      normalizedForm.title,
-      band:       normalizedForm.band,
-      style:      normalizedForm.style,
-      date:       normalizedForm.dateStart || new Date().toISOString().slice(0, 10),
-      date_end:   normalizedForm.dateEnd,
-      time_start: normalizedForm.timeStart,
-      time_end:   normalizedForm.timeEnd,
-      image:      imagemPreview || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-      price:      normalizedForm.price
-        ? (/^(grátis|gratis)$/i.test(normalizedForm.price.trim())
-            ? 'Grátis'
-            : `R$ ${normalizedForm.price.replace(/^R\$\s*/i, '').trim()}`)
-        : 'Grátis',
-      city:       normalizedForm.city,
-      cep:        normalizedForm.cep,
-      bairro:     normalizedForm.bairro,
-      rua:        normalizedForm.rua,
-      referencia: normalizedForm.referencia,
-      vendors,
-      created_at: new Date().toISOString(),
+    // Monta FormData com os nomes que o controller espera
+    const fd = new FormData()
+    fd.append('titulo',        normalizedForm.title.trim())
+    fd.append('data_inicio',   normalizedForm.dateStart)
+    fd.append('data_fim',      normalizedForm.dateEnd || normalizedForm.dateStart)
+    fd.append('local_nome',    normalizedForm.rua
+      ? `${normalizedForm.rua}${normalizedForm.bairro ? ', ' + normalizedForm.bairro : ''}`
+      : normalizedForm.city || '')
+    fd.append('local_endereco',
+      [normalizedForm.rua, normalizedForm.bairro, normalizedForm.city, normalizedForm.cep]
+        .filter(Boolean).join(', '))
+    fd.append('descricao',
+      [normalizedForm.band ? `Banda: ${normalizedForm.band}` : '',
+      normalizedForm.referencia ? `Referência: ${normalizedForm.referencia}` : '']
+        .filter(Boolean).join(' | ') || '')
+
+    // valor_ingresso: o backend espera float ou null
+    const priceRaw = normalizedForm.price.replace(/^R\$\s*/i, '').trim()
+    if (priceRaw && !/^(grátis|gratis)$/i.test(priceRaw)) {
+      fd.append('valor_ingresso', parseFloat(priceRaw.replace(',', '.')))
     }
+
+    // Imagem: campo deve se chamar "foto_capa" (uploadCapaEvento no middleware)
+    if (imagemFile) {
+      fd.append('foto_capa', imagemFile)
+    }
+
     try {
-      const raw  = localStorage.getItem('bailesul_events')
-      const list = raw ? JSON.parse(raw) : []
-      list.unshift(newEvent)
-      localStorage.setItem('bailesul_events', JSON.stringify(list))
-    } catch {}
-    navigate('/')
+      const res = await fetch('/api/eventos', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // NÃO definir Content-Type aqui — o browser define sozinho com boundary
+        },
+        body: fd,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setFormAlert(data.error || 'Erro ao criar evento.')
+        return
+      }
+
+      navigate('/meus-eventos')
+
+    } catch {
+      setFormAlert('Erro de conexão. Tente novamente.')
+    }
   }
 
   return (
