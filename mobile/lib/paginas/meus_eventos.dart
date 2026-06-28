@@ -19,7 +19,6 @@ class MeusEventosPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BaileSulColors.dark,
-      bottomNavigationBar: const MobileFooter(),
       body: Column(
         children: [
           MobileHeader(
@@ -28,30 +27,38 @@ class MeusEventosPage extends StatelessWidget {
             onMenuPressed: () => _abrirMenu(context),
           ),
           Expanded(
-            child: Container(
-              width: double.infinity,
-              color: BaileSulColors.pageBackground,
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-              child: const Column(
+            child: SingleChildScrollView(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Meus Eventos',
-                    style: TextStyle(
-                      color: BaileSulColors.headerText,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
+                  Container(
+                    width: double.infinity,
+                    color: BaileSulColors.pageBackground,
+                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Meus Eventos',
+                          style: TextStyle(
+                            color: BaileSulColors.headerText,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Os eventos que você organiza ou participa aparecerão aqui.',
+                          style: TextStyle(
+                            color: BaileSulColors.mutedText,
+                            fontSize: 14,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Text(
-                    'Os eventos que você organiza ou participa aparecerão aqui.',
-                    style: TextStyle(
-                      color: BaileSulColors.mutedText,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
+                  const MobileFooter(),
                 ],
               ),
             ),

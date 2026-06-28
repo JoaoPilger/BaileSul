@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -117,7 +117,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
+      backgroundColor: MobileFooter.backgroundColor,
       body: Column(
         children: [
           MobileHeader(
@@ -126,121 +126,121 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
             onMenuPressed: _abrirMenu,
           ),
           Expanded(
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(
-                parent: AlwaysScrollableScrollPhysics(),
-              ),
-              slivers: [
-                SliverToBoxAdapter(
-                  child: Container(
-                    color: BaileSulColors.pageBackground,
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Eventos',
-                          style: TextStyle(
-                            color: BaileSulColors.headerText,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                            height: 1.1,
+            child: LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                return SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(
+                    parent: AlwaysScrollableScrollPhysics(),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            child: Container(
+                              color: BaileSulColors.pageBackground,
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Eventos',
+                                    style: TextStyle(
+                                      color: BaileSulColors.headerText,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: -0.5,
+                                      height: 1.1,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Encontre os melhores bailes da região',
+                                    style: TextStyle(
+                                      color: BaileSulColors.mutedText.withValues(alpha: 0.8),
+                                      fontSize: 14,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 18),
+                                  _CampoBusca(
+                                    controller: _buscaController,
+                                    onChanged: _filtrarEventos,
+                                    onClear: () {
+                                      _buscaController.clear();
+                                      _filtrarEventos('');
+                                    },
+                                  ),
+                                  const SizedBox(height: 20),
+                                  if (_carregando)
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 60),
+                                      child: Center(
+                                        child: CircularProgressIndicator(
+                                          color: BaileSulColors.accent,
+                                        ),
+                                      ),
+                                    )
+                                  else if (_erro != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 24),
+                                      child: _EstadoVazio(
+                                        icone: Icons.error_outline_rounded,
+                                        titulo: 'Ops!',
+                                        subtitulo: _erro!,
+                                        labelBotao: 'Tentar novamente',
+                                        onBotao: _carregarEventos,
+                                      ),
+                                    )
+                                  else if (_eventosFiltrados.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 24),
+                                      child: _EstadoVazio(
+                                        icone: Icons.event_busy_rounded,
+                                        titulo: 'Nenhum evento encontrado',
+                                        subtitulo: _buscaController.text.trim().isNotEmpty
+                                            ? 'Tente outro termo de busca.'
+                                            : 'Ainda não há eventos cadastrados na plataforma.',
+                                        labelBotao: _buscaController.text.trim().isNotEmpty
+                                            ? 'Limpar busca'
+                                            : 'Atualizar',
+                                        onBotao: () {
+                                          if (_buscaController.text.trim().isNotEmpty) {
+                                            _buscaController.clear();
+                                            _filtrarEventos('');
+                                          } else {
+                                            _carregarEventos();
+                                          }
+                                        },
+                                      ),
+                                    )
+                                  else
+                                    Column(
+                                      children: _eventosFiltrados.map((evento) {
+                                        return Padding(
+                                          padding: const EdgeInsets.only(bottom: 18),
+                                          child: _EventoCard(evento: evento),
+                                        );
+                                      }).toList(),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Encontre os melhores bailes da região',
-                          style: TextStyle(
-                            color: BaileSulColors.mutedText.withValues(alpha: 0.8),
-                            fontSize: 14,
-                            height: 1.4,
+                          MobileFooter(
+                            logoHeight: 52,
+                            horizontalPadding: 24,
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                        _CampoBusca(
-                          controller: _buscaController,
-                          onChanged: _filtrarEventos,
-                          onClear: () {
-                            _buscaController.clear();
-                            _filtrarEventos('');
-                          },
-                        ),
-                        const SizedBox(height: 14),
-                      ],
-                    ),
-                  ),
-                ),
-                if (_carregando)
-                  const SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: 60),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          color: BaileSulColors.accent,
-                        ),
-                      ),
-                    ),
-                  )
-                else if (_erro != null)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 48, horizontal: 24),
-                      child: _EstadoVazio(
-                        icone: Icons.error_outline_rounded,
-                        titulo: 'Ops!',
-                        subtitulo: _erro!,
-                        labelBotao: 'Tentar novamente',
-                        onBotao: _carregarEventos,
-                      ),
-                    ),
-                  )
-                else if (_eventosFiltrados.isEmpty)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 48, horizontal: 24),
-                      child: _EstadoVazio(
-                        icone: Icons.event_busy_rounded,
-                        titulo: 'Nenhum evento encontrado',
-                        subtitulo: _buscaController.text.trim().isNotEmpty
-                            ? 'Tente outro termo de busca.'
-                            : 'Ainda não há eventos cadastrados na plataforma.',
-                        labelBotao: _buscaController.text.trim().isNotEmpty
-                            ? 'Limpar busca'
-                            : 'Atualizar',
-                        onBotao: () {
-                          if (_buscaController.text.trim().isNotEmpty) {
-                            _buscaController.clear();
-                            _filtrarEventos('');
-                          } else {
-                            _carregarEventos();
-                          }
-                        },
-                      ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(20, 6, 20, 24),
-                    sliver: SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (BuildContext context, int index) => Padding(
-                          padding: const EdgeInsets.only(bottom: 18),
-                          child: _EventoCard(evento: _eventosFiltrados[index]),
-                        ),
-                        childCount: _eventosFiltrados.length,
+                        ],
                       ),
                     ),
                   ),
-                SliverToBoxAdapter(
-                  child: MobileFooter(
-                    logoHeight: 52,
-                    horizontalPadding: 24,
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         ],

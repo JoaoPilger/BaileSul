@@ -54,6 +54,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.music_note_outlined,
             titulo: 'Perfil da banda',
             subtitulo: 'Nome artístico, estilo e descrição',
+            rota: '/perfil-banda',
           ),
           _ConfiguracaoItem(
             icon: Icons.calendar_month_outlined,
@@ -72,6 +73,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.apartment_outlined,
             titulo: 'Perfil da comunidade',
             subtitulo: 'Nome, endereço e descrição',
+            rota: '/perfil-comunidade',
           ),
           _ConfiguracaoItem(
             icon: Icons.location_on_outlined,
@@ -94,8 +96,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
     if (!sessao.autenticado || tipo == null) {
       return Scaffold(
-        backgroundColor: BaileSulColors.dark,
-        bottomNavigationBar: const MobileFooter(),
+        backgroundColor: MobileFooter.backgroundColor,
         body: Column(
           children: [
             MobileHeader(
@@ -104,17 +105,25 @@ class ConfiguracoesPage extends StatelessWidget {
               onMenuPressed: () => _abrirMenu(context),
             ),
             Expanded(
-              child: Container(
-                color: BaileSulColors.pageBackground,
-                alignment: Alignment.center,
-                padding: const EdgeInsets.all(24),
-                child: const Text(
-                  'Faça login ou cadastre-se para acessar as configurações.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: BaileSulColors.mutedText,
-                    fontSize: 15,
-                  ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      color: BaileSulColors.pageBackground,
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.all(24),
+                      child: const Text(
+                        'Faça login ou cadastre-se para acessar as configurações.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: BaileSulColors.mutedText,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    const MobileFooter(),
+                  ],
                 ),
               ),
             ),
@@ -126,8 +135,7 @@ class ConfiguracoesPage extends StatelessWidget {
     final List<_ConfiguracaoItem> itens = _itensPorTipo(tipo);
 
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
-      bottomNavigationBar: const MobileFooter(),
+      backgroundColor: MobileFooter.backgroundColor,
       body: Column(
         children: [
           MobileHeader(
@@ -136,72 +144,83 @@ class ConfiguracoesPage extends StatelessWidget {
             onMenuPressed: () => _abrirMenu(context),
           ),
           Expanded(
-            child: Container(
-              width: double.infinity,
-              color: BaileSulColors.pageBackground,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text(
-                    'Configurações',
-                    style: TextStyle(
-                      color: BaileSulColors.headerText,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _subtituloConta(tipo),
-                    style: const TextStyle(
-                      color: BaileSulColors.mutedText,
-                      fontSize: 14,
-                      height: 1.4,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _ContaResumoCard(
-                    tipo: tipo,
-                    email: sessao.email,
-                    autenticado: sessao.autenticado,
-                  ),
-                  const SizedBox(height: 16),
-                  ...itens.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _ConfiguracaoTile(item: item),
-                    ),
-                  ),
-                  if (sessao.autenticado) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: OutlinedButton.icon(
-                        onPressed: () async {
-                          await sessao.encerrarSessao();
-                          if (!context.mounted) return;
-                          Navigator.of(context).popUntil(
-                            (Route<dynamic> route) => route.isFirst,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Você saiu da sua conta.'),
+                  Container(
+                    width: double.infinity,
+                    color: BaileSulColors.pageBackground,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Configurações',
+                            style: TextStyle(
+                              color: BaileSulColors.headerText,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.logout_rounded, size: 20),
-                        label: const Text('Sair da conta'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFB42318),
-                          side: const BorderSide(color: Color(0xFFB42318)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _subtituloConta(tipo),
+                            style: const TextStyle(
+                              color: BaileSulColors.mutedText,
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          _ContaResumoCard(
+                            tipo: tipo,
+                            email: sessao.email,
+                            autenticado: sessao.autenticado,
+                          ),
+                          const SizedBox(height: 16),
+                          ...itens.map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _ConfiguracaoTile(item: item),
+                            ),
+                          ),
+                          if (sessao.autenticado) ...[
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                onPressed: () async {
+                                  await sessao.encerrarSessao();
+                                  if (!context.mounted) return;
+                                  Navigator.of(context).popUntil(
+                                    (Route<dynamic> route) => route.isFirst,
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Você saiu da sua conta.'),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.logout_rounded, size: 20),
+                                label: const Text('Sair da conta'),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFFB42318),
+                                  side: const BorderSide(color: Color(0xFFB42318)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
-                  ],
+                  ),
+                  const MobileFooter(),
                 ],
               ),
             ),
@@ -276,11 +295,13 @@ class _ConfiguracaoItem {
     required this.icon,
     required this.titulo,
     required this.subtitulo,
+    this.rota,
   });
 
   final IconData icon;
   final String titulo;
   final String subtitulo;
+  final String? rota;
 }
 
 class _ConfiguracaoTile extends StatelessWidget {
@@ -296,9 +317,13 @@ class _ConfiguracaoTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('${item.titulo} em breve.')),
-          );
+          if (item.rota != null) {
+            Navigator.pushNamed(context, item.rota!);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${item.titulo} em breve.')),
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),

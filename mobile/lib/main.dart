@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/home.dart';
@@ -16,6 +16,9 @@ import 'models/tipo_conta.dart';
 import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
 import 'widgets/mobile_footer.dart';
+import 'paginas/notificacoes.dart';
+import 'paginas/perfil_banda.dart';
+import 'paginas/perfil_comunidade.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,6 +44,7 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
       routes: {
+        '/notificacoes': (_) => const NotificacoesPage(),
         '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
         '/pesquisa-comunidades': (_) => const PesquisaPadraoComunidade(),
         '/pesquisa-bandas': (_) => const PesquisaPadraoBandas(),
@@ -69,6 +73,8 @@ class MyApp extends StatelessWidget {
           final args = ModalRoute.of(context)!.settings.arguments;
           return PaginaEvento(event: args! as EventItem);
         },
+        '/perfil-banda': (_) => const PerfilBandaPage(),
+        '/perfil-comunidade': (_) => const PerfilComunidadePage(),
       },
     );
   }

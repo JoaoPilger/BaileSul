@@ -4,28 +4,45 @@ import Footer from '../../components/footer/Footer'
 import { loadEvents } from '../../utils/events'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar } from 'lucide-react'
-import { cn } from '../../utils/cn'
 import shared from '../../styles/shared.module.css'
-import styles from './bandas.module.css'
+import styles from '../../styles/listings.module.css'
 
-function BandCard({ item }) {
+function ListingCard({ item, onDelete }) {
   const navigate = useNavigate()
+  const date = new Date(item.date)
+  const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
+  const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className={styles['band-card']} onClick={() => navigate(`/eventos/${item.id}`)} style={{ cursor: 'pointer' }}>
-      <img src={item.image} alt={item.title} className={styles['band-card-img']} />
-      <div className={styles['band-card-body']}>
-        <h3 className={styles['band-card-title']}>{item.title.toUpperCase()}</h3>
-        <div className={styles['band-card-sub']}>Banda/Artista</div>
-        <div className={styles['band-card-meta']}>
-          <Calendar size={14} /> <span>{item.date}</span>
+    <div className={styles['listing-card']} onClick={() => navigate(`/eventos/${item.id}`)}>
+      <div className={styles['listing-card-img-wrap']}>
+        <img src={item.image} alt={item.title} className={styles['listing-card-img']} />
+        <div className={styles['listing-card-badge']}>
+          <span>{day}</span>
+          <span>{month}</span>
         </div>
-        <div className={styles['band-card-meta']}>
-          <span>00:00</span>
+        {item.price && <div className={styles['listing-card-price']}>{item.price}</div>}
+      </div>
+
+      <div className={styles['listing-card-body']}>
+        <span className={styles['listing-card-label']}>{item.style || 'Banda'}</span>
+        <h3 className={styles['listing-card-title']}>{item.title}</h3>
+        <div className={styles['listing-card-meta']}>
+          <MapPin size={14} />
+          {item.city}
         </div>
-        <div className={styles['band-card-meta']}>
-          <MapPin size={14} /> <span>{item.city}, SC</span>
-        </div>
+        {onDelete && (
+          <button
+            className={styles['listing-card-action']}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(item.id)
+            }}
+          >
+            🗑️ Apagar
+          </button>
+        )}
       </div>
     </div>
   )
@@ -42,14 +59,15 @@ export default function Bandas() {
   const [selectedCity, setSelectedCity] = useState('')
 
   useEffect(() => {
-    const all = loadEvents()
-    setItems(all)
-    setDisplayed(all)
+    loadEvents().then((all) => {
+      setItems(all)
+      setDisplayed(all)
 
-    const uniqueStyles = Array.from(new Set(all.map((e) => e.style).filter(Boolean)))
-    const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
-    setMusicStyles(uniqueStyles)
-    setCities(uniqueCities)
+      const uniqueStyles = Array.from(new Set(all.map((e) => e.style).filter(Boolean)))
+      const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
+      setMusicStyles(uniqueStyles)
+      setCities(uniqueCities)
+    })
   }, [])
 
   function applyFilters({ q = query, style = selectedStyle, city = selectedCity } = {}) {
@@ -98,42 +116,77 @@ export default function Bandas() {
   return (
     <>
       <Header />
-      <main className={styles['bands-page']}>
-        <div className={styles['bands-hero']}>
+      <main className={styles['listing-page']}>
+        <section className={styles['listing-hero']}>
+          <div className={styles['listing-hero-content']}>
+            <h1>Descubra grandes artistas</h1>
+            <p>Encontre as melhores bandas e artistas para sua próxima festa.</p>
+          </div>
+        </section>
+
+        <section className={shared.section}>
           <div className={shared.container}>
-            <h1>Bandas</h1>
-          </div>
-        </div>
-
-        <section className={cn(shared.section, shared.container, styles.sectionArea)}>
-          <div className={styles['bands-filters']}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <input value={query} onChange={onQueryChange} className={styles['bands-search']} placeholder="Buscar banda" />
-              {suggestions.length > 0 && (
-                <ul className={styles['suggestions-list']}>
-                  {suggestions.map((s) => (
-                    <li key={s} className={styles['suggestion-item']} onClick={() => onSelectSuggestion(s)}>{s}</li>
-                  ))}
-                </ul>
-              )}
+            <div className={shared.sectionHeader}>
+              <div>
+                <h2 className={shared.sectionTitle}>Bandas Disponíveis</h2>
+                <p className={shared.sectionSub}>Descubra os melhores artistas e bandas.</p>
+              </div>
+              <span className={styles['listing-count']}>{displayed.length} bandas</span>
             </div>
 
-            <div className={styles['bands-filters-right']}>
-              <select value={selectedStyle} onChange={onStyleChange}>
-                <option value="">Estilo musical</option>
-                {musicStyles.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-              <select value={selectedCity} onChange={onCityChange}>
-                <option value="">Todas as cidades</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <div style={{ position: 'relative' }}>
+              <div className={styles['listing-filters']}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    value={query}
+                    onChange={onQueryChange}
+                    className={styles['listing-search']}
+                    placeholder="Buscar banda..."
+                  />
+                  {suggestions.length > 0 && (
+                    <ul className={styles['suggestions-list']}>
+                      {suggestions.map((s) => (
+                        <li key={s} className={styles['suggestion-item']} onClick={() => onSelectSuggestion(s)}>
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className={styles['listing-filters-group']}>
+                  <select value={selectedStyle} onChange={onStyleChange} className={styles['listing-select']}>
+                    <option value="">Todos os estilos</option>
+                    {musicStyles.map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <select value={selectedCity} onChange={onCityChange} className={styles['listing-select']}>
+                    <option value="">Todas as cidades</option>
+                    {cities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className={styles['bands-grid']}>
-            {displayed.map((it) => (
-              <BandCard key={it.id} item={it} />
-            ))}
+            {displayed.length ? (
+              <div className={styles['listing-grid']}>
+                {displayed.map((item) => (
+                  <ListingCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className={styles['listing-empty']}>
+                <Calendar size={48} />
+                <p>Nenhuma banda encontrada</p>
+                <span>Tente ajustar seus filtros ou busque por outro termo</span>
+              </div>
+            )}
           </div>
         </section>
       </main>

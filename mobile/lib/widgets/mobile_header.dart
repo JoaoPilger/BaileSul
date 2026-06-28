@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../services/notificacoes_service.dart';
 
 /// Cabeçalho mobile com fundo escuro, logo à esquerda e menu à direita.
 class MobileHeader extends StatelessWidget {
@@ -42,16 +43,76 @@ class MobileHeader extends StatelessWidget {
                   height: logoHeight,
                   fit: BoxFit.contain,
                 ),
-                IconButton(
-                  onPressed: onMenuPressed,
-                  style: IconButton.styleFrom(
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(44, 44),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  icon: const Icon(Icons.menu, size: 26),
-                  tooltip: 'Menu',
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedBuilder(
+                      animation: NotificacoesService.instance,
+                      builder: (context, child) {
+                        final int count = NotificacoesService.instance.unreadCount;
+                        return Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            IconButton(
+                              onPressed: () {
+                                Navigator.pushNamed(context, '/notificacoes');
+                              },
+                              style: IconButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(44, 44),
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              icon: Icon(
+                                count > 0
+                                    ? Icons.notifications_active_outlined
+                                    : Icons.notifications_none_outlined,
+                                size: 26,
+                              ),
+                              tooltip: 'Notificações',
+                            ),
+                            if (count > 0)
+                              Positioned(
+                                right: 6,
+                                top: 6,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFF3B30),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 14,
+                                    minHeight: 14,
+                                  ),
+                                  child: Text(
+                                    '$count',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: onMenuPressed,
+                      style: IconButton.styleFrom(
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(44, 44),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.menu, size: 26),
+                      tooltip: 'Menu',
+                    ),
+                  ],
                 ),
               ],
             ),

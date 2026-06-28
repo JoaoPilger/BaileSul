@@ -63,6 +63,14 @@ abstract final class MobileAppMenu {
       ),
     );
 
+    itens.add(
+      MobileMenuEntry(
+        icon: Icons.notifications_none_rounded,
+        label: 'Notificações',
+        onTap: () => Navigator.pushNamed(context, '/notificacoes'),
+      ),
+    );
+
     final SessaoUsuario sessao = SessaoUsuario.instance;
 
     if (sessao.autenticado) {

@@ -4,28 +4,45 @@ import Footer from '../../components/footer/Footer'
 import { loadEvents } from '../../utils/events'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar } from 'lucide-react'
-import { cn } from '../../utils/cn'
 import shared from '../../styles/shared.module.css'
-import styles from './comunidades.module.css'
+import styles from '../../styles/listings.module.css'
 
-function CommunityCard({ item }) {
+function ListingCard({ item, onDelete }) {
   const navigate = useNavigate()
+  const date = new Date(item.date)
+  const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
+  const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className={styles['community-card']} onClick={() => navigate(`/eventos/${item.id}`)} style={{ cursor: 'pointer' }}>
-      <img src={item.image} alt={item.title} className={styles['community-card-img']} />
-      <div className={styles['community-card-body']}>
-        <h3 className={styles['community-card-title']}>{item.title.toUpperCase()}</h3>
-        <div className={styles['community-card-sub']}>Banda/Artista</div>
-        <div className={styles['community-card-meta']}>
-          <Calendar size={14} /> <span>{item.date}</span>
+    <div className={styles['listing-card']} onClick={() => navigate(`/eventos/${item.id}`)}>
+      <div className={styles['listing-card-img-wrap']}>
+        <img src={item.image} alt={item.title} className={styles['listing-card-img']} />
+        <div className={styles['listing-card-badge']}>
+          <span>{day}</span>
+          <span>{month}</span>
         </div>
-        <div className={styles['community-card-meta']}>
-          <span>00:00</span>
+        {item.price && <div className={styles['listing-card-price']}>{item.price}</div>}
+      </div>
+
+      <div className={styles['listing-card-body']}>
+        <span className={styles['listing-card-label']}>{item.style || 'Comunidade'}</span>
+        <h3 className={styles['listing-card-title']}>{item.title}</h3>
+        <div className={styles['listing-card-meta']}>
+          <MapPin size={14} />
+          {item.city}
         </div>
-        <div className={styles['community-card-meta']}>
-          <MapPin size={14} /> <span>{item.city}, SC</span>
-        </div>
+        {onDelete && (
+          <button
+            className={styles['listing-card-action']}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onDelete(item.id)
+            }}
+          >
+            🗑️ Apagar
+          </button>
+        )}
       </div>
     </div>
   )
@@ -40,12 +57,13 @@ export default function Comunidades() {
   const [selectedCity, setSelectedCity] = useState('')
 
   useEffect(() => {
-    const all = loadEvents()
-    setItems(all)
-    setDisplayed(all)
+    loadEvents().then((all) => {
+      setItems(all)
+      setDisplayed(all)
 
-    const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
-    setCities(uniqueCities)
+      const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
+      setCities(uniqueCities)
+    })
   }, [])
 
   function applyFilters({ q = query, city = selectedCity } = {}) {
@@ -88,37 +106,69 @@ export default function Comunidades() {
   return (
     <>
       <Header />
-      <main className={styles['communities-page']}>
-        <div className={styles['communities-hero']}>
+      <main className={styles['listing-page']}>
+        <section className={styles['listing-hero']}>
+          <div className={styles['listing-hero-content']}>
+            <h1>Explore comunidades locais</h1>
+            <p>Descubra as melhores comunidades de dança da sua região.</p>
+          </div>
+        </section>
+
+        <section className={shared.section}>
           <div className={shared.container}>
-            <h1>Comunidades</h1>
-          </div>
-        </div>
-
-        <section className={cn(shared.section, shared.container, styles.sectionArea)}>
-          <div className={styles['communities-filters']}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <input value={query} onChange={onQueryChange} className={styles['communities-search']} placeholder="Buscar comunidade" />
-              {suggestions.length > 0 && (
-                <ul className={styles['suggestions-list']}>
-                  {suggestions.map((s) => (
-                    <li key={s} className={styles['suggestion-item']} onClick={() => onSelectSuggestion(s)}>{s}</li>
-                  ))}
-                </ul>
-              )}
+            <div className={shared.sectionHeader}>
+              <div>
+                <h2 className={shared.sectionTitle}>Comunidades Disponíveis</h2>
+                <p className={shared.sectionSub}>Encontre a comunidade perfeita para você.</p>
+              </div>
+              <span className={styles['listing-count']}>{displayed.length} comunidades</span>
             </div>
-            <div className={styles['communities-filters-right']}>
-              <select value={selectedCity} onChange={onCityChange}>
-                <option value="">Cidade</option>
-                {cities.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
 
-          <div className={styles['communities-grid']}>
-            {displayed.map((it) => (
-              <CommunityCard key={it.id} item={it} />
-            ))}
+            <div style={{ position: 'relative' }}>
+              <div className={styles['listing-filters']}>
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    value={query}
+                    onChange={onQueryChange}
+                    className={styles['listing-search']}
+                    placeholder="Buscar comunidade..."
+                  />
+                  {suggestions.length > 0 && (
+                    <ul className={styles['suggestions-list']}>
+                      {suggestions.map((s) => (
+                        <li key={s} className={styles['suggestion-item']} onClick={() => onSelectSuggestion(s)}>
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className={styles['listing-filters-group']}>
+                  <select value={selectedCity} onChange={onCityChange} className={styles['listing-select']}>
+                    <option value="">Todas as cidades</option>
+                    {cities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {displayed.length ? (
+              <div className={styles['listing-grid']}>
+                {displayed.map((item) => (
+                  <ListingCard key={item.id} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div className={styles['listing-empty']}>
+                <Calendar size={48} />
+                <p>Nenhuma comunidade encontrada</p>
+                <span>Tente ajustar seus filtros ou busque por outro termo</span>
+              </div>
+            )}
           </div>
         </section>
       </main>

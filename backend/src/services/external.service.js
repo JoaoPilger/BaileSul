@@ -58,7 +58,7 @@ const validarCNPJ = async (cnpj) => {
  * @param {string} endereco - Endereço completo ou cidade+estado
  * @returns {Promise<{latitude: number, longitude: number}|null>}
  */
-const geocodificarEndereco = async (endereco) => {
+const geocodificarEnderecoBase = async (endereco) => {
   if (!endereco || endereco.trim().length < 3) return null;
 
   try {
@@ -86,6 +86,82 @@ const geocodificarEndereco = async (endereco) => {
     console.error('[Nominatim] Erro ao geocodificar:', err.message);
     return null;
   }
+};
+
+/**
+ * Geocodifica usando parâmetros estruturados do Nominatim para maior precisão.
+ * @param {{ street?: string, city?: string, postalcode?: string }} params
+ * @returns {Promise<{latitude: number, longitude: number}|null>}
+ */
+const geocodificarEstruturado = async ({ street, city, postalcode }) => {
+  const qs = new URLSearchParams({ format: 'json', limit: '1', countrycodes: 'br' });
+  if (street)     qs.set('street', street);
+  if (city)       qs.set('city', city);
+  if (postalcode) qs.set('postalcode', postalcode.replace(/\D/g, ''));
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?${qs}`;
+    const res = await fetch(url, {
+      headers: {
+        'User-Agent': 'BaileSul/1.0 (projeto-integrador@ifc.edu.br)',
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data || data.length === 0) return null;
+    return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Geocodifica um endereço usando Nominatim.
+ * Tenta primeiro uma busca estruturada (street + city + postalcode)
+ * e depois cai para buscas progressivas por query livre.
+ */
+const geocodificarEndereco = async (endereco) => {
+  if (!endereco || endereco.trim().length < 3) return null;
+
+  // Separa os componentes (rua, bairro, referencia, cidade, cep)
+  const parts = endereco.split(',').map(p => p.trim()).filter(Boolean);
+
+  // Detecta um CEP no último componente
+  const cepCandidate = parts.length > 0 ? parts[parts.length - 1] : '';
+  const hasCep = /^\d{5}-?\d{3}$/.test(cepCandidate.replace(/\D/g, '').length === 8 ? cepCandidate : '');
+
+  // Tenta montar busca estruturada
+  if (parts.length >= 2) {
+    const postalcode = hasCep ? cepCandidate : undefined;
+    // A cidade é o penúltimo componente (ou último se não houver CEP)
+    const cityIdx = hasCep ? parts.length - 2 : parts.length - 1;
+    const city = parts[cityIdx] || undefined;
+    // A rua é o primeiro componente (se houver mais de 2 partes)
+    const street = cityIdx > 0 ? parts[0] : undefined;
+
+    // 1) rua + cidade + cep
+    if (street && city) {
+      const coords = await geocodificarEstruturado({ street, city, postalcode });
+      if (coords) return coords;
+    }
+    // 2) só cidade + cep
+    if (city) {
+      const coords = await geocodificarEstruturado({ city, postalcode });
+      if (coords) return coords;
+    }
+  }
+
+  // Fallback: busca livre progressiva removendo partes da esquerda
+  let remaining = [...parts];
+  while (remaining.length > 0) {
+    const coords = await geocodificarEnderecoBase(remaining.join(', '));
+    if (coords) return coords;
+    remaining.shift();
+  }
+
+  return null;
 };
 
 /**

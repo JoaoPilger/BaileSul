@@ -152,117 +152,114 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
     final List<Map<String, dynamic>> listaFiltrada = _eventos.where(_filtrarPorStatus).toList();
 
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
+      backgroundColor: MobileFooter.backgroundColor,
       body: Column(
         children: [
           MobileHeader(onMenuPressed: _abrirMenu, logoHeight: 58, horizontalPadding: 16),
           Expanded(
-            child: Container(
-              width: double.infinity,
-              color: BaileSulColors.pageBackground,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 760),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final bool isNarrow = constraints.maxWidth < 700;
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (isNarrow) ...[
-                                Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
-                                const SizedBox(height: 12),
-                                _buildFilterTabs(),
-                                const SizedBox(height: 12),
-                                ElevatedButton.icon(
-                                  onPressed: () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
-                                  ),
-                                  icon: const Icon(Icons.add, size: 18),
-                                  label: const Text('Criar Evento'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0D496B),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                  ),
-                                ),
-                              ] else ...[
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    color: BaileSulColors.pageBackground,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 760),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 12),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final bool isNarrow = constraints.maxWidth < 700;
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
                                   children: [
-                                    Expanded(
-                                      child: Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    ElevatedButton.icon(
-                                      onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
-                                      ),
-                                      icon: const Icon(Icons.add, size: 18),
-                                      label: const Text('Criar Evento'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0D496B),
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                _buildFilterTabs(),
-                              ],
-                              const SizedBox(height: 16),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: SingleChildScrollView(
-                          padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 120),
-                          child: Column(
-                            children: [
-                              _buildStatsGrid(),
-                              const SizedBox(height: 16),
-                              if (_loading)
-                                const Center(child: CircularProgressIndicator())
-                              else if (_error != null)
-                                Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
-                              else if (listaFiltrada.isEmpty)
-                                const Center(child: Text('Nenhum evento encontrado'))
-                              else
-                                Column(
-                                  children: [
-                                    for (final event in listaFiltrada) ...[
-                                      _EventoListCard(event: event, defaultImageUrl: _defaultImageUrl),
+                                    if (isNarrow) ...[
+                                      Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
                                       const SizedBox(height: 12),
+                                      _buildFilterTabs(),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton.icon(
+                                        onPressed: () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
+                                        ),
+                                        icon: const Icon(Icons.add, size: 18),
+                                        label: const Text('Criar Evento'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF0D496B),
+                                          foregroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                        ),
+                                      ),
+                                    ] else ...[
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Expanded(
+                                            child: Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          ElevatedButton.icon(
+                                            onPressed: () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
+                                            ),
+                                            icon: const Icon(Icons.add, size: 18),
+                                            label: const Text('Criar Evento'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFF0D496B),
+                                              foregroundColor: Colors.white,
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      _buildFilterTabs(),
                                     ],
+                                    const SizedBox(height: 16),
                                   ],
-                                ),
-                            ],
-                          ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            _buildStatsGrid(),
+                            const SizedBox(height: 16),
+                            if (_loading)
+                              const Center(child: CircularProgressIndicator())
+                            else if (_error != null)
+                              Center(child: Text(_error!, style: const TextStyle(color: Colors.red)))
+                            else if (listaFiltrada.isEmpty)
+                              const Center(child: Text('Nenhum evento encontrado'))
+                            else
+                              Column(
+                                children: [
+                                  for (final event in listaFiltrada) ...[
+                                    _EventoListCard(event: event, defaultImageUrl: _defaultImageUrl),
+                                    const SizedBox(height: 12),
+                                  ],
+                                ],
+                              ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  const MobileFooter(),
+                ],
               ),
             ),
           ),
         ],
       ),
-      bottomNavigationBar: const MobileFooter(),
     );
   }
 

@@ -1,6 +1,7 @@
 const pool = require('../config/database');
 const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
 const { caminhoParaUrl } = require('../middlewares/upload');
+const { geocodificarEndereco } = require('../services/external.service');
 
 // ─────────────────────────────────────────────────────────────
 //  Helpers internos
@@ -64,7 +65,7 @@ const listar = async (req, res) => {
     const total = countRes.rows[0].total;
 
     const { rows } = await pool.query(
-      `SELECT e.id, e.titulo, e.data_inicio, e.data_fim,
+      `SELECT e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
               e.local_nome, e.local_endereco,
               e.latitude, e.longitude,
               e.valor_ingresso, e.foto_capa_url, e.status,
@@ -178,13 +179,26 @@ const criar = async (req, res) => {
 
   const foto_capa_url = resolverFotoCapa(req) ?? null;
 
+  let latitude = null;
+  let longitude = null;
+  if (local_endereco) {
+    const cleanAddress = local_endereco.includes(';')
+      ? local_endereco.split(';').filter(p => p.trim()).join(', ')
+      : local_endereco;
+    const coords = await geocodificarEndereco(cleanAddress);
+    if (coords) {
+      latitude = coords.latitude;
+      longitude = coords.longitude;
+    }
+  }
+
   try {
     const { rows } = await pool.query(
       `INSERT INTO eventos
          (comunidade_id, titulo, descricao, data_inicio, data_fim,
-          local_nome, local_endereco, valor_ingresso, foto_capa_url)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-       RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status`,
+          local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+       RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude`,
       [
         comunidade_id,
         titulo.trim(),
@@ -195,6 +209,8 @@ const criar = async (req, res) => {
         local_endereco || null,
         valor_ingresso != null ? parseFloat(valor_ingresso) : null,
         foto_capa_url,
+        latitude,
+        longitude,
       ]
     );
 
@@ -244,6 +260,27 @@ const atualizar = async (req, res) => {
 
   const foto_capa_url = resolverFotoCapa(req); // undefined = não alterar
 
+  let latitude = undefined;
+  let longitude = undefined;
+  if (local_endereco !== undefined) {
+    if (local_endereco) {
+      const cleanAddress = local_endereco.includes(';')
+        ? local_endereco.split(';').filter(p => p.trim()).join(', ')
+        : local_endereco;
+      const coords = await geocodificarEndereco(cleanAddress);
+      if (coords) {
+        latitude = coords.latitude;
+        longitude = coords.longitude;
+      } else {
+        latitude = null;
+        longitude = null;
+      }
+    } else {
+      latitude = null;
+      longitude = null;
+    }
+  }
+
   try {
     const sets  = [];
     const params = [];
@@ -265,6 +302,15 @@ const atualizar = async (req, res) => {
     campo('valor_ingresso', valor_ingresso != null ? parseFloat(valor_ingresso) : undefined);
     campo('status',         status);
     campo('foto_capa_url',  foto_capa_url);
+
+    if (latitude !== undefined) {
+      sets.push(`latitude = $${i++}`);
+      params.push(latitude);
+    }
+    if (longitude !== undefined) {
+      sets.push(`longitude = $${i++}`);
+      params.push(longitude);
+    }
 
     if (sets.length === 0) {
       return res.status(400).json({ error: 'Nenhum campo fornecido para atualização' });

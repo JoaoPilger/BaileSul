@@ -3,6 +3,7 @@ import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import api from '../../services/api'
 import {
   formatCep,
   formatCityField,
@@ -208,54 +209,103 @@ export default function CriarEvento() {
       return
     }
 
-    // Monta FormData com os nomes que o controller espera
-    const fd = new FormData()
-    fd.append('titulo',        normalizedForm.title.trim())
-    fd.append('data_inicio',   normalizedForm.dateStart)
-    fd.append('data_fim',      normalizedForm.dateEnd || normalizedForm.dateStart)
-    fd.append('local_nome',    normalizedForm.rua
-      ? `${normalizedForm.rua}${normalizedForm.bairro ? ', ' + normalizedForm.bairro : ''}`
-      : normalizedForm.city || '')
-    fd.append('local_endereco',
-      [normalizedForm.rua, normalizedForm.bairro, normalizedForm.city, normalizedForm.cep]
-        .filter(Boolean).join(', '))
-    fd.append('descricao',
-      [normalizedForm.band ? `Banda: ${normalizedForm.band}` : '',
-      normalizedForm.referencia ? `Referência: ${normalizedForm.referencia}` : '']
-        .filter(Boolean).join(' | ') || '')
+    const descricaoParts = []
+    if (normalizedForm.band?.trim()) {
+      descricaoParts.push(`Banda/Artista: ${normalizedForm.band.trim()}`)
+    }
+    if (normalizedForm.style) {
+      const estiloLabel = ESTILOS.find(e => e.value === normalizedForm.style)?.label || normalizedForm.style
+      descricaoParts.push(`Estilo musical: ${estiloLabel}`)
+    }
+    const descricao = descricaoParts.join('\n')
 
-    // valor_ingresso: o backend espera float ou null
-    const priceRaw = normalizedForm.price.replace(/^R\$\s*/i, '').trim()
-    if (priceRaw && !/^(grátis|gratis)$/i.test(priceRaw)) {
-      fd.append('valor_ingresso', parseFloat(priceRaw.replace(',', '.')))
+    const localNome = normalizedForm.city || ''
+    const localEndereco = [
+      normalizedForm.rua || '',
+      normalizedForm.bairro || '',
+      normalizedForm.referencia || '',
+      normalizedForm.city || '',
+      normalizedForm.cep || '',
+    ].map(p => String(p).trim()).join(';')
+
+    let valorIngresso = null
+    const priceStr = normalizedForm.price
+    if (priceStr && !/^(grátis|gratis)$/i.test(priceStr)) {
+      const numericString = priceStr.replace(/^R\$\s*/i, '').replace(',', '.')
+      const val = parseFloat(numericString)
+      if (!Number.isNaN(val) && val >= 0) {
+        valorIngresso = val
+      }
     }
 
-    // Imagem: campo deve se chamar "foto_capa" (uploadCapaEvento no middleware)
+    const formData = new FormData()
+    formData.append('titulo', normalizedForm.title.trim())
+    if (descricao) formData.append('descricao', descricao)
+    formData.append('data_inicio', normalizedForm.dateStart)
+    formData.append('data_fim', normalizedForm.dateEnd || normalizedForm.dateStart)
+    if (localNome) formData.append('local_nome', localNome)
+    if (localEndereco) formData.append('local_endereco', localEndereco)
+    if (valorIngresso !== null) {
+      formData.append('valor_ingresso', String(valorIngresso))
+    }
+
+    const fallbackImage = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80'
     if (imagemFile) {
-      fd.append('foto_capa', imagemFile)
+      formData.append('foto_capa', imagemFile)
+    } else {
+      formData.append('foto_capa_url', fallbackImage)
     }
 
     try {
-      const res = await fetch('/api/eventos', {
-        method: 'POST',
+      const response = await api.post('/eventos', formData, {
         headers: {
-          Authorization: `Bearer ${token}`,
-          // NÃO definir Content-Type aqui — o browser define sozinho com boundary
+          'Content-Type': 'multipart/form-data',
         },
-        body: fd,
       })
 
-      const data = await res.json()
+      const databaseEvent = response.data.evento || {}
 
-      if (!res.ok) {
-        setFormAlert(data.error || 'Erro ao criar evento.')
-        return
+      let imageUrl = databaseEvent.foto_capa_url || imagemPreview || fallbackImage;
+      if (imageUrl && imageUrl.includes('/media/')) {
+        const idx = imageUrl.indexOf('/media/');
+        imageUrl = imageUrl.substring(idx);
       }
 
-      navigate('/meus-eventos')
+      const newEvent = {
+        id:         databaseEvent.id || Date.now(),
+        title:      normalizedForm.title,
+        band:       normalizedForm.band,
+        style:      normalizedForm.style,
+        date:       normalizedForm.dateStart || new Date().toISOString().slice(0, 10),
+        date_end:   normalizedForm.dateEnd,
+        time_start: normalizedForm.timeStart,
+        time_end:   normalizedForm.timeEnd,
+        image:      imageUrl,
+        price:      normalizedForm.price
+          ? (/^(grátis|gratis)$/i.test(normalizedForm.price.trim())
+              ? 'Grátis'
+              : `R$ ${normalizedForm.price.replace(/^R\$\s*/i, '').trim()}`)
+          : 'Grátis',
+        city:       normalizedForm.city,
+        cep:        normalizedForm.cep,
+        bairro:     normalizedForm.bairro,
+        rua:        normalizedForm.rua,
+        referencia: normalizedForm.referencia,
+        vendors,
+        latitude:   databaseEvent.latitude,
+        longitude:  databaseEvent.longitude,
+        created_at: new Date().toISOString(),
+      }
 
-    } catch {
-      setFormAlert('Erro de conexão. Tente novamente.')
+      const raw  = localStorage.getItem('bailesul_events')
+      const list = raw ? JSON.parse(raw) : []
+      list.unshift(newEvent)
+      localStorage.setItem('bailesul_events', JSON.stringify(list))
+      navigate('/')
+    } catch (err) {
+      console.error('Erro ao salvar evento:', err)
+      const errorMsg = err.response?.data?.error || 'Erro ao salvar evento. Tente novamente.'
+      setFormAlert(errorMsg)
     }
   }
 

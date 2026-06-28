@@ -16,6 +16,7 @@ import VitrineComunidade from './paginas/vitrine_comunidade/vitrine_comunidade.j
 import VitrineBanda from './paginas/vitrine_banda/vitrine_banda.jsx'
 import Vendedores from './paginas/vendedores/vendedores.jsx'
 import Configuracoes from './paginas/configuracoes/configuracoes.jsx'
+import Pagamentos from './paginas/pagamentos/pagamentos.jsx'
 
 function App() {
   return (
@@ -38,6 +39,7 @@ function App() {
           <Route path="/bandas/:id" element={<VitrineBanda />} />
           <Route path="/vendedores" element={<Vendedores />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
