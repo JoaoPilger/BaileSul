@@ -18,10 +18,11 @@ export default function Configuracoes() {
     <>
       <Header />
       <div className={`${shared.container} ${styles.page}`}>
-        <h1 className={styles.title}>Configurações</h1>
-        <p className={styles.subtitle}>Gerencie o perfil e as configurações da sua conta.</p>
+        <div className={styles.wrapper}>
+          <h1 className={styles.title}>Configurações</h1>
+          <p className={styles.subtitle}>Gerencie o perfil e as configurações da sua conta.</p>
 
-        <div className={styles.grid}>
+          <div className={styles.grid}>
           <div className={styles.infoCard}>
             <strong>Conta {usuario?.tipo}</strong>
             <div style={{ marginTop: 8, color: 'var(--muted)' }}>{usuario?.email}</div>
@@ -31,35 +32,32 @@ export default function Configuracoes() {
           <div className={styles.tilesGrid}>
             <button type="button" onClick={() => { setSnackMsg('Perfil da banda em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
               <div className={styles.tileContent}>
-                <Music className={styles.icon} size={18} />
+                <Music className={styles.icon} size={24} />
                 <div className={styles.textBlock}>
                   <div className={styles.tileTitle}>Perfil da banda</div>
                   <div className={styles.tileSubtitle}>Nome artístico, estilo e descrição</div>
                 </div>
               </div>
-              <div className={styles.arrow}>›</div>
             </button>
 
             <button type="button" onClick={() => { setSnackMsg('Agenda em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
               <div className={styles.tileContent}>
-                <Calendar className={styles.icon} size={18} />
+                <Calendar className={styles.icon} size={24} />
                 <div className={styles.textBlock}>
                   <div className={styles.tileTitle}>Agenda</div>
                   <div className={styles.tileSubtitle}>Datas e compromissos</div>
                 </div>
               </div>
-              <div className={styles.arrow}>›</div>
             </button>
 
             <button type="button" onClick={() => { setSnackMsg('Alterar senha em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
               <div className={styles.tileContent}>
-                <Lock className={styles.icon} size={18} />
+                <Lock className={styles.icon} size={24} />
                 <div className={styles.textBlock}>
                   <div className={styles.tileTitle}>Alterar senha</div>
                   <div className={styles.tileSubtitle}>Atualize sua senha de acesso</div>
                 </div>
               </div>
-              <div className={styles.arrow}>›</div>
             </button>
           </div>
 
@@ -67,6 +65,7 @@ export default function Configuracoes() {
             <button onClick={async () => { await logout(); navigate('/'); }} className={`${shared.btn} ${styles.logoutBtn}`}>
               <LogOut /> Sair da conta
             </button>
+          </div>
           </div>
         </div>
       </div>
