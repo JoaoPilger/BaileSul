@@ -29,7 +29,8 @@ function mapUsuario(data, fallbackEmail) {
 }
 
 export function AuthProvider({ children }) {
-  const [auth, setAuth] = useState(() => loadStoredAuth())
+  /* Sempre inicia deslogado – a sessão não é restaurada automaticamente ao recarregar */
+  const [auth, setAuth] = useState(null)
 
   const persistAuth = useCallback((next) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))

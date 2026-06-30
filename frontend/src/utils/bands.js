@@ -1,0 +1,61 @@
+import api from '../services/api'
+
+/**
+ * Carrega bandas da API real (/api/bandas).
+ * Mapeia os campos do backend para o formato do frontend.
+ */
+export async function loadBands() {
+  try {
+    const res = await api.get('/bandas?limite=100')
+    const rows = res.data.dados || []
+    return rows.map(mapBandaRow)
+  } catch (err) {
+    console.error('Erro ao buscar bandas da API:', err)
+    return []
+  }
+}
+
+/**
+ * Carrega o detalhe de uma banda pelo id.
+ */
+export async function loadBandById(id) {
+  if (!id) return null
+  try {
+    const res = await api.get(`/bandas/${id}`)
+    if (res.data) {
+      return mapBandaDetail(res.data)
+    }
+  } catch (err) {
+    console.error(`Erro ao buscar banda ${id}:`, err)
+  }
+  return null
+}
+
+function mapBandaRow(row) {
+  return {
+    id: row.usuario_id,
+    title: row.nome_artistico || 'Banda',
+    style: row.estilo_musical || '',
+    description: row.descricao || '',
+    whatsapp: row.whatsapp || '',
+    cnpj_validado: row.cnpj_validado || false,
+  }
+}
+
+function mapBandaDetail(row) {
+  return {
+    ...mapBandaRow(row),
+    video_url: row.video_url || '',
+    eventos: (row.eventos || []).map((e) => ({
+      id: e.id,
+      titulo: e.titulo,
+      data_inicio: e.data_inicio,
+      data_fim: e.data_fim,
+      local: e.local_nome,
+      comunidade: e.comunidade,
+      cidade: e.cidade,
+      estado: e.estado,
+    })),
+    midias: row.midias || [],
+  }
+}

@@ -1,47 +1,42 @@
 import React, { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
-import { loadEvents } from '../../utils/events'
+import { loadBands } from '../../utils/bands'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Calendar } from 'lucide-react'
+import { Music, Users } from 'lucide-react'
 import shared from '../../styles/shared.module.css'
 import styles from '../../styles/listings.module.css'
 
-function ListingCard({ item, onDelete }) {
+function BandCard({ item }) {
   const navigate = useNavigate()
-  const date = new Date(item.date)
-  const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
-  const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className={styles['listing-card']} onClick={() => navigate(`/eventos/${item.id}`)}>
+    <div className={styles['listing-card']} onClick={() => navigate(`/bandas/${item.id}`)}>
       <div className={styles['listing-card-img-wrap']}>
-        <img src={item.image} alt={item.title} className={styles['listing-card-img']} />
-        <div className={styles['listing-card-badge']}>
-          <span>{day}</span>
-          <span>{month}</span>
+        <div
+          className={styles['listing-card-img']}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #6a4cff 0%, #a855f7 100%)',
+            minHeight: '160px',
+          }}
+        >
+          <Music size={48} color="rgba(255,255,255,0.5)" />
         </div>
-        {item.price && <div className={styles['listing-card-price']}>{item.price}</div>}
+        {item.style && <div className={styles['listing-card-price']}>{item.style}</div>}
       </div>
 
       <div className={styles['listing-card-body']}>
-        <span className={styles['listing-card-label']}>{item.style || 'Banda'}</span>
+        <span className={styles['listing-card-label']}>Banda</span>
         <h3 className={styles['listing-card-title']}>{item.title}</h3>
-        <div className={styles['listing-card-meta']}>
-          <MapPin size={14} />
-          {item.city}
-        </div>
-        {onDelete && (
-          <button
-            className={styles['listing-card-action']}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(item.id)
-            }}
-          >
-            🗑️ Apagar
-          </button>
+        {item.description && (
+          <div className={styles['listing-card-meta']}>
+            {item.description.length > 80
+              ? item.description.slice(0, 80) + '…'
+              : item.description}
+          </div>
         )}
       </div>
     </div>
@@ -54,28 +49,26 @@ export default function Bandas() {
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState([])
   const [musicStyles, setMusicStyles] = useState([])
-  const [cities, setCities] = useState([])
   const [selectedStyle, setSelectedStyle] = useState('')
-  const [selectedCity, setSelectedCity] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    loadEvents().then((all) => {
+    setIsLoading(true)
+    loadBands().then((all) => {
       setItems(all)
       setDisplayed(all)
+      setIsLoading(false)
 
       const uniqueStyles = Array.from(new Set(all.map((e) => e.style).filter(Boolean)))
-      const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
       setMusicStyles(uniqueStyles)
-      setCities(uniqueCities)
-    })
+    }).catch(() => setIsLoading(false))
   }, [])
 
-  function applyFilters({ q = query, style = selectedStyle, city = selectedCity } = {}) {
+  function applyFilters({ q = query, style = selectedStyle } = {}) {
     const lower = q.trim().toLowerCase()
     let out = items.slice()
     if (lower) out = out.filter((it) => it.title.toLowerCase().includes(lower))
     if (style) out = out.filter((it) => it.style === style)
-    if (city) out = out.filter((it) => it.city === city)
     setDisplayed(out)
   }
 
@@ -106,11 +99,6 @@ export default function Bandas() {
   function onStyleChange(e) {
     setSelectedStyle(e.target.value)
     applyFilters({ style: e.target.value })
-  }
-
-  function onCityChange(e) {
-    setSelectedCity(e.target.value)
-    applyFilters({ city: e.target.value })
   }
 
   return (
@@ -162,27 +150,31 @@ export default function Bandas() {
                       </option>
                     ))}
                   </select>
-                  <select value={selectedCity} onChange={onCityChange} className={styles['listing-select']}>
-                    <option value="">Todas as cidades</option>
-                    {cities.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
 
-            {displayed.length ? (
+            {isLoading ? (
+              <div className={styles['listing-grid']}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className={shared.skeletonCard}>
+                    <div className={shared.skeletonImg} />
+                    <div className={shared.skeletonBody}>
+                      <div className={shared.skeletonLine} style={{ width: '70%' }} />
+                      <div className={shared.skeletonLine} style={{ width: '50%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : displayed.length ? (
               <div className={styles['listing-grid']}>
                 {displayed.map((item) => (
-                  <ListingCard key={item.id} item={item} />
+                  <BandCard key={item.id} item={item} />
                 ))}
               </div>
             ) : (
               <div className={styles['listing-empty']}>
-                <Calendar size={48} />
+                <Users size={48} />
                 <p>Nenhuma banda encontrada</p>
                 <span>Tente ajustar seus filtros ou busque por outro termo</span>
               </div>

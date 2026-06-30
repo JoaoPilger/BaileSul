@@ -1,47 +1,47 @@
 import React, { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
-import { loadEvents } from '../../utils/events'
+import { loadCommunities } from '../../utils/communities'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Calendar } from 'lucide-react'
+import { MapPin, Users } from 'lucide-react'
 import shared from '../../styles/shared.module.css'
 import styles from '../../styles/listings.module.css'
 
-function ListingCard({ item, onDelete }) {
+function CommunityCard({ item }) {
   const navigate = useNavigate()
-  const date = new Date(item.date)
-  const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
-  const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
   return (
-    <div className={styles['listing-card']} onClick={() => navigate(`/eventos/${item.id}`)}>
+    <div className={styles['listing-card']} onClick={() => navigate(`/comunidades/${item.id}`)}>
       <div className={styles['listing-card-img-wrap']}>
-        <img src={item.image} alt={item.title} className={styles['listing-card-img']} />
-        <div className={styles['listing-card-badge']}>
-          <span>{day}</span>
-          <span>{month}</span>
+        <div
+          className={styles['listing-card-img']}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+            minHeight: '160px',
+          }}
+        >
+          <Users size={48} color="rgba(255,255,255,0.5)" />
         </div>
-        {item.price && <div className={styles['listing-card-price']}>{item.price}</div>}
       </div>
 
       <div className={styles['listing-card-body']}>
-        <span className={styles['listing-card-label']}>{item.style || 'Comunidade'}</span>
+        <span className={styles['listing-card-label']}>Comunidade</span>
         <h3 className={styles['listing-card-title']}>{item.title}</h3>
-        <div className={styles['listing-card-meta']}>
-          <MapPin size={14} />
-          {item.city}
-        </div>
-        {onDelete && (
-          <button
-            className={styles['listing-card-action']}
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              onDelete(item.id)
-            }}
-          >
-            🗑️ Apagar
-          </button>
+        {item.city && (
+          <div className={styles['listing-card-meta']}>
+            <MapPin size={14} />
+            {item.city}{item.state ? ` - ${item.state}` : ''}
+          </div>
+        )}
+        {item.description && (
+          <div className={styles['listing-card-meta']} style={{ marginTop: '4px', opacity: 0.7 }}>
+            {item.description.length > 80
+              ? item.description.slice(0, 80) + '…'
+              : item.description}
+          </div>
         )}
       </div>
     </div>
@@ -55,15 +55,18 @@ export default function Comunidades() {
   const [suggestions, setSuggestions] = useState([])
   const [cities, setCities] = useState([])
   const [selectedCity, setSelectedCity] = useState('')
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    loadEvents().then((all) => {
+    setIsLoading(true)
+    loadCommunities().then((all) => {
       setItems(all)
       setDisplayed(all)
+      setIsLoading(false)
 
       const uniqueCities = Array.from(new Set(all.map((e) => e.city).filter(Boolean)))
       setCities(uniqueCities)
-    })
+    }).catch(() => setIsLoading(false))
   }, [])
 
   function applyFilters({ q = query, city = selectedCity } = {}) {
@@ -156,15 +159,27 @@ export default function Comunidades() {
               </div>
             </div>
 
-            {displayed.length ? (
+            {isLoading ? (
+              <div className={styles['listing-grid']}>
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className={shared.skeletonCard}>
+                    <div className={shared.skeletonImg} />
+                    <div className={shared.skeletonBody}>
+                      <div className={shared.skeletonLine} style={{ width: '70%' }} />
+                      <div className={shared.skeletonLine} style={{ width: '50%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : displayed.length ? (
               <div className={styles['listing-grid']}>
                 {displayed.map((item) => (
-                  <ListingCard key={item.id} item={item} />
+                  <CommunityCard key={item.id} item={item} />
                 ))}
               </div>
             ) : (
               <div className={styles['listing-empty']}>
-                <Calendar size={48} />
+                <Users size={48} />
                 <p>Nenhuma comunidade encontrada</p>
                 <span>Tente ajustar seus filtros ou busque por outro termo</span>
               </div>
