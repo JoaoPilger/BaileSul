@@ -59,6 +59,7 @@ function mapUsuario(data, fallbackEmail) {
 export function AuthProvider({ children }) {
   /* Restaura a sessão salva no localStorage ao carregar a página (F5) */
   const [auth, setAuth] = useState(loadStoredAuth)
+  const [isVendedor, setIsVendedor] = useState(false)
 
   const persistAuth = useCallback((next) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
@@ -164,18 +165,41 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('storage', onStorage)
   }, [])
 
+  // Usuários do tipo "pessoal" podem ou não ser vendedores de alguma
+  // comunidade (é um vínculo na tabela `vendedores`, não um campo do
+  // usuário). Checa isso uma vez, sempre que a sessão de um "pessoal" muda.
+  useEffect(() => {
+    if (auth?.usuario?.tipo !== 'pessoal' || !auth?.token) {
+      setIsVendedor(false)
+      return
+    }
+
+    let cancelado = false
+    api
+      .get('/vendedores/me', { headers: { Authorization: `Bearer ${auth.token}` } })
+      .then(({ data }) => {
+        if (!cancelado) setIsVendedor(Array.isArray(data) && data.length > 0)
+      })
+      .catch(() => {
+        if (!cancelado) setIsVendedor(false)
+      })
+
+    return () => { cancelado = true }
+  }, [auth?.usuario?.tipo, auth?.token])
+
   const value = useMemo(
     () => ({
       usuario: auth?.usuario ?? null,
       token: auth?.token ?? null,
       isAuthenticated: Boolean(auth?.token),
+      isVendedor,
       tokenExpiryMs: auth?.token ? getTokenExpiryMs(auth.token) : null,
       isTokenExpired: () => isTokenExpired(auth?.token),
       login,
       register,
       logout,
     }),
-    [auth, login, register, logout],
+    [auth, isVendedor, login, register, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

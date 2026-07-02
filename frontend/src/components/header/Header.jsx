@@ -10,8 +10,8 @@ export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const { usuario, isAuthenticated } = useAuth();
-  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
+  const { usuario, isAuthenticated, isVendedor } = useAuth();
+  const { links, podeCriarEvento } = getNavConfig(usuario?.tipo, isVendedor);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);

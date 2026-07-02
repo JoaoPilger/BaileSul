@@ -52,7 +52,6 @@ const adicionar = async (req, res) => {
   }
 
   try {
-    // 1. Busca o usuário do tipo pessoal utilizando o e-mail informado
     const usuarioRes = await pool.query(
       `SELECT u.id, u.tipo, pp.nome AS nome_perfil
        FROM usuarios u
@@ -73,8 +72,6 @@ const adicionar = async (req, res) => {
     const nomeFinal = usuarioRes.rows[0].nome_perfil || 'Usuário Sem Nome';
     const whatsappFinal = whatsapp.replace(/\D/g, '');
 
-    // 2. Executa o INSERT com a cláusula ON CONFLICT
-    // IMPORTANTE: Assume que sua constraint de unicidade é nas colunas (comunidade_id, usuario_id)
     const { rows } = await pool.query(
       `INSERT INTO vendedores (comunidade_id, usuario_id, nome, whatsapp, ativo)
        VALUES ($1, $2, $3, $4, true)
@@ -122,19 +119,73 @@ const remover = async (req, res) => {
 };
 
 /**
+ * GET /api/vendedores/reservas?status=pendente|confirmado|rejeitado&busca=...
+ * Lista as reservas atribuídas ao vendedor (usuário pessoal) autenticado,
+ * pra tela de "Confirmar Pagamentos". Só o próprio vendedor vê as suas.
+ */
+const minhasReservasPendentes = async (req, res) => {
+  const vendedor_usuario_id = req.usuario.id;
+  const { status, busca } = req.query;
+
+  const statusValidos = ['pendente', 'confirmado', 'rejeitado', 'cancelado'];
+  if (status && !statusValidos.includes(status)) {
+    return res.status(400).json({ error: `status inválido. Use: ${statusValidos.join(', ')}` });
+  }
+
+  try {
+    let where = 'WHERE v.usuario_id = $1';
+    const params = [vendedor_usuario_id];
+    let i = 2;
+
+    if (status) {
+      where += ` AND r.status_pagamento = $${i++}`;
+      params.push(status);
+    }
+    if (busca) {
+      where += ` AND (
+        LOWER(pp.nome) LIKE LOWER($${i}) OR
+        LOWER(u.email) LIKE LOWER($${i}) OR
+        LOWER(e.titulo) LIKE LOWER($${i})
+      )`;
+      params.push(`%${busca}%`);
+      i++;
+    }
+
+    const { rows } = await pool.query(
+      `SELECT r.id, r.quantidade, r.status_pagamento, r.criado_em,
+              (r.quantidade * COALESCE(e.valor_ingresso, 0))::FLOAT AS valor_total,
+              e.id AS evento_id, e.titulo AS evento,
+              pp.nome AS comprador_nome, u.email AS comprador_email
+       FROM reservas r
+       JOIN vendedores v ON v.id = r.vendedor_id
+       JOIN eventos e ON e.id = r.evento_id
+       JOIN usuarios u ON u.id = r.comprador_id
+       LEFT JOIN perfis_pessoais pp ON pp.usuario_id = r.comprador_id
+       ${where}
+       ORDER BY r.criado_em DESC`,
+      params
+    );
+
+    return res.json(rows);
+
+  } catch (err) {
+    console.error('Erro ao listar reservas do vendedor:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * PATCH /api/vendedores/reservas/:reserva_id/confirmar
+ * Confirmação de pagamento – EXCLUSIVO do vendedor responsável pela reserva.
  */
 const confirmarPagamento = async (req, res) => {
   const { reserva_id } = req.params;
-  const { id: usuario_id, tipo: usuario_tipo } = req.usuario;
+  const { id: usuario_id } = req.usuario;
 
   try {
     const reservaRes = await pool.query(
-      `SELECT r.id, r.vendedor_id, r.status_pagamento,
-              e.comunidade_id,
-              v.usuario_id AS vendedor_usuario_id
+      `SELECT r.id, r.status_pagamento, v.usuario_id AS vendedor_usuario_id
        FROM reservas r
-       JOIN eventos e ON e.id = r.evento_id
        LEFT JOIN vendedores v ON v.id = r.vendedor_id
        WHERE r.id = $1`,
       [reserva_id]
@@ -146,26 +197,16 @@ const confirmarPagamento = async (req, res) => {
 
     const reserva = reservaRes.rows[0];
 
-    if (reserva.status_pagamento !== 'pendente') {
-      return res.status(409).json({ error: 'Reserva já confirmada ou cancelada' });
+    if (!reserva.vendedor_usuario_id || reserva.vendedor_usuario_id !== usuario_id) {
+      return res.status(403).json({ error: 'Você não é o vendedor responsável por esta reserva' });
     }
 
-    if (usuario_tipo === 'comunidade') {
-      if (reserva.comunidade_id !== usuario_id) {
-        return res.status(403).json({ error: 'Acesso não autorizado para este evento' });
-      }
-    } else if (usuario_tipo === 'pessoal') {
-      if (!reserva.vendedor_usuario_id || reserva.vendedor_usuario_id !== usuario_id) {
-        return res.status(403).json({ error: 'Você não é o vendedor responsável por esta reserva' });
-      }
-    } else {
-      return res.status(403).json({ error: 'Acesso não autorizado para este perfil' });
+    if (reserva.status_pagamento !== 'pendente') {
+      return res.status(409).json({ error: 'Reserva já confirmada, rejeitada ou cancelada' });
     }
 
     await pool.query(
-      `UPDATE reservas
-       SET status_pagamento = 'confirmado'
-       WHERE id = $1`,
+      `UPDATE reservas SET status_pagamento = 'confirmado' WHERE id = $1`,
       [reserva_id]
     );
 
@@ -179,6 +220,56 @@ const confirmarPagamento = async (req, res) => {
 
   } catch (err) {
     console.error('Erro ao confirmar pagamento:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * PATCH /api/vendedores/reservas/:reserva_id/rejeitar
+ * Rejeição de pagamento – EXCLUSIVO do vendedor responsável pela reserva.
+ */
+const rejeitarPagamento = async (req, res) => {
+  const { reserva_id } = req.params;
+  const { id: usuario_id } = req.usuario;
+
+  try {
+    const reservaRes = await pool.query(
+      `SELECT r.id, r.status_pagamento, v.usuario_id AS vendedor_usuario_id
+       FROM reservas r
+       LEFT JOIN vendedores v ON v.id = r.vendedor_id
+       WHERE r.id = $1`,
+      [reserva_id]
+    );
+
+    if (reservaRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva não encontrada' });
+    }
+
+    const reserva = reservaRes.rows[0];
+
+    if (!reserva.vendedor_usuario_id || reserva.vendedor_usuario_id !== usuario_id) {
+      return res.status(403).json({ error: 'Você não é o vendedor responsável por esta reserva' });
+    }
+
+    if (reserva.status_pagamento !== 'pendente') {
+      return res.status(409).json({ error: 'Reserva já confirmada, rejeitada ou cancelada' });
+    }
+
+    await pool.query(
+      `UPDATE reservas SET status_pagamento = 'rejeitado' WHERE id = $1`,
+      [reserva_id]
+    );
+
+    await pool.query(
+      `INSERT INTO logs_status_pagamentos (reserva_id, status_anterior, status_novo, usuario_id)
+       VALUES ($1, 'pendente', 'rejeitado', $2)`,
+      [reserva_id, usuario_id]
+    );
+
+    return res.json({ message: 'Pagamento rejeitado' });
+
+  } catch (err) {
+    console.error('Erro ao rejeitar pagamento:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
@@ -215,8 +306,7 @@ const buscarSugestoes = async (req, res) => {
 /**
  * GET /api/vendedores/me
  * RF08 – Lista as comunidades às quais o usuário 'pessoal' logado
- * está vinculado como vendedor ativo. Usado pelo front para decidir
- * se exibe o card "Comunidades vinculadas" em Configurações.
+ * está vinculado como vendedor ativo.
  */
 const minhasComunidades = async (req, res) => {
   const { id: usuario_id, tipo: usuario_tipo } = req.usuario;
@@ -243,4 +333,13 @@ const minhasComunidades = async (req, res) => {
   }
 };
 
-module.exports = { listar, adicionar, remover, confirmarPagamento, buscarSugestoes, minhasComunidades };
+module.exports = {
+  listar,
+  adicionar,
+  remover,
+  confirmarPagamento,
+  rejeitarPagamento,
+  minhasReservasPendentes,
+  buscarSugestoes,
+  minhasComunidades,
+};
