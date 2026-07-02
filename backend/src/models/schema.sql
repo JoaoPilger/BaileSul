@@ -169,7 +169,6 @@ CREATE TABLE vendedores (
   ativo          BOOLEAN      NOT NULL DEFAULT TRUE,
   criado_em      TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em  TIMESTAMPTZ DEFAULT NOW(),
-  -- Um usuário pessoal só pode ser vendedor de uma comunidade por vez
   CONSTRAINT uq_vendedor_usuario_comunidade UNIQUE (usuario_id, comunidade_id)
 );
 

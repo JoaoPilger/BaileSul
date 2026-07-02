@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { User } from 'lucide-react'
@@ -17,20 +17,23 @@ import {
 } from '../../utils/criarEventoValidation'
 import styles from './criar_evento.module.css';
 
-const ESTILOS = [
-  { value: 'sertanejo', label: 'Sertanejo' },
-  { value: 'forro',     label: 'Forró' },
-  { value: 'pagode',    label: 'Pagode' },
-  { value: 'rock',      label: 'Rock' },
+const TIPOS_EVENTO = [
+  { value: 'musical', label: 'Musical' },
+  { value: 'almoco',  label: 'Almoço' },
+  { value: 'bingo',   label: 'Bingo' },
+  { value: 'expos',   label: 'Expos' },
+  { value: 'futebol', label: 'Futebol' },
+]
+
+const ESTILOS_MUSICAIS = [
   { value: 'gaucha',    label: 'Gaúcha' },
-  { value: 'axe',       label: 'Axé' },
-  { value: 'mpb',       label: 'MPB' },
-  { value: 'outro',     label: 'Outro' },
+  { value: 'bandinha',  label: 'Bandinha' },
 ]
 
 const TEXT_LIMITS = {
   title: 120,
   band: 80,
+  descricao: 1000,
   rua: 120,
   referencia: 150,
 }
@@ -48,7 +51,9 @@ export default function CriarEvento() {
   const [form, setForm] = useState({
     title:     '',
     band:      '',
-    style:     'sertanejo',
+    descricao: '',
+    tipoEvento:     'musical',
+    estiloMusical:  'gaucha',
     dateStart: '',
     dateEnd:   '',
     timeStart: '',
@@ -70,6 +75,15 @@ export default function CriarEvento() {
   const [submitAttempted, setSubmitAttempted] = useState(false)
   const [vendorError, setVendorError]   = useState('')
   const [formAlert, setFormAlert]       = useState('')
+
+  const [bandaId, setBandaId]                 = useState(null)
+  const [bandaSugestoes, setBandaSugestoes]    = useState([])
+  const [bandaSugestoesOpen, setBandaSugestoesOpen] = useState(false)
+  const [bandaBuscando, setBandaBuscando]      = useState(false)
+
+  const [vendedoresComunidade, setVendedoresComunidade] = useState([])
+  const [vendorSugestoes, setVendorSugestoes]           = useState([])
+  const [vendorSugestoesOpen, setVendorSugestoesOpen]   = useState(false)
 
   const contaLink   = isAuthenticated ? '/perfil' : '/login'
   const footerLinks = [
@@ -109,6 +123,8 @@ export default function CriarEvento() {
     else if (name === 'city' || name === 'bairro') next = formatCityField(value)
     else if (TEXT_LIMITS[name]) next = formatTextField(value, TEXT_LIMITS[name])
 
+    if (name === 'band') setBandaId(null)
+
     setForm((prev) => {
       const updated = { ...prev, [name]: next }
       const related = [name]
@@ -140,6 +156,71 @@ export default function CriarEvento() {
     }
 
     if (name === 'cep') buscarCep()
+  }
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    api
+      .get('/vendedores', { headers: { Authorization: `Bearer ${token}` } })
+      .then(({ data }) => setVendedoresComunidade(Array.isArray(data) ? data : []))
+      .catch(() => setVendedoresComunidade([]))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    if (form.tipoEvento !== 'musical') {
+      setBandaSugestoes([])
+      setBandaSugestoesOpen(false)
+      return
+    }
+
+    // Se o texto não bate mais com a banda selecionada, desvincula
+    if (bandaId && form.band.trim() === '') setBandaId(null)
+
+    // Já vinculada a uma banda selecionada: não busca de novo
+    if (bandaId) {
+      setBandaSugestoesOpen(false)
+      return
+    }
+
+    const termo = form.band.trim()
+    if (termo.length < 2) {
+      setBandaSugestoes([])
+      setBandaSugestoesOpen(false)
+      return
+    }
+
+    let cancelado = false
+    setBandaBuscando(true)
+    const t = setTimeout(async () => {
+      try {
+        const { data } = await api.get('/bandas/sugestoes', {
+          params: { nome: termo },
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (!cancelado) {
+          setBandaSugestoes(Array.isArray(data) ? data : [])
+          setBandaSugestoesOpen(true)
+        }
+      } catch {
+        if (!cancelado) setBandaSugestoes([])
+      } finally {
+        if (!cancelado) setBandaBuscando(false)
+      }
+    }, 300)
+
+    return () => {
+      cancelado = true
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.band, form.tipoEvento])
+
+  const selecionarBanda = (banda) => {
+    setBandaId(banda.usuario_id)
+    setForm((prev) => ({ ...prev, band: banda.nome_artistico }))
+    setBandaSugestoesOpen(false)
+    setBandaSugestoes([])
   }
 
   const handleImagem = (file) => {
@@ -187,9 +268,40 @@ export default function CriarEvento() {
     setVendorError('')
     setVendors((s) => [...s, { id: Date.now(), name: vendorName.trim() }])
     setVendorName('')
+    setVendorSugestoesOpen(false)
+    setVendorSugestoes([])
   }
 
   const removeVendor = (id) => setVendors((s) => s.filter((v) => v.id !== id))
+
+  const handleVendorNameChange = (e) => {
+    const value = e.target.value.slice(0, 80)
+    setVendorName(value)
+    if (vendorError) setVendorError('')
+
+    const termo = value.trim().toLowerCase()
+    if (termo.length < 2) {
+      setVendorSugestoes([])
+      setVendorSugestoesOpen(false)
+      return
+    }
+
+    const jaAdicionados = new Set(vendors.map((v) => v.name.toLowerCase()))
+    const encontrados = vendedoresComunidade
+      .filter((v) => v.nome?.toLowerCase().includes(termo) && !jaAdicionados.has(v.nome.toLowerCase()))
+      .slice(0, 5)
+
+    setVendorSugestoes(encontrados)
+    setVendorSugestoesOpen(encontrados.length > 0)
+  }
+
+  const selecionarVendor = (v) => {
+    setVendors((s) => [...s, { id: v.id, name: v.nome }])
+    setVendorName('')
+    setVendorError('')
+    setVendorSugestoesOpen(false)
+    setVendorSugestoes([])
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -209,15 +321,19 @@ export default function CriarEvento() {
       return
     }
 
+    const tipoEventoFinal = normalizedForm.tipoEvento === 'musical'
+      ? `musical_${normalizedForm.estiloMusical}`
+      : normalizedForm.tipoEvento
+
     const descricaoParts = []
-    if (normalizedForm.band?.trim()) {
+    if (normalizedForm.descricao?.trim()) {
+      descricaoParts.push(normalizedForm.descricao.trim())
+    }
+    if (normalizedForm.tipoEvento === 'musical' && !bandaId && normalizedForm.band?.trim()) {
+      // Banda digitada mas não vinculada a um cadastro existente
       descricaoParts.push(`Banda/Artista: ${normalizedForm.band.trim()}`)
     }
-    if (normalizedForm.style) {
-      const estiloLabel = ESTILOS.find(e => e.value === normalizedForm.style)?.label || normalizedForm.style
-      descricaoParts.push(`Estilo musical: ${estiloLabel}`)
-    }
-    const descricao = descricaoParts.join('\n')
+    const descricao = descricaoParts.join('\n\n')
 
     const localNome = normalizedForm.city || ''
     const localEndereco = [
@@ -241,6 +357,7 @@ export default function CriarEvento() {
     const formData = new FormData()
     formData.append('titulo', normalizedForm.title.trim())
     if (descricao) formData.append('descricao', descricao)
+    formData.append('tipo_evento', tipoEventoFinal)
     formData.append('data_inicio', normalizedForm.dateStart)
     formData.append('data_fim', normalizedForm.dateEnd || normalizedForm.dateStart)
     if (localNome) formData.append('local_nome', localNome)
@@ -265,6 +382,20 @@ export default function CriarEvento() {
 
       const databaseEvent = response.data.evento || {}
 
+      if (bandaId && databaseEvent.id) {
+        try {
+          await api.post(
+            `/eventos/${databaseEvent.id}/contratos`,
+            { banda_id: bandaId },
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+        } catch (contratoErr) {
+          // Evento já foi criado; apenas avisa que o convite à banda falhou
+          console.error('Erro ao convidar banda:', contratoErr)
+          setFormAlert('Evento criado, mas não foi possível convidar a banda selecionada. Tente convidá-la depois.')
+        }
+      }
+
       let imageUrl = databaseEvent.foto_capa_url || imagemPreview || fallbackImage;
       if (imageUrl && imageUrl.includes('/media/')) {
         const idx = imageUrl.indexOf('/media/');
@@ -275,7 +406,7 @@ export default function CriarEvento() {
         id:         databaseEvent.id || Date.now(),
         title:      normalizedForm.title,
         band:       normalizedForm.band,
-        style:      normalizedForm.style,
+        tipoEvento: tipoEventoFinal,
         date:       normalizedForm.dateStart || new Date().toISOString().slice(0, 10),
         date_end:   normalizedForm.dateEnd,
         time_start: normalizedForm.timeStart,
@@ -359,35 +490,126 @@ export default function CriarEvento() {
                 <FieldHint message={showError('title')} />
               </div>
 
+              <div className={styles['ce-field']}>
+                <label className={styles['ce-field-label']} htmlFor="descricao">Descrição do Evento</label>
+                <textarea
+                  id="descricao"
+                  name="descricao"
+                  className={cn(styles['ce-input'], styles['no-icon'])}
+                  style={{ height: 'auto', minHeight: '96px', padding: '12px 14px', resize: 'vertical' }}
+                  placeholder="Conte um pouco sobre o evento: atrações, público, o que esperar..."
+                  value={form.descricao}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  maxLength={TEXT_LIMITS.descricao}
+                />
+                <FieldHint message={showError('descricao')} />
+              </div>
+
               <div className={styles['ce-row']}>
-                <div className={styles['ce-field']}>
-                  <label className={styles['ce-field-label']} htmlFor="band">Banda / Artista *</label>
-                  <div className={styles['ce-input-wrap']}>
-                    <input
-                      id="band"
-                      name="band"
-                      type="text"
-                      className={inputClass('band')}
-                      placeholder="Ex: Os Gauchões"
-                      value={form.band}
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      maxLength={TEXT_LIMITS.band}
-                      required
-                    />
-                    <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                {form.tipoEvento === 'musical' && (
+                  <div className={styles['ce-field']} style={{ position: 'relative' }}>
+                    <label className={styles['ce-field-label']} htmlFor="band">Banda / Artista *</label>
+                    <div className={styles['ce-input-wrap']}>
+                      <input
+                        id="band"
+                        name="band"
+                        type="text"
+                        autoComplete="off"
+                        className={inputClass('band')}
+                        placeholder="Ex: Os Gauchões"
+                        value={form.band}
+                        onChange={handleChange}
+                        onBlur={(e) => { handleBlur(e); setTimeout(() => setBandaSugestoesOpen(false), 120) }}
+                        onFocus={() => bandaSugestoes.length > 0 && setBandaSugestoesOpen(true)}
+                        maxLength={TEXT_LIMITS.band}
+                        required
+                      />
+                      <svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13" /><circle cx="6" cy="18" r="3" /><circle cx="18" cy="16" r="3" /></svg>
+                    </div>
+                    {bandaId && (
+                      <p style={{ fontSize: '0.76rem', color: 'var(--success)', marginTop: '2px' }}>
+                        ✓ Vinculada a uma banda cadastrada — um convite será enviado ao criar o evento.
+                      </p>
+                    )}
+                    {bandaSugestoesOpen && bandaSugestoes.length > 0 && (
+                      <ul
+                        className={styles['ce-vendor-list']}
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 20,
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '10px',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                          marginTop: '4px',
+                        }}
+                      >
+                        {bandaSugestoes.map((b) => (
+                          <li
+                            key={b.usuario_id}
+                            className={styles['ce-vendor-item']}
+                            style={{ cursor: 'pointer' }}
+                            onMouseDown={() => selecionarBanda(b)}
+                          >
+                            <span>{b.nome_artistico}</span>
+                            {b.estilo_musical && (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {b.estilo_musical}
+                              </span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <FieldHint message={showError('band')} />
                   </div>
-                  <FieldHint message={showError('band')} />
-                </div>
+                )}
                 <div className={styles['ce-field']}>
-                  <label className={styles['ce-field-label']} htmlFor="style">Estilo Musical *</label>
+                  <label className={styles['ce-field-label']} htmlFor="tipoEvento">Tipo de Evento *</label>
                   <div className={styles['ce-input-wrap']}>
-                    <select id="style" name="style" className={cn(styles['ce-input'], styles['no-icon'])} value={form.style} onChange={handleChange}>
-                      {ESTILOS.map((e) => <option key={e.value} value={e.value}>{e.label}</option>)}
+                    <select
+                      id="tipoEvento"
+                      name="tipoEvento"
+                      className={cn(styles['ce-input'], styles['no-icon'])}
+                      value={form.tipoEvento}
+                      onChange={handleChange}
+                    >
+                      {TIPOS_EVENTO.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                   </div>
                 </div>
               </div>
+
+              {form.tipoEvento === 'musical' && (
+                <div className={styles['ce-field']}>
+                  <label className={styles['ce-field-label']}>Estilo Musical *</label>
+                  <div className={styles['ce-row']}>
+                    {ESTILOS_MUSICAIS.map((e) => (
+                      <label
+                        key={e.value}
+                        className={cn(
+                          styles['ce-vendor-item'],
+                          form.estiloMusical === e.value && styles['ce-upload-area--filled'],
+                        )}
+                        style={{ cursor: 'pointer', justifyContent: 'flex-start', gap: '10px' }}
+                      >
+                        <input
+                          type="radio"
+                          name="estiloMusical"
+                          value={e.value}
+                          checked={form.estiloMusical === e.value}
+                          onChange={handleChange}
+                        />
+                        {e.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className={styles['ce-field']}>
                 <label className={styles['ce-field-label']} htmlFor="price">Ingresso / Entrada</label>
@@ -534,23 +756,51 @@ export default function CriarEvento() {
               <div className={styles['ce-section-label']}>Vendedores</div>
 
               <div className={styles['ce-vendor-row']}>
-                <div className={styles['ce-field']}>
+                <div className={styles['ce-field']} style={{ position: 'relative' }}>
                   <label className={styles['ce-field-label']} htmlFor="vendorName">Nome do Vendedor</label>
                   <div className={styles['ce-input-wrap']}>
                     <input
                       id="vendorName"
                       type="text"
+                      autoComplete="off"
                       className={cn(styles['ce-input'], vendorError && styles['ce-input--error'])}
                       placeholder="Ex: Bar do João"
                       value={vendorName}
-                      onChange={(e) => {
-                        setVendorName(e.target.value.slice(0, 80))
-                        if (vendorError) setVendorError('')
-                      }}
+                      onChange={handleVendorNameChange}
+                      onFocus={() => vendorSugestoes.length > 0 && setVendorSugestoesOpen(true)}
+                      onBlur={() => setTimeout(() => setVendorSugestoesOpen(false), 120)}
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVendor() } }}
                     />
                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
                   </div>
+                  {vendorSugestoesOpen && vendorSugestoes.length > 0 && (
+                    <ul
+                      className={styles['ce-vendor-list']}
+                      style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        zIndex: 20,
+                        background: 'var(--surface)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '10px',
+                        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                        marginTop: '4px',
+                      }}
+                    >
+                      {vendorSugestoes.map((v) => (
+                        <li
+                          key={v.id}
+                          className={styles['ce-vendor-item']}
+                          style={{ cursor: 'pointer' }}
+                          onMouseDown={() => selecionarVendor(v)}
+                        >
+                          <span>{v.nome}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   <FieldHint message={vendorError} />
                 </div>
                 <button type="button" className={styles['ce-btn-add']} onClick={addVendor}>+ Adicionar</button>

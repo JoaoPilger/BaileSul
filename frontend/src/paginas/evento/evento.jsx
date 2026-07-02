@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
+import { useAuth } from '../../contexts/AuthContext'
 import styles from './evento.module.css';
 
 const DEFAULT_IMAGE =
@@ -86,6 +87,7 @@ function getDescription(evento) {
 export default function EventoPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { token } = useAuth()
   const [evento, setEvento] = useState(null)
   const [mapSrc, setMapSrc] = useState(AMAUC_MAP)
   const [modalOpen, setModalOpen] = useState(false)
@@ -191,7 +193,6 @@ export default function EventoPage() {
     setReservaLoading(true)
 
     try {
-      const token = localStorage.getItem('token') // ajuste se guardar em outro lugar
       const res = await fetch(`/api/reservas/eventos/${id}`, {
         method: 'POST',
         headers: {

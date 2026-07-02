@@ -3,6 +3,9 @@ const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
 const { caminhoParaUrl } = require('../middlewares/upload');
 const { geocodificarEndereco } = require('../services/external.service');
 
+// Tipos de evento aceitos (coluna eventos.tipo_evento)
+const TIPOS_EVENTO = ['musical_gaucha', 'musical_bandinha', 'almoco', 'bingo', 'expos', 'futebol'];
+
 // ─────────────────────────────────────────────────────────────
 //  Helpers internos
 // ─────────────────────────────────────────────────────────────
@@ -34,11 +37,20 @@ const resolverFotoCapa = (req) => {
  * Filtros opcionais: ?cidade=&estado=&data_inicio=
  */
 const listar = async (req, res) => {
-  const { cidade, estado, data_inicio } = req.query;
+  const { cidade, estado, data_inicio, tipo_evento } = req.query;
   const { pagina, limite, offset } = parsePaginacao(req.query);
 
   try {
-    let where = "WHERE e.status = 'agendado'";
+    let where = `
+      WHERE e.status = 'agendado'
+        AND (
+          e.tipo_evento NOT LIKE 'musical_%'
+          OR EXISTS (
+            SELECT 1 FROM contratos c
+            WHERE c.evento_id = e.id AND c.status_aceite = 'aceito'
+          )
+        )
+    `;
     const params = [];
     let i = 1;
 
@@ -54,6 +66,13 @@ const listar = async (req, res) => {
       where += ` AND e.data_inicio >= $${i++}`;
       params.push(data_inicio);
     }
+    if (tipo_evento) {
+      if (!TIPOS_EVENTO.includes(tipo_evento)) {
+        return res.status(400).json({ error: `tipo_evento inválido. Use: ${TIPOS_EVENTO.join(', ')}` });
+      }
+      where += ` AND e.tipo_evento = $${i++}`;
+      params.push(tipo_evento);
+    }
 
     const countRes = await pool.query(
       `SELECT COUNT(*)::int AS total
@@ -68,7 +87,7 @@ const listar = async (req, res) => {
       `SELECT e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
               e.local_nome, e.local_endereco,
               e.latitude, e.longitude,
-              e.valor_ingresso, e.foto_capa_url, e.status,
+              e.valor_ingresso, e.foto_capa_url, e.status, e.tipo_evento,
               pc.nome_entidade AS comunidade,
               pc.cidade, pc.estado
        FROM eventos e
@@ -99,7 +118,7 @@ const buscarPorId = async (req, res) => {
       `SELECT e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
               e.local_nome, e.local_endereco,
               e.latitude, e.longitude,
-              e.valor_ingresso, e.foto_capa_url, e.status,
+              e.valor_ingresso, e.foto_capa_url, e.status, e.tipo_evento,
               pc.usuario_id AS comunidade_id,
               pc.nome_entidade AS comunidade,
               pc.whatsapp AS comunidade_whatsapp,
@@ -111,6 +130,22 @@ const buscarPorId = async (req, res) => {
     );
     if (eventoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Evento não encontrado' });
+    }
+
+    const evento = eventoRes.rows[0];
+    const souDono = req.usuario?.tipo === 'comunidade' && req.usuario.id === evento.comunidade_id;
+
+    if (!souDono) {
+      const precisaConfirmacao = evento.tipo_evento?.startsWith('musical_');
+      if (precisaConfirmacao) {
+        const contratoAceito = await pool.query(
+          `SELECT 1 FROM contratos WHERE evento_id = $1 AND status_aceite = 'aceito' LIMIT 1`,
+          [id]
+        );
+        if (contratoAceito.rows.length === 0) {
+          return res.status(404).json({ error: 'Evento não encontrado' });
+        }
+      }
     }
 
     const diasRes = await pool.query(
@@ -139,7 +174,7 @@ const buscarPorId = async (req, res) => {
     );
 
     return res.json({
-      ...eventoRes.rows[0],
+      ...evento,
       dias:   diasRes.rows,
       bandas: bandasRes.rows,
       midias: midiasRes.rows,
@@ -166,11 +201,15 @@ const criar = async (req, res) => {
   const comunidade_id = req.usuario.id;
   const {
     titulo, descricao, data_inicio, data_fim,
-    local_nome, local_endereco, valor_ingresso,
+    local_nome, local_endereco, valor_ingresso, tipo_evento,
   } = req.body;
 
   if (!titulo || !data_inicio || !data_fim) {
     return res.status(400).json({ error: 'Campos obrigatórios: titulo, data_inicio, data_fim' });
+  }
+
+  if (tipo_evento && !TIPOS_EVENTO.includes(tipo_evento)) {
+    return res.status(400).json({ error: `tipo_evento inválido. Use: ${TIPOS_EVENTO.join(', ')}` });
   }
 
   if (new Date(data_fim) < new Date(data_inicio)) {
@@ -196,9 +235,9 @@ const criar = async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO eventos
          (comunidade_id, titulo, descricao, data_inicio, data_fim,
-          local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-       RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude`,
+          local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'))
+       RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento`,
       [
         comunidade_id,
         titulo.trim(),
@@ -211,6 +250,7 @@ const criar = async (req, res) => {
         foto_capa_url,
         latitude,
         longitude,
+        tipo_evento || null,
       ]
     );
 
@@ -237,7 +277,7 @@ const atualizar = async (req, res) => {
   const comunidade_id = req.usuario.id;
   const {
     titulo, descricao, data_inicio, data_fim,
-    local_nome, local_endereco, valor_ingresso, status,
+    local_nome, local_endereco, valor_ingresso, status, tipo_evento,
   } = req.body;
 
   if (data_inicio && data_fim && new Date(data_fim) < new Date(data_inicio)) {
@@ -247,6 +287,10 @@ const atualizar = async (req, res) => {
   const statusValidos = ['agendado', 'cancelado', 'finalizado'];
   if (status && !statusValidos.includes(status)) {
     return res.status(400).json({ error: `Status inválido. Use: ${statusValidos.join(', ')}` });
+  }
+
+  if (tipo_evento && !TIPOS_EVENTO.includes(tipo_evento)) {
+    return res.status(400).json({ error: `tipo_evento inválido. Use: ${TIPOS_EVENTO.join(', ')}` });
   }
 
   // Verifica ownership antes de montar o UPDATE
@@ -302,6 +346,7 @@ const atualizar = async (req, res) => {
     campo('valor_ingresso', valor_ingresso != null ? parseFloat(valor_ingresso) : undefined);
     campo('status',         status);
     campo('foto_capa_url',  foto_capa_url);
+    campo('tipo_evento',    tipo_evento);
 
     if (latitude !== undefined) {
       sets.push(`latitude = $${i++}`);

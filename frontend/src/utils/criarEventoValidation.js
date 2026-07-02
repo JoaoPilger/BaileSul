@@ -63,9 +63,17 @@ export function validateField(name, value, form = {}) {
       return ''
     }
     case 'band': {
+      if (form.tipoEvento && form.tipoEvento !== 'musical') return ''
       const text = value.trim()
       if (!text) return 'Informe a banda ou artista.'
       if (text.length < 2) return 'Mínimo de 2 caracteres.'
+      return ''
+    }
+    case 'descricao': {
+      if (!value) return ''
+      if (value.trim().length > 0 && value.trim().length < 10) {
+        return 'Descreva um pouco mais o evento (mín. 10 caracteres).'
+      }
       return ''
     }
     case 'price': {
@@ -141,6 +149,7 @@ export function validateForm(form) {
   const fields = [
     'title',
     'band',
+    'descricao',
     'price',
     'dateStart',
     'dateEnd',

@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { listar, adicionar, remover, confirmarPagamento, buscarSugestoes } = require('../controllers/vendedor.controller');
+const { listar, adicionar, remover, confirmarPagamento, buscarSugestoes, minhasComunidades } = require('../controllers/vendedor.controller');
 const { autenticar, autorizar } = require('../middlewares/auth.middleware');
 
 // RF13 – Confirmar pagamento (DEVE vir antes de /:id)
@@ -12,6 +12,9 @@ router.patch(
 
 // Autocomplete – busca usuários pessoais por nome ou whatsapp (somente comunidade)
 router.get('/sugestoes', autenticar, autorizar('comunidade'), buscarSugestoes);
+
+// RF08 – Comunidades vinculadas ao usuário pessoal logado (DEVE vir antes de /:id)
+router.get('/me', autenticar, autorizar('pessoal'), minhasComunidades);
 
 // RF08 – Gestão de vendedores (somente comunidade)
 router.get('/',       autenticar, autorizar('comunidade'), listar);

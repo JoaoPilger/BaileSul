@@ -17,6 +17,7 @@ import VitrineBanda from './paginas/vitrine_banda/vitrine_banda.jsx'
 import Vendedores from './paginas/vendedores/vendedores.jsx'
 import Configuracoes from './paginas/configuracoes/configuracoes.jsx'
 import Pagamentos from './paginas/pagamentos/pagamentos.jsx'
+import MeusIngressosPage from './paginas/meus_ingressos/meusIngressos.jsx'
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
           <Route path="/vendedores" element={<Vendedores />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/pagamentos" element={<Pagamentos />} />
+          <Route path="/meus-ingressos" element={<MeusIngressosPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

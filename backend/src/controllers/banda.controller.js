@@ -185,4 +185,34 @@ const atualizarPerfil = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, agenda, atualizarPerfil };
+/**
+ * GET /api/bandas/sugestoes?nome=...
+ * Autocomplete para o formulário de criar evento: retorna até 5 bandas
+ * cujo nome_artistico é parecido com o texto digitado.
+ */
+const buscarSugestoes = async (req, res) => {
+  const { nome } = req.query;
+
+  if (!nome || !nome.trim()) {
+    return res.json([]);
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT pb.usuario_id, pb.nome_artistico, pb.estilo_musical
+       FROM perfis_bandas pb
+       WHERE LOWER(pb.nome_artistico) LIKE LOWER($1)
+       ORDER BY pb.nome_artistico ASC
+       LIMIT 5`,
+      [`%${nome.trim()}%`]
+    );
+
+    return res.json(rows);
+
+  } catch (err) {
+    console.error('Erro ao buscar sugestões de banda:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { listar, buscarPorId, agenda, atualizarPerfil, buscarSugestoes };

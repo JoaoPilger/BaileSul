@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
+
+:root {
+  --bg:            #D9D9D9;
+  --surface:       #FFFFFF;
+  --dark:          #0D0F16;
+  --accent:        #0D496B;
+  --accent-hover:  #0f5a84;
+  --accent-glow:   rgba(13, 73, 107, 0.28);
+  --accent-light:  #185FA5;
+  --text:          #111111;
+  --text-muted:    rgba(17, 17, 17, 0.5);
+  --border:        rgba(17, 17, 17, 0.13);
+  --nav-h:         68px;
+  --font-head:     'Playfair Display', Georgia, serif;
+  --font-body:     'DM Sans', system-ui, sans-serif;
+}
+
+.mi-page {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  padding-bottom: 4rem;
+}
+
+.mi-body {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: calc(var(--nav-h) + 28px) 32px 0;
+}
+
+.mi-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 6px 4px;
+  margin-bottom: 14px;
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.mi-back-btn:hover { color: var(--accent); }
+
+.mi-back-btn svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8px;
+}
+
+.mi-title {
+  font-family: var(--font-head);
+  color: var(--dark);
+  font-size: 1.7rem;
+  font-weight: 700;
+  margin-bottom: 20px;
+}
+
+/* --- Busca e filtros --- */
+
+.mi-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 26px;
+}
+
+.mi-search {
+  position: relative;
+  flex: 1 1 260px;
+  min-width: 220px;
+}
+
+.mi-search svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2px;
+  pointer-events: none;
+}
+
+.mi-search input {
+  width: 100%;
+  height: 42px;
+  padding: 0 14px 0 38px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.mi-search input::placeholder { color: var(--text-muted); }
+
+.mi-select {
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mi-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.mi-filter-btn {
+  height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+}
+
+.mi-filter-btn:hover {
+  border-color: rgba(13, 73, 107, 0.35);
+  color: var(--accent);
+}
+
+.mi-filter-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* --- Seções --- */
+
+.mi-section {
+  margin-bottom: 30px;
+}
+
+.mi-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--accent);
+}
+
+.mi-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mi-empty {
+  padding: 28px 20px;
+  text-align: center;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  font-size: 0.9rem;
+}
+
+.mi-loading {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+/* --- Card --- */
+
+.mi-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.mi-card-img {
+  width: 68px;
+  height: 68px;
+  border-radius: 10px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #c8d4db;
+}
+
+.mi-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.mi-card-title {
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mi-card-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.mi-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.mi-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.mi-card-meta svg {
+  width: 13px;
+  height: 13px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2px;
+}
+
+.mi-card-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  margin-right: 8px;
+}
+
+.mi-card-badge.pendente {
+  background: rgba(217, 119, 6, 0.12);
+  color: #b45309;
+}
+
+.mi-card-badge.confirmado {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+}
+
+.mi-card-action {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.mi-card-action:hover {
+  border-color: rgba(13, 73, 107, 0.35);
+  color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  :root { --nav-h: 56px; }
+  .mi-body { padding: calc(var(--nav-h) + 20px) 16px 0; }
+  .mi-card { flex-wrap: wrap; }
+  .mi-card-action { margin-left: auto; }
+}

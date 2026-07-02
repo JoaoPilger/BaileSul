@@ -212,4 +212,35 @@ const buscarSugestoes = async (req, res) => {
   }
 };
 
-module.exports = { listar, adicionar, remover, confirmarPagamento, buscarSugestoes };
+/**
+ * GET /api/vendedores/me
+ * RF08 – Lista as comunidades às quais o usuário 'pessoal' logado
+ * está vinculado como vendedor ativo. Usado pelo front para decidir
+ * se exibe o card "Comunidades vinculadas" em Configurações.
+ */
+const minhasComunidades = async (req, res) => {
+  const { id: usuario_id, tipo: usuario_tipo } = req.usuario;
+
+  if (usuario_tipo !== 'pessoal') {
+    return res.json([]);
+  }
+
+  try {
+    const { rows } = await pool.query(
+      `SELECT v.id AS vendedor_id, v.comunidade_id, v.nome, v.whatsapp, v.criado_em,
+              pc.nome_entidade AS comunidade_nome
+       FROM vendedores v
+       LEFT JOIN perfis_comunidades pc ON pc.usuario_id = v.comunidade_id
+       WHERE v.usuario_id = $1 AND v.ativo = true
+       ORDER BY pc.nome_entidade ASC`,
+      [usuario_id]
+    );
+    return res.json(rows);
+
+  } catch (err) {
+    console.error('Erro ao buscar comunidades vinculadas:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { listar, adicionar, remover, confirmarPagamento, buscarSugestoes, minhasComunidades };

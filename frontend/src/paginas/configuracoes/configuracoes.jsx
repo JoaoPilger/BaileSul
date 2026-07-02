@@ -1,18 +1,143 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import shared from '../../styles/shared.module.css'
 import styles from './configuracoes.module.css'
-import { Music, Calendar, Lock, LogOut } from 'lucide-react'
+import { Music, Calendar, Lock, LogOut, Building2 } from 'lucide-react'
 import Snackbar from '../../components/ui/Snackbar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import api from '../../services/api'
 
 export default function Configuracoes() {
   const { usuario, logout } = useAuth()
   const navigate = useNavigate()
   const [snackOpen, setSnackOpen] = useState(false)
   const [snackMsg, setSnackMsg] = useState('')
+  const [comunidadesVinculadas, setComunidadesVinculadas] = useState([])
+  const [carregandoVendedor, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
+
+  useEffect(() => {
+    if (usuario?.tipo !== 'pessoal') {
+      setCarregandoVendedor(false)
+      return
+    }
+
+    let ativo = true
+    setCarregandoVendedor(true)
+
+    api.get('/vendedores/me')
+      .then(({ data }) => { if (ativo) setComunidadesVinculadas(data ?? []) })
+      .catch(() => { if (ativo) setComunidadesVinculadas([]) })
+      .finally(() => { if (ativo) setCarregandoVendedor(false) })
+
+    return () => { ativo = false }
+  }, [usuario?.tipo])
+
+  const showEmBreve = (msg) => { setSnackMsg(msg); setSnackOpen(true) }
+
+  const isVendedor = usuario?.tipo === 'pessoal' && comunidadesVinculadas.length > 0
+
+  const getTiles = () => {
+    // Vendedor: extensão de "pessoal", mantém Perfil + card especial + senha
+    if (usuario?.tipo === 'pessoal' && isVendedor) {
+      return [
+        {
+          key: 'perfil-pessoal',
+          icon: Music,
+          title: 'Perfil',
+          subtitle: 'Nome, email e senha',
+          onClick: () => showEmBreve('Perfil pessoal em breve.'),
+        },
+        {
+          key: 'comunidades-vinculadas',
+          icon: Building2,
+          title: 'Comunidades vinculadas',
+          subtitle: 'CTGs que você representa como vendedor',
+          onClick: () => showEmBreve('Comunidades vinculadas em breve.'),
+        },
+        {
+          key: 'senha',
+          icon: Lock,
+          title: 'Alterar senha',
+          subtitle: 'Atualize sua senha de acesso',
+          onClick: () => showEmBreve('Alterar senha em breve.'),
+        },
+      ]
+    }
+
+    if (usuario?.tipo === 'comunidade') {
+      return [
+        {
+          key: 'perfil-comunidade',
+          icon: Music,
+          title: 'Perfil da Comunidade',
+          subtitle: 'Perfil Comunidade',
+          onClick: () => showEmBreve('Perfil da comunidade em breve.'),
+        },
+        {
+          key: 'agenda',
+          icon: Calendar,
+          title: 'Agenda',
+          subtitle: 'Datas e compromissos',
+          onClick: () => showEmBreve('Agenda em breve.'),
+        },
+        {
+          key: 'senha',
+          icon: Lock,
+          title: 'Alterar senha',
+          subtitle: 'Atualize sua senha de acesso',
+          onClick: () => showEmBreve('Alterar senha em breve.'),
+        },
+      ]
+    }
+
+    if (usuario?.tipo === 'pessoal') {
+      return [
+        {
+          key: 'perfil-pessoal',
+          icon: Music,
+          title: 'Perfil',
+          subtitle: 'Nome, email e senha',
+          onClick: () => showEmBreve('Perfil pessoal em breve.'),
+        },
+        {
+          key: 'senha',
+          icon: Lock,
+          title: 'Alterar senha',
+          subtitle: 'Atualize sua senha de acesso',
+          onClick: () => showEmBreve('Alterar senha em breve.'),
+        },
+      ]
+    }
+
+    // banda (padrão): mantém igual
+    return [
+      {
+        key: 'perfil-banda',
+        icon: Music,
+        title: 'Perfil da banda',
+        subtitle: 'Nome artístico, estilo e descrição',
+        onClick: () => showEmBreve('Perfil da banda em breve.'),
+      },
+      {
+        key: 'agenda',
+        icon: Calendar,
+        title: 'Agenda',
+        subtitle: 'Datas e compromissos',
+        onClick: () => showEmBreve('Agenda em breve.'),
+      },
+      {
+        key: 'senha',
+        icon: Lock,
+        title: 'Alterar senha',
+        subtitle: 'Atualize sua senha de acesso',
+        onClick: () => showEmBreve('Alterar senha em breve.'),
+      },
+    ]
+  }
+
+  const tiles = getTiles()
 
   return (
     <>
@@ -30,35 +155,17 @@ export default function Configuracoes() {
           </div>
 
           <div className={styles.tilesGrid}>
-            <button type="button" onClick={() => { setSnackMsg('Perfil da banda em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
-              <div className={styles.tileContent}>
-                <Music className={styles.icon} size={24} />
-                <div className={styles.textBlock}>
-                  <div className={styles.tileTitle}>Perfil da banda</div>
-                  <div className={styles.tileSubtitle}>Nome artístico, estilo e descrição</div>
+            {tiles.map(({ key, icon: Icon, title, subtitle, onClick }) => (
+              <button key={key} type="button" onClick={onClick} className={styles.tileButton}>
+                <div className={styles.tileContent}>
+                  <Icon className={styles.icon} size={24} />
+                  <div className={styles.textBlock}>
+                    <div className={styles.tileTitle}>{title}</div>
+                    <div className={styles.tileSubtitle}>{subtitle}</div>
+                  </div>
                 </div>
-              </div>
-            </button>
-
-            <button type="button" onClick={() => { setSnackMsg('Agenda em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
-              <div className={styles.tileContent}>
-                <Calendar className={styles.icon} size={24} />
-                <div className={styles.textBlock}>
-                  <div className={styles.tileTitle}>Agenda</div>
-                  <div className={styles.tileSubtitle}>Datas e compromissos</div>
-                </div>
-              </div>
-            </button>
-
-            <button type="button" onClick={() => { setSnackMsg('Alterar senha em breve.'); setSnackOpen(true); }} className={styles.tileButton}>
-              <div className={styles.tileContent}>
-                <Lock className={styles.icon} size={24} />
-                <div className={styles.textBlock}>
-                  <div className={styles.tileTitle}>Alterar senha</div>
-                  <div className={styles.tileSubtitle}>Atualize sua senha de acesso</div>
-                </div>
-              </div>
-            </button>
+              </button>
+            ))}
           </div>
 
           <div className={styles.logoutWrap}>

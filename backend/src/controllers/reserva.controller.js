@@ -43,15 +43,12 @@ const criar = async (req, res) => {
       });
     }
 
-    // Round-robin real: vendedor com menor número de reservas pendentes
+    // Sorteia aleatoriamente um vendedor ativo da comunidade para confirmar o pagamento
     const vendedorRes = await pool.query(
       `SELECT v.id, v.nome, v.whatsapp
        FROM vendedores v
-       LEFT JOIN reservas r ON r.vendedor_id = v.id
-         AND r.status_pagamento = 'pendente'
        WHERE v.comunidade_id = $1 AND v.ativo = true
-       GROUP BY v.id, v.nome, v.whatsapp
-       ORDER BY COUNT(r.id) ASC, v.id ASC
+       ORDER BY RANDOM()
        LIMIT 1`,
       [comunidade_id]
     );
@@ -104,18 +101,53 @@ const criar = async (req, res) => {
  */
 const minhasReservas = async (req, res) => {
   const comprador_id = req.usuario.id;
+  const { status, tipo_evento, busca } = req.query;
+
+  const statusValidos = ['pendente', 'confirmado', 'cancelado'];
+  if (status && !statusValidos.includes(status)) {
+    return res.status(400).json({ error: `status inválido. Use: ${statusValidos.join(', ')}` });
+  }
 
   try {
+    let where = 'WHERE r.comprador_id = $1';
+    const params = [comprador_id];
+    let i = 2;
+
+    if (status) {
+      where += ` AND r.status_pagamento = $${i++}`;
+      params.push(status);
+    }
+    if (tipo_evento) {
+      where += ` AND e.tipo_evento = $${i++}`;
+      params.push(tipo_evento);
+    }
+    if (busca) {
+      where += ` AND (LOWER(e.titulo) LIKE LOWER($${i}) OR CAST(e.data_inicio AS TEXT) LIKE $${i})`;
+      params.push(`%${busca}%`);
+      i++;
+    }
+
     const { rows } = await pool.query(
       `SELECT r.id, r.quantidade, r.status_pagamento, r.criado_em,
-              e.titulo AS evento, e.data_inicio, e.local_nome,
+              e.id AS evento_id, e.titulo AS evento, e.data_inicio, e.data_fim,
+              e.local_nome, e.foto_capa_url, e.tipo_evento, e.valor_ingresso,
+              pc.nome_entidade AS comunidade, pc.cidade, pc.estado,
+              pb.nome_artistico AS banda,
               v.nome AS vendedor_nome, v.whatsapp AS vendedor_whatsapp
        FROM reservas r
        JOIN eventos e ON e.id = r.evento_id
+       JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
        LEFT JOIN vendedores v ON v.id = r.vendedor_id
-       WHERE r.comprador_id = $1
+       LEFT JOIN LATERAL (
+         SELECT pb.nome_artistico
+         FROM contratos c
+         JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
+         WHERE c.evento_id = e.id AND c.status_aceite = 'aceito'
+         LIMIT 1
+       ) pb ON true
+       ${where}
        ORDER BY r.criado_em DESC`,
-      [comprador_id]
+      params
     );
     return res.json(rows);
 
