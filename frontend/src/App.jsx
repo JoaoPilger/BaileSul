@@ -19,6 +19,7 @@ import Configuracoes from './paginas/configuracoes/configuracoes.jsx'
 import Pagamentos from './paginas/pagamentos/pagamentos.jsx'
 import MeusIngressosPage from './paginas/meus_ingressos/meusIngressos.jsx'
 import MeusEventosComunidade from './paginas/meus_eventos_comunidade/meus_eventos_comunidade.jsx'
+import MeusEventosBanda from './paginas/meus_eventos_banda/meus_eventos_banda.jsx'
 
 
 function App() {
@@ -45,6 +46,7 @@ function App() {
           <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="/meus-ingressos" element={<MeusIngressosPage />} />
           <Route path="/meus-eventos" element={<MeusEventosComunidade />} />
+          <Route path="/meus-eventos/banda" element={<MeusEventosBanda />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
