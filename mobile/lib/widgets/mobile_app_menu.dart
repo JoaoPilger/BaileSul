@@ -107,6 +107,13 @@ abstract final class MobileAppMenu {
             onTap: () => Navigator.pushNamed(context, '/criar-evento'),
           ),
         );
+        itens.add(
+          MobileMenuEntry(
+            icon: Icons.people_alt_rounded,
+            label: 'Vendedores',
+            onTap: () => Navigator.pushNamed(context, '/vendedores'),
+          ),
+        );
       }
 
       itens.add(
