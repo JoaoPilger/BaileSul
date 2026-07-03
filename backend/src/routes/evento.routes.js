@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const {
-  listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato
+  listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato, convidarBanda
 } = require('../controllers/evento.controller');
 const { autenticar, autorizar, autenticarOpcional } = require('../middlewares/auth.middleware');
 const { uploadCapaEvento, uploadErrorHandler } = require('../middlewares/upload');
@@ -23,5 +23,8 @@ router.use(uploadErrorHandler);
 
 // Banda responde contrato (aceitar / recusar)
 router.patch('/:id/contratos/:contrato_id', autenticar, autorizar('banda'), responderContrato);
+
+// Comunidade convida banda para um evento já criado
+router.post('/:id/contratos', autenticar, autorizar('comunidade'), convidarBanda);
 
 module.exports = router;

@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import Calendario from './paginas/calendario/calendario.jsx'
 import CadastroSelecao from './paginas/cadastro/cadastroSelecao.jsx'
 import CadastroPessoal from './paginas/cadastro/cadastroPessoal.jsx'
@@ -19,21 +19,35 @@ import Configuracoes from './paginas/configuracoes/configuracoes.jsx'
 import Pagamentos from './paginas/pagamentos/pagamentos.jsx'
 import MeusIngressosPage from './paginas/meus_ingressos/meusIngressos.jsx'
 import MeusEventosComunidade from './paginas/meus_eventos_comunidade/meus_eventos_comunidade.jsx'
+import Painel from './paginas/painel/painel.jsx'
+import ContratosPage from './paginas/contratos/contratos.jsx'
 import MeusEventosBanda from './paginas/meus_eventos_banda/meus_eventos_banda.jsx'
 
+// "/" mostra a home pública normalmente para visitantes e usuários "pessoal".
+// Banda e comunidade logam pra trabalhar, não pra navegar a vitrine pública
+// — então são direcionados direto pro dashboard deles.
+function RootGate() {
+  const { usuario } = useAuth()
+  if (usuario?.tipo === 'banda' || usuario?.tipo === 'comunidade') {
+    return <Navigate to="/painel" replace />
+  }
+  return <Home />
+}
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<RootGate />} />
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<CadastroSelecao />} />
           <Route path="/cadastro/pessoal" element={<CadastroPessoal />} />
           <Route path="/cadastro/banda" element={<CadastroBanda />} />
           <Route path="/cadastro/comunidade" element={<CadastroComunidade />} />
           <Route path="/calendario" element={<Calendario />} />
+          <Route path="/painel" element={<Painel />} />
+          <Route path="/contratos" element={<ContratosPage />} />
           <Route path="/criar-evento" element={<CriarEvento />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/eventos/:id" element={<Evento />} />
