@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../utils/cn';
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
@@ -46,7 +46,10 @@ function FieldHint({ message }) {
 export default function CriarEvento() {
   const { isAuthenticated, token } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const fileRef = useRef(null)
+
+  const initialDateStart = location.state?.dateStart || ''
 
   const [form, setForm] = useState({
     title:     '',
@@ -54,7 +57,7 @@ export default function CriarEvento() {
     descricao: '',
     tipoEvento:     'musical',
     estiloMusical:  'gaucha',
-    dateStart: '',
+    dateStart: initialDateStart,
     dateEnd:   '',
     timeStart: '',
     timeEnd:   '',

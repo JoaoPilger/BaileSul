@@ -126,7 +126,8 @@ const agenda = async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT e.id, e.titulo, e.data_inicio, e.data_fim, e.local_nome,
+      `SELECT c.id AS contrato_id,
+              e.id, e.titulo, e.data_inicio, e.data_fim, e.local_nome,
               e.status AS status_evento, c.status_aceite,
               pc.nome_entidade AS comunidade, pc.whatsapp AS comunidade_whatsapp,
               pc.cidade, pc.estado

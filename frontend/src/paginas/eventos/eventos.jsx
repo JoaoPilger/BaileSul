@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar, Trash2 } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
-import { loadEvents, deleteEventById } from '../../utils/events'
+import { loadEvents } from '../../utils/events'
 import shared from '../../styles/shared.module.css'
 import styles from '../../styles/listings.module.css'
 
@@ -31,16 +31,6 @@ function ListingCard({ event, onDelete }) {
           <MapPin size={14} />
           {event.city}
         </div>
-        <button
-          className={styles['listing-card-action']}
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(event.id)
-          }}
-        >
-          <Trash2 size={14} /> Apagar
-        </button>
       </div>
     </div>
   )
