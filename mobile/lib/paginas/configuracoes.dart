@@ -57,11 +57,6 @@ class ConfiguracoesPage extends StatelessWidget {
             rota: '/perfil-banda',
           ),
           _ConfiguracaoItem(
-            icon: Icons.calendar_month_outlined,
-            titulo: 'Agenda',
-            subtitulo: 'Datas e compromissos',
-          ),
-          _ConfiguracaoItem(
             icon: Icons.lock_outline,
             titulo: 'Alterar senha',
             subtitulo: 'Atualize sua senha de acesso',
