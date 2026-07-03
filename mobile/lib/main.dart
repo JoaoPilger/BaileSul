@@ -19,6 +19,7 @@ import 'widgets/mobile_footer.dart';
 import 'paginas/notificacoes.dart';
 import 'paginas/perfil_banda.dart';
 import 'paginas/perfil_comunidade.dart';
+import 'paginas/vendedores.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -75,6 +76,7 @@ class MyApp extends StatelessWidget {
         },
         '/perfil-banda': (_) => const PerfilBandaPage(),
         '/perfil-comunidade': (_) => const PerfilComunidadePage(),
+        '/vendedores': (_) => const VendedoresPage(),
       },
     );
   }
