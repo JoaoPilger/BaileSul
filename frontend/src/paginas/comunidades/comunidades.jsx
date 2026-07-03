@@ -13,17 +13,8 @@ function CommunityCard({ item }) {
   return (
     <div className={styles['listing-card']} onClick={() => navigate(`/comunidades/${item.id}`)}>
       <div className={styles['listing-card-img-wrap']}>
-        <div
-          className={styles['listing-card-img']}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-            minHeight: '160px',
-          }}
-        >
-          <Users size={48} color="rgba(255,255,255,0.5)" />
+        <div className={styles['listing-card-placeholder-community']}>
+          <Users size={40} className={styles['listing-card-placeholder-icon']} />
         </div>
       </div>
 
