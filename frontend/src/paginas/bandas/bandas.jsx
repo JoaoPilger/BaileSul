@@ -13,17 +13,8 @@ function BandCard({ item }) {
   return (
     <div className={styles['listing-card']} onClick={() => navigate(`/bandas/${item.id}`)}>
       <div className={styles['listing-card-img-wrap']}>
-        <div
-          className={styles['listing-card-img']}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #6a4cff 0%, #a855f7 100%)',
-            minHeight: '160px',
-          }}
-        >
-          <Music size={48} color="rgba(255,255,255,0.5)" />
+        <div className={styles['listing-card-placeholder-band']}>
+          <Music size={40} className={styles['listing-card-placeholder-icon']} />
         </div>
         {item.style && <div className={styles['listing-card-price']}>{item.style}</div>}
       </div>

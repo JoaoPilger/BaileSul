@@ -127,29 +127,28 @@ export default function Eventos() {
                   onChange={(e) => setQuery(e.target.value)}
                   className={styles['listing-search']}
                   placeholder="Buscar evento..."
-                  style={{ flex: 2 }}
                 />
 
-                <input
-                  type="date"
-                  value={dateFilter}
-                  onChange={(e) => setDateFilter(e.target.value)}
-                  className={styles['listing-select']}
-                  style={{ flex: 1, minWidth: '110px', padding: '0.7rem 0.8rem', fontSize: '0.9rem' }}
-                />
+                <div className={styles['listing-filters-group']}>
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e) => setDateFilter(e.target.value)}
+                    className={styles['listing-select']}
+                  />
 
-                <input
-                  type="time"
-                  value={timeFilter}
-                  onChange={(e) => setTimeFilter(e.target.value)}
-                  className={styles['listing-select']}
-                  style={{ flex: 1, minWidth: '100px', padding: '0.7rem 0.8rem', fontSize: '0.9rem' }}
-                />
+                  <input
+                    type="time"
+                    value={timeFilter}
+                    onChange={(e) => setTimeFilter(e.target.value)}
+                    className={styles['listing-select']}
+                  />
 
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles['listing-select']}>
-                  <option value="recent">Mais recente</option>
-                  <option value="oldest">Mais antigo</option>
-                </select>
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles['listing-select']}>
+                    <option value="recent">Mais recente</option>
+                    <option value="oldest">Mais antigo</option>
+                  </select>
+                </div>
               </div>
             </div>
 
