@@ -16,6 +16,7 @@ export function getNavConfig(tipo, isVendedor = false) {
   } else if (tipo === 'banda') {
     base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
     base.push({ to: '/contratos',    label: 'Contratos',    icon: FileText });
+    base.push({ to: '/meus-eventos/banda', label: 'Meus Eventos', icon: ListMusic });
   } else if (tipo === 'comunidade') {
     base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
     base.push({ to: '/vendedores',   label: 'Vendedores',   icon: Users });
