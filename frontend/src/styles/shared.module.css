@@ -108,11 +108,12 @@
   font-weight: 700;
   letter-spacing: -.015em;
   line-height: 1.15;
+  color: var(--black);
 }
 .sectionLight .sectionTitle { color: var(--black); }
 .sectionDark  .sectionTitle { color: var(--white); }
 
-.sectionSub { margin-top: .4rem; font-size: .95rem; }
+.sectionSub { margin-top: .4rem; font-size: .95rem; color: var(--muted); }
 .sectionLight .sectionSub { color: var(--muted); }
 .sectionDark  .sectionSub { color: var(--muted-inv); }
 

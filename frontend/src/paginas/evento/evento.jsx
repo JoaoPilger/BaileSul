@@ -480,7 +480,7 @@ export default function EventoPage() {
             </div>
 
             {reservaErro && (
-              <p className={styles['ev-modal-erro']}>{reservaErro}</p>
+              <p className={styles['ev-modal-error']}>{reservaErro}</p>
             )}
             <button
               type="button"

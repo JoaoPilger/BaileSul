@@ -2,6 +2,7 @@
   background: #f8fafc;
   min-height: 100vh;
   padding-bottom: 5rem;
+  overflow-x: hidden;
 }
 
 .listing-hero {
@@ -67,11 +68,14 @@
   border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.01);
   border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .listing-search {
   flex: 2;
-  min-width: 240px;
+  min-width: 200px;
   padding: .8rem 1.2rem;
   border-radius: 12px;
   border: 1px solid rgba(13, 73, 107, 0.12);
@@ -80,6 +84,8 @@
   font-size: .95rem;
   min-height: 48px;
   transition: all .25s ease;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .listing-search:focus {
@@ -94,7 +100,8 @@
   gap: .75rem;
   align-items: center;
   flex: 1;
-  min-width: 200px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .listing-select {
@@ -106,8 +113,10 @@
   border: 1px solid rgba(13, 73, 107, 0.12);
   font-size: .95rem;
   min-height: 48px;
+  min-width: 0;
   cursor: pointer;
   transition: all .25s ease;
+  box-sizing: border-box;
 }
 
 .listing-select:focus {

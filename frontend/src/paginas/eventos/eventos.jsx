@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MapPin, Calendar, Trash2 } from 'lucide-react'
+import { MapPin, Calendar } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEvents } from '../../utils/events'
 import shared from '../../styles/shared.module.css'
 import styles from '../../styles/listings.module.css'
 
-function ListingCard({ event, onDelete }) {
+function ListingCard({ event }) {
   const navigate = useNavigate()
   const date = new Date(event.date)
   const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
@@ -51,7 +51,7 @@ export default function Eventos() {
     })
   }, [])
 
-  function applyFilters() {
+  useEffect(() => {
     let filtered = events.slice()
 
     const lower = query.trim().toLowerCase()
@@ -77,17 +77,7 @@ export default function Eventos() {
     }
 
     setDisplayed(filtered)
-  }
-
-  useEffect(() => {
-    applyFilters()
   }, [query, dateFilter, timeFilter, sortBy, events])
-
-  async function handleDelete(id) {
-    await deleteEventById(id)
-    const data = await loadEvents()
-    setEvents(data)
-  }
 
   return (
     <>
@@ -145,7 +135,7 @@ export default function Eventos() {
             {displayed.length ? (
               <div className={styles['listing-grid']}>
                 {displayed.map((event) => (
-                  <ListingCard key={event.id} event={event} onDelete={handleDelete} />
+                  <ListingCard key={event.id} event={event} />
                 ))}
               </div>
             ) : (
