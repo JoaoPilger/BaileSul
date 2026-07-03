@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Music, ListMusic, Ticket, Users, Wallet } from 'lucide-react';
+import { Calendar, MapPin, Music, ListMusic, Ticket, Users, Wallet, FileText } from 'lucide-react';
 
 export function getNavConfig(tipo, isVendedor = false) {
   const base = [
@@ -14,6 +14,8 @@ export function getNavConfig(tipo, isVendedor = false) {
       base.push({ to: '/pagamentos', label: 'Pagamentos', icon: Wallet });
     }
   } else if (tipo === 'banda') {
+    base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });
+    base.push({ to: '/contratos',    label: 'Contratos',    icon: FileText });
     base.push({ to: '/meus-eventos/banda', label: 'Meus Eventos', icon: ListMusic });
   } else if (tipo === 'comunidade') {
     base.push({ to: '/meus-eventos', label: 'Meus Eventos', icon: ListMusic });

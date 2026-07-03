@@ -175,7 +175,7 @@ const buscarPorId = async (req, res) => {
 
     return res.json({
       ...evento,
-      dias:   diasRes.rows,
+      dias: diasRes.rows,
       bandas: bandasRes.rows,
       midias: midiasRes.rows,
     });
@@ -232,12 +232,13 @@ const criar = async (req, res) => {
   }
 
   try {
+    // 1. Criação do evento na tabela 'eventos'
     const { rows } = await pool.query(
       `INSERT INTO eventos
-         (comunidade_id, titulo, descricao, data_inicio, data_fim,
-          local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'))
-       RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento`,
+          (comunidade_id, titulo, descricao, data_inicio, data_fim,
+           local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'))
+        RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento`,
       [
         comunidade_id,
         titulo.trim(),
@@ -254,7 +255,12 @@ const criar = async (req, res) => {
       ]
     );
 
-    return res.status(201).json({ message: 'Evento criado com sucesso', evento: rows[0] });
+    const novoEvento = rows[0];
+
+    return res.status(201).json({
+      message: 'Evento criado com sucesso',
+      evento: novoEvento
+    });
 
   } catch (err) {
     console.error('Erro ao criar evento:', err.message, err.detail || '');
@@ -273,7 +279,7 @@ const criar = async (req, res) => {
  * O middleware uploadCapaEvento deve ser aplicado na rota antes deste controller.
  */
 const atualizar = async (req, res) => {
-  const { id }       = req.params;
+  const { id } = req.params;
   const comunidade_id = req.usuario.id;
   const {
     titulo, descricao, data_inicio, data_fim,
@@ -326,7 +332,7 @@ const atualizar = async (req, res) => {
   }
 
   try {
-    const sets  = [];
+    const sets = [];
     const params = [];
     let i = 1;
 
@@ -337,16 +343,16 @@ const atualizar = async (req, res) => {
       }
     };
 
-    campo('titulo',         titulo?.trim());
-    campo('descricao',      descricao);
-    campo('data_inicio',    data_inicio);
-    campo('data_fim',       data_fim);
-    campo('local_nome',     local_nome);
+    campo('titulo', titulo?.trim());
+    campo('descricao', descricao);
+    campo('data_inicio', data_inicio);
+    campo('data_fim', data_fim);
+    campo('local_nome', local_nome);
     campo('local_endereco', local_endereco);
     campo('valor_ingresso', valor_ingresso != null ? parseFloat(valor_ingresso) : undefined);
-    campo('status',         status);
-    campo('foto_capa_url',  foto_capa_url);
-    campo('tipo_evento',    tipo_evento);
+    campo('status', status);
+    campo('foto_capa_url', foto_capa_url);
+    campo('tipo_evento', tipo_evento);
 
     if (latitude !== undefined) {
       sets.push(`latitude = $${i++}`);
@@ -380,7 +386,7 @@ const atualizar = async (req, res) => {
  * RF20 – Cancelar evento (soft: status → 'cancelado').
  */
 const cancelar = async (req, res) => {
-  const { id }       = req.params;
+  const { id } = req.params;
   const comunidade_id = req.usuario.id;
 
   try {
@@ -412,7 +418,7 @@ const cancelar = async (req, res) => {
  */
 const adicionarDia = async (req, res) => {
   const { id: evento_id } = req.params;
-  const comunidade_id     = req.usuario.id;
+  const comunidade_id = req.usuario.id;
   const { data, data_fim_dia, hora_inicio, hora_fim, observacao } = req.body;
 
   if (!data || !hora_inicio || !hora_fim) {
@@ -455,7 +461,7 @@ const adicionarDia = async (req, res) => {
  */
 const removerDia = async (req, res) => {
   const { id: evento_id, dia_id } = req.params;
-  const comunidade_id             = req.usuario.id;
+  const comunidade_id = req.usuario.id;
 
   const dono = await pool.query(
     'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
@@ -499,7 +505,7 @@ const removerDia = async (req, res) => {
  */
 const adicionarMidia = async (req, res) => {
   const { id: evento_id } = req.params;
-  const comunidade_id     = req.usuario.id;
+  const comunidade_id = req.usuario.id;
 
   if (!req.file) {
     return res.status(400).json({ error: 'Arquivo obrigatório (campo: arquivo)' });
@@ -514,11 +520,11 @@ const adicionarMidia = async (req, res) => {
     return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
   }
 
-  const url       = caminhoParaUrl(req.file.path);
-  const tipo      = req.file.mimetype.startsWith('video/') ? 'video' : 'imagem';
-  const titulo    = req.body.titulo    || null;
+  const url = caminhoParaUrl(req.file.path);
+  const tipo = req.file.mimetype.startsWith('video/') ? 'video' : 'imagem';
+  const titulo = req.body.titulo || null;
   const descricao = req.body.descricao || null;
-  const ordem     = parseInt(req.body.ordem, 10) || 0;
+  const ordem = parseInt(req.body.ordem, 10) || 0;
 
   try {
     const { rows } = await pool.query(
@@ -541,7 +547,7 @@ const adicionarMidia = async (req, res) => {
  */
 const removerMidia = async (req, res) => {
   const { id: evento_id, midia_id } = req.params;
-  const comunidade_id               = req.usuario.id;
+  const comunidade_id = req.usuario.id;
 
   const dono = await pool.query(
     'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
@@ -577,8 +583,8 @@ const removerMidia = async (req, res) => {
  */
 const convidarBanda = async (req, res) => {
   const { id: evento_id } = req.params;
-  const comunidade_id     = req.usuario.id;
-  const { banda_id }      = req.body;
+  const comunidade_id = req.usuario.id;
+  const { banda_id } = req.body;
 
   if (!banda_id) {
     return res.status(400).json({ error: 'Campo obrigatório: banda_id' });
@@ -625,8 +631,9 @@ const convidarBanda = async (req, res) => {
  */
 const responderContrato = async (req, res) => {
   const { contrato_id } = req.params;
-  const banda_id        = req.usuario.id;
-  const { resposta }    = req.body; // 'aceito' | 'recusado'
+  const banda_id = req.usuario.id;
+  // Aceita 'status_aceite' (frontend contratos.jsx) ou 'resposta' (legado)
+  const resposta = req.body.status_aceite || req.body.resposta;
 
   const respostasValidas = ['aceito', 'recusado'];
   if (!respostasValidas.includes(resposta)) {
