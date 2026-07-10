@@ -73,7 +73,7 @@ export default function Configuracoes() {
           icon: Music,
           title: 'Perfil da Comunidade',
           subtitle: 'Perfil Comunidade',
-          onClick: () => navigate(`/comunidades/${usuario.id}`),
+          onClick: () => showEmBreve('Perfil da comunidade em breve.'),
         },
         {
           key: 'agenda',
@@ -118,7 +118,7 @@ export default function Configuracoes() {
         icon: Music,
         title: 'Perfil da banda',
         subtitle: 'Nome artístico, estilo e descrição',
-        onClick: () => navigate(`/bandas/${usuario.id}`),
+        onClick: () => showEmBreve('Perfil da banda em breve.'),
       },
       {
         key: 'agenda',
