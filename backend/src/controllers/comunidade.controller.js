@@ -185,4 +185,66 @@ const atualizarPerfil = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, listarMeusEventos, atualizarPerfil };
+const { caminhoParaUrl } = require('../middlewares/upload');
+
+/**
+ * POST /api/comunidades/me/midias
+ * Adiciona imagem ou vídeo na galeria da comunidade.
+ * O arquivo chega via multipart/form-data (campo "arquivo"), processado
+ * pelo middleware midiaUploadSingle antes deste controller. O tipo
+ * (imagem/video) é inferido automaticamente do mimetype do arquivo.
+ */
+const adicionarMidia = async (req, res) => {
+  const comunidade_id = req.usuario.id;
+  const { titulo } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo enviado. Selecione uma imagem ou vídeo.' });
+  }
+
+  const tipo = req.file.mimetype.startsWith('video') ? 'video' : 'imagem';
+  const path = require('path');
+  const rel = path.relative(path.resolve(__dirname, '..', 'media'), req.file.path);
+  const url = '/media/' + rel.split(path.sep).join('/');
+
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO perfil_midias (dono_tipo, dono_id, tipo, url, titulo, ordem)
+       VALUES ('comunidade', $1, $2, $3, $4, COALESCE((SELECT MAX(ordem)+1 FROM perfil_midias WHERE dono_tipo='comunidade' AND dono_id=$1), 1))
+       RETURNING id, tipo, url, titulo, ordem`,
+      [comunidade_id, tipo, url, titulo || null]
+    );
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('Erro ao adicionar mídia de comunidade:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * DELETE /api/comunidades/me/midias/:midia_id
+ * Remove imagem ou video da galeria da comunidade
+ */
+const removerMidia = async (req, res) => {
+  const comunidade_id = req.usuario.id;
+  const { midia_id } = req.params;
+
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM perfil_midias
+       WHERE id = $1 AND dono_tipo = 'comunidade' AND dono_id = $2`,
+      [midia_id, comunidade_id]
+    );
+
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Mídia não encontrada ou não pertence a esta comunidade' });
+    }
+
+    return res.json({ message: 'Mídia removida com sucesso' });
+  } catch (err) {
+    console.error('Erro ao remover mídia de comunidade:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { listar, buscarPorId, listarMeusEventos, atualizarPerfil, adicionarMidia, removerMidia };
