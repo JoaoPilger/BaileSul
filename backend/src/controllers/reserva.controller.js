@@ -11,6 +11,12 @@ const criar = async (req, res) => {
   const evento_id = req.params.evento_id ?? req.params.id;
   const comprador_id = req.usuario.id;
   const quantidade = parseInt(req.body.quantidade, 10);
+  const forma_pagamento = ['presencial', 'whatsapp'].includes(req.body.forma_pagamento)
+    ? req.body.forma_pagamento
+    : 'presencial';
+  const nome_retirada = typeof req.body.nome_retirada === 'string'
+    ? req.body.nome_retirada.trim().slice(0, 120)
+    : null;
 
   if (isNaN(quantidade) || quantidade < 1 || quantidade > QUANTIDADE_MAX) {
     return res.status(400).json({
@@ -62,19 +68,21 @@ const criar = async (req, res) => {
 
     // INSERT reserva
     const reservaRes = await pool.query(
-      `INSERT INTO reservas (evento_id, comprador_id, vendedor_id, quantidade)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO reservas (evento_id, comprador_id, vendedor_id, quantidade, forma_pagamento, nome_retirada)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
-      [evento_id, comprador_id, vendedor.id, quantidade]
+      [evento_id, comprador_id, vendedor.id, quantidade, forma_pagamento, nome_retirada || null]
     );
 
     const reserva_id = reservaRes.rows[0].id;
 
-    // Montar link wa.me
+    const formaPagLabel = forma_pagamento === 'whatsapp' ? 'Via WhatsApp' : 'Presencial';
     const mensagem = encodeURIComponent(
       `Olá! Quero confirmar minha reserva:\n` +
       `📅 Evento: ${titulo}\n` +
       `🎟️ Quantidade: ${quantidade} ingresso(s)\n` +
+      `💳 Pagamento: ${formaPagLabel}\n` +
+      (nome_retirada ? `👤 Nome retirada: ${nome_retirada}\n` : '') +
       `🔑 Reserva ID: #${reserva_id}`
     );
     const whatsapp_link = `https://wa.me/${vendedor.whatsapp.replace(/\D/g, '')}?text=${mensagem}`;

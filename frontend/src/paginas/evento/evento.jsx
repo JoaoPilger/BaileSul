@@ -59,14 +59,26 @@ function formatPrice(price) {
   return `R$ ${amount}`
 }
 
-function buildAddress(evento) {
-  const parts = [evento.rua, evento.bairro, evento.city, evento.cep]
+/**
+ * loadEventById (utils/events.js) já normaliza o evento vindo da API,
+ * devolvendo campos separados: rua, bairro, referencia, city, cep, local.
+ * Não é preciso parsear nada aqui — só montar o texto de endereço.
+ */
+function buildAddressQuery(evento) {
+  if (!evento) return ''
+  const parts = [evento.rua, evento.bairro, evento.city]
     .map((p) => (p ? String(p).trim() : ''))
     .filter(Boolean)
   if (parts.length) return `${parts.join(', ')}, Brasil`
   if (evento.local) return `${evento.local}, Brasil`
   if (evento.city) return `${evento.city}, Santa Catarina, Brasil`
   return ''
+}
+
+/** Texto de endereço mostrado na seção "Localização" (sem ", Brasil" no final). */
+function buildAddressDisplay(evento) {
+  const q = buildAddressQuery(evento)
+  return q.replace(/,\s*Brasil$/i, '')
 }
 
 function buildMapUrl(lat, lon) {
@@ -106,21 +118,33 @@ export default function EventoPage() {
   }, [id])
 
   const addressQuery = useMemo(
-    () => (evento ? buildAddress(evento) : ''),
+    () => (evento ? buildAddressQuery(evento) : ''),
+    [evento],
+  )
+
+  const addressDisplay = useMemo(
+    () => (evento ? buildAddressDisplay(evento) : ''),
     [evento],
   )
 
   useEffect(() => {
-    if (evento?.latitude && evento?.longitude) {
-      const lat = parseFloat(evento.latitude)
-      const lon = parseFloat(evento.longitude)
-      if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
-        setMapSrc(buildMapUrl(lat, lon))
-        return
-      }
+    if (!evento) return
+    console.log('=== EFEITO RODOU, evento.id:', evento.id, Date.now())
+
+    // 1. Caso ideal: o backend já geocodificou e salvou lat/lon na criação
+    //    do evento. Usa direto, sem nova chamada de rede.
+    const lat = parseFloat(evento.latitude)
+    const lon = parseFloat(evento.longitude)
+    if (!Number.isNaN(lat) && !Number.isNaN(lon) && lat !== 0 && lon !== 0) {
+      setMapSrc(buildMapUrl(lat, lon))
+      return
     }
 
-    if (!addressQuery) {
+    // 2. Sem coordenadas salvas: tenta geocodificar no cliente como fallback.
+    const rua = evento.rua || ''
+    const cidadeFinal = evento.city || ''
+
+    if (!cidadeFinal.trim()) {
       setMapSrc(AMAUC_MAP)
       return
     }
@@ -130,19 +154,47 @@ export default function EventoPage() {
 
     ;(async () => {
       try {
-        const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addressQuery)}`,
-          {
-            signal: controller.signal,
-            headers: { 'Accept-Language': 'pt-BR' },
-          },
-        )
-        const data = await res.json()
+        let data = []
+
+        // Tentativa 1: busca estruturada (city + street) — mais precisa
+        if (rua.trim()) {
+          const params = new URLSearchParams({
+            format: 'json',
+            limit: '1',
+            country: 'Brasil',
+            city: cidadeFinal.trim(),
+            street: rua.trim(),
+          })
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+            { signal: controller.signal, headers: { 'Accept-Language': 'pt-BR' } },
+          )
+          data = await res.json()
+        }
+
+        // Tentativa 2: busca livre com o endereço completo
+        if (!data?.[0] && addressQuery) {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(addressQuery)}`,
+            { signal: controller.signal, headers: { 'Accept-Language': 'pt-BR' } },
+          )
+          data = await res.json()
+        }
+
+        // Tentativa 3: só a cidade, como último recurso
+        if (!data?.[0]) {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(`${cidadeFinal.trim()}, Brasil`)}`,
+            { signal: controller.signal, headers: { 'Accept-Language': 'pt-BR' } },
+          )
+          data = await res.json()
+        }
+
         if (cancelled || !data?.[0]) return
-        const lat = parseFloat(data[0].lat)
-        const lon = parseFloat(data[0].lon)
-        if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
-          setMapSrc(buildMapUrl(lat, lon))
+        const foundLat = parseFloat(data[0].lat)
+        const foundLon = parseFloat(data[0].lon)
+        if (!Number.isNaN(foundLat) && !Number.isNaN(foundLon)) {
+          setMapSrc(buildMapUrl(foundLat, foundLon))
         }
       } catch {
         if (!cancelled) setMapSrc(AMAUC_MAP)
@@ -153,7 +205,7 @@ export default function EventoPage() {
       cancelled = true
       controller.abort()
     }
-  }, [addressQuery, evento])
+  }, [evento, addressQuery])
 
   if (!evento) {
     return (
@@ -179,7 +231,8 @@ export default function EventoPage() {
   const styleLabel = formatStyle(evento.style)
   const localDisplay =
     evento.local ||
-    [evento.rua, evento.bairro, evento.city].filter(Boolean).join(', ') ||
+    addressDisplay ||
+    [evento.bairro, evento.city].filter(Boolean).join(', ') ||
     evento.city ||
     ''
 
@@ -199,7 +252,11 @@ export default function EventoPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ quantidade: Number(quantidade) }),
+        body: JSON.stringify({
+          quantidade: Number(quantidade),
+          forma_pagamento: pagamento,
+          nome_retirada: nomeRetirada.trim(),
+        }),
       })
 
       const data = await res.json()
@@ -209,8 +266,8 @@ export default function EventoPage() {
         return
       }
 
-      // Sucesso: abre o link do WhatsApp do vendedor e fecha o modal
-      if (data.vendedor?.whatsapp_link) {
+      // Sucesso: abre o WhatsApp do vendedor apenas se o pagamento for via WhatsApp
+      if (pagamento === 'whatsapp' && data.vendedor?.whatsapp_link) {
         window.open(data.vendedor.whatsapp_link, '_blank', 'noopener,noreferrer')
       }
 
@@ -231,12 +288,12 @@ export default function EventoPage() {
   }
 
   const openModal = () => setModalOpen(true)
-  
+
   const closeModal = () => {
-  setModalOpen(false)
-  setReservaErro('')
-  setReservaLoading(false)
-}
+    setModalOpen(false)
+    setReservaErro('')
+    setReservaLoading(false)
+  }
 
   return (
     <>
@@ -271,7 +328,9 @@ export default function EventoPage() {
               <h1 className={styles['ev-title']}>{evento.title}</h1>
 
               <div className={styles['ev-organizer-row']}>
-                <span className={styles['ev-organizer']}>{evento.band || evento.organizer || 'Evento'}</span>
+                <span className={styles['ev-organizer']}>
+                  {evento.band || evento.organizer || 'Evento'}
+                </span>
                 <button type="button" className={styles['ev-share-btn']} onClick={handleShare}>
                   <svg viewBox="0 0 24 24" aria-hidden>
                     <circle cx="18" cy="5" r="3" />
@@ -304,7 +363,7 @@ export default function EventoPage() {
             <aside className={styles['ev-right']}>
               <section className={styles['ev-info-card']} aria-label="Informações do evento">
                 <div className={styles['ev-info-list']}>
-                  {evento.date && (
+                  {(evento.date) && (
                     <div className={styles['ev-info-item']}>
                       <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
@@ -316,7 +375,9 @@ export default function EventoPage() {
                       </div>
                       <div className={styles['ev-info-text']}>
                         <span className={styles['ev-info-label']}>Data</span>
-                        <span className={styles['ev-info-value']}>{formatDate(evento.date)}</span>
+                        <span className={styles['ev-info-value']}>
+                          {formatDate(evento.date)}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -382,7 +443,9 @@ export default function EventoPage() {
                       </div>
                       <div className={styles['ev-info-text']}>
                         <span className={styles['ev-info-label']}>Organização</span>
-                        <span className={styles['ev-info-value']}>{evento.band || evento.organizer}</span>
+                        <span className={styles['ev-info-value']}>
+                          {evento.band || evento.organizer}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -405,7 +468,7 @@ export default function EventoPage() {
 
           <section className={styles['ev-location']} aria-label="Localização do evento">
             <div className={styles['ev-location-title']}>Localização</div>
-            {addressQuery && <p className={styles['ev-location-address']}>{addressQuery.replace(', Brasil', '')}</p>}
+            {addressDisplay && <p className={styles['ev-location-address']}>{addressDisplay}</p>}
             <div className={styles['ev-mapa-container']}>
               <iframe
                 title={`Mapa — ${evento.title}`}

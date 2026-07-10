@@ -88,7 +88,11 @@ export default function CriarEvento() {
   const [vendorSugestoes, setVendorSugestoes]           = useState([])
   const [vendorSugestoesOpen, setVendorSugestoesOpen]   = useState(false)
 
-  const contaLink   = isAuthenticated ? '/perfil' : '/login'
+  const MAP_DEFAULT = 'https://www.openstreetmap.org/export/embed.html?bbox=-53.0,-29.5,-48.0,-26.0&layer=mapnik'
+  const [mapSrc, setMapSrc]       = useState(MAP_DEFAULT)
+  const [mapLoading, setMapLoading] = useState(false)
+
+  const contaLink   = isAuthenticated ? '/configuracoes' : '/login'
   const footerLinks = [
     { to: '/eventos',      label: 'Eventos' },
     { to: '/calendario',   label: 'Calendário' },
@@ -169,6 +173,80 @@ export default function CriarEvento() {
       .catch(() => setVendedoresComunidade([]))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Atualiza o mapa dinamicamente conforme o endereço é preenchido (debounce 800ms)
+  useEffect(() => {
+    const { rua, bairro, city, cep } = form
+    if (!city.trim()) {
+      setMapSrc(MAP_DEFAULT)
+      return
+    }
+
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      setMapLoading(true)
+      try {
+        let data = []
+
+        // Tentativa 1: busca estruturada (mais precisa)
+        if (rua.trim()) {
+          const params = new URLSearchParams({
+            format: 'json',
+            limit: '1',
+            country: 'Brasil',
+            city: city.trim(),
+            street: rua.trim(),
+          })
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?${params.toString()}`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+          )
+          data = await res.json()
+        }
+
+        // Tentativa 2: busca livre com todos os campos, se a estruturada não achou nada
+        if (!data?.[0]) {
+          const parts = [rua, bairro, city, cep].map(p => String(p || '').trim()).filter(Boolean)
+          const q = encodeURIComponent(`${parts.join(', ')}, Brasil`)
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+          )
+          data = await res.json()
+        }
+
+        // Tentativa 3: só cidade, como último recurso
+        if (!data?.[0]) {
+          const q = encodeURIComponent(`${city.trim()}, Brasil`)
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${q}`,
+            { headers: { 'Accept-Language': 'pt-BR' } }
+          )
+          data = await res.json()
+        }
+
+        if (!cancelled && data?.[0]) {
+          const lat = parseFloat(data[0].lat)
+          const lon = parseFloat(data[0].lon)
+          if (!Number.isNaN(lat) && !Number.isNaN(lon)) {
+            const pad = 0.012
+            const bbox = [lon - pad, lat - pad, lon + pad, lat + pad].join(',')
+            setMapSrc(`https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`)
+          }
+        }
+      } catch {
+        // Falha silenciosa: mantém o mapa padrão
+      } finally {
+        if (!cancelled) setMapLoading(false)
+      }
+    }, 800)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.rua, form.bairro, form.city, form.cep])
 
   useEffect(() => {
     if (form.tipoEvento !== 'musical') {
@@ -921,10 +999,22 @@ export default function CriarEvento() {
                 <FieldHint message={showError('referencia')} />
               </div>
 
-              <div className={styles['ce-mapa-container']}>
+              <div className={styles['ce-mapa-container']} style={{ position: 'relative' }}>
+                {mapLoading && (
+                  <div style={{
+                    position: 'absolute', inset: 0, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    background: 'rgba(0,0,0,0.35)', borderRadius: '10px',
+                    zIndex: 2, color: '#fff', fontSize: '0.85rem', gap: '8px',
+                  }}>
+                    <span style={{ animation: 'spin 1s linear infinite', display: 'inline-block' }}>⟳</span>
+                    Atualizando mapa…
+                  </div>
+                )}
                 <iframe
+                  key={mapSrc}
                   title="mapa-localizacao"
-                  src="https://www.openstreetmap.org/export/embed.html?bbox=-53.0,-29.5,-48.0,-26.0&layer=mapnik"
+                  src={mapSrc}
                   className={styles['ce-mapa-iframe']}
                   loading="lazy"
                 />

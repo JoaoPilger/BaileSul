@@ -298,6 +298,8 @@ CREATE TABLE reservas (
   comprador_id      BIGINT NOT NULL REFERENCES usuarios(id)   ON DELETE CASCADE,
   vendedor_id       INT    REFERENCES vendedores(id)          ON DELETE SET NULL,
   quantidade        INT    NOT NULL DEFAULT 1,
+  forma_pagamento   VARCHAR(20)  DEFAULT 'presencial',
+  nome_retirada     VARCHAR(120),
   status_pagamento  status_pagamento NOT NULL DEFAULT 'pendente',
   criado_em         TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em     TIMESTAMPTZ DEFAULT NOW(),

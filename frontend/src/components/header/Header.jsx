@@ -20,7 +20,7 @@ export default function Header() {
   }, []);
 
   const isActive = (path) => location.pathname === path;
-  const contaLink = isAuthenticated ? '/perfil' : '/login';
+  const contaLink = isAuthenticated ? '/configuracoes' : '/login';
   const contaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
   const isEventDetail = location.pathname.startsWith('/eventos/') && location.pathname !== '/eventos';
   const forceSolidPaths = ['/bandas', '/comunidades'];

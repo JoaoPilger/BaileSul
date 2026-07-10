@@ -69,8 +69,14 @@ export default function PainelBanda() {
   hoje.setHours(0, 0, 0, 0)
   const proximos = aceitos
     .map((a) => {
-      const data = a.data_inicio ? new Date(a.data_inicio + 'T00:00:00') : null
-      const dias = data ? Math.ceil((data - hoje) / (1000 * 60 * 60 * 24)) : null
+      // data_inicio vem como TIMESTAMPTZ (string ISO completa, ex: "2026-07-10T00:00:00.000Z"),
+      // então passamos direto pro Date — concatenar 'T00:00:00' aqui gerava string inválida
+      // (ex: "...000ZT00:00:00"), o que fazia `dias` virar NaN e o evento sumir do filtro.
+      const data = a.data_inicio ? new Date(a.data_inicio) : null
+      const diaBase = data
+        ? new Date(data.getFullYear(), data.getMonth(), data.getDate())
+        : null
+      const dias = diaBase ? Math.round((diaBase - hoje) / (1000 * 60 * 60 * 24)) : null
       return { ...a, dias }
     })
     .filter((a) => a.dias === null || a.dias >= 0)
