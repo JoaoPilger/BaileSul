@@ -1,17 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '../../utils/cn';
 import { useParams, useNavigate } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
 import { useAuth } from '../../contexts/AuthContext'
 import styles from './evento.module.css';
 
+// Corrige o caminho dos ícones padrão do Leaflet, que quebram com bundlers
+// (Vite/Webpack) porque resolvem os assets de forma diferente do CDN.
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
+
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80'
 
-const AMAUC_MAP =
-  'https://www.openstreetmap.org/export/embed.html?bbox=-53.0,-29.5,-48.0,-26.0&layer=mapnik'
+const DEFAULT_CENTER = [-27.5, -50.5] // Centro aproximado da região Sul do Brasil
+const DEFAULT_ZOOM = 6
+const EVENT_ZOOM = 15
 
 const STYLE_LABELS = {
   sertanejo: 'Sertanejo',
@@ -81,12 +94,6 @@ function buildAddressDisplay(evento) {
   return q.replace(/,\s*Brasil$/i, '')
 }
 
-function buildMapUrl(lat, lon) {
-  const pad = 0.012
-  const bbox = [lon - pad, lat - pad, lon + pad, lat + pad].join(',')
-  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lon}`
-}
-
 function getDescription(evento) {
   if (evento.description?.trim()) return evento.description.trim()
   const city = evento.city || 'cidade não informada'
@@ -101,7 +108,8 @@ export default function EventoPage() {
   const navigate = useNavigate()
   const { token } = useAuth()
   const [evento, setEvento] = useState(null)
-  const [mapSrc, setMapSrc] = useState(AMAUC_MAP)
+  const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER)
+  const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
   const [modalOpen, setModalOpen] = useState(false)
   const [quantidade, setQuantidade] = useState('1')
   const [pagamento, setPagamento] = useState('presencial')
@@ -129,14 +137,14 @@ export default function EventoPage() {
 
   useEffect(() => {
     if (!evento) return
-    console.log('=== EFEITO RODOU, evento.id:', evento.id, Date.now())
 
     // 1. Caso ideal: o backend já geocodificou e salvou lat/lon na criação
     //    do evento. Usa direto, sem nova chamada de rede.
     const lat = parseFloat(evento.latitude)
     const lon = parseFloat(evento.longitude)
     if (!Number.isNaN(lat) && !Number.isNaN(lon) && lat !== 0 && lon !== 0) {
-      setMapSrc(buildMapUrl(lat, lon))
+      setMapCenter([lat, lon])
+      setMapZoom(EVENT_ZOOM)
       return
     }
 
@@ -145,7 +153,8 @@ export default function EventoPage() {
     const cidadeFinal = evento.city || ''
 
     if (!cidadeFinal.trim()) {
-      setMapSrc(AMAUC_MAP)
+      setMapCenter(DEFAULT_CENTER)
+      setMapZoom(DEFAULT_ZOOM)
       return
     }
 
@@ -194,10 +203,14 @@ export default function EventoPage() {
         const foundLat = parseFloat(data[0].lat)
         const foundLon = parseFloat(data[0].lon)
         if (!Number.isNaN(foundLat) && !Number.isNaN(foundLon)) {
-          setMapSrc(buildMapUrl(foundLat, foundLon))
+          setMapCenter([foundLat, foundLon])
+          setMapZoom(EVENT_ZOOM)
         }
       } catch {
-        if (!cancelled) setMapSrc(AMAUC_MAP)
+        if (!cancelled) {
+          setMapCenter(DEFAULT_CENTER)
+          setMapZoom(DEFAULT_ZOOM)
+        }
       }
     })()
 
@@ -470,12 +483,24 @@ export default function EventoPage() {
             <div className={styles['ev-location-title']}>Localização</div>
             {addressDisplay && <p className={styles['ev-location-address']}>{addressDisplay}</p>}
             <div className={styles['ev-mapa-container']}>
-              <iframe
-                title={`Mapa — ${evento.title}`}
-                src={mapSrc}
+              <MapContainer
+                key={`${mapCenter[0]}-${mapCenter[1]}-${mapZoom}`}
+                center={mapCenter}
+                zoom={mapZoom}
+                scrollWheelZoom={false}
                 className={styles['ev-mapa-iframe']}
-                loading="lazy"
-              />
+                style={{ width: '100%', height: '100%' }}
+              >
+                <TileLayer
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+                {mapZoom === EVENT_ZOOM && (
+                  <Marker position={mapCenter}>
+                    <Popup>{evento.title}</Popup>
+                  </Marker>
+                )}
+              </MapContainer>
             </div>
           </section>
         </div>
