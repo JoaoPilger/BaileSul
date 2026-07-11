@@ -20,11 +20,33 @@ import 'paginas/notificacoes.dart';
 import 'paginas/perfil_banda.dart';
 import 'paginas/perfil_comunidade.dart';
 import 'paginas/vendedores.dart';
+import 'paginas/painel_banda.dart';
+import 'paginas/contratos.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SessaoUsuario.instance.restaurar();
   runApp(const MyApp());
+}
+
+/// Tela inicial mostrada em "/". Contas do tipo banda vão direto pro painel
+/// (contratos + agenda), assim como já acontece na versão web — as demais
+/// continuam vendo a home pública normalmente.
+class RootGate extends StatelessWidget {
+  const RootGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: SessaoUsuario.instance,
+      builder: (context, _) {
+        if (SessaoUsuario.instance.tipoConta == TipoConta.banda) {
+          return const PainelBandaPage();
+        }
+        return const HomePage();
+      },
+    );
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -43,8 +65,10 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      home: const RootGate(),
       routes: {
+        '/painel': (_) => const PainelBandaPage(),
+        '/contratos': (_) => const ContratosPage(),
         '/notificacoes': (_) => const NotificacoesPage(),
         '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
         '/pesquisa-comunidades': (_) => const PesquisaPadraoComunidade(),

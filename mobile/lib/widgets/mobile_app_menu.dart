@@ -87,6 +87,13 @@ abstract final class MobileAppMenu {
       } else if (tipo == TipoConta.banda || _devForceShowBanda) {
         itens.add(
           MobileMenuEntry(
+            icon: Icons.description_outlined,
+            label: 'Contratos',
+            onTap: () => Navigator.pushNamed(context, '/contratos'),
+          ),
+        );
+        itens.add(
+          MobileMenuEntry(
             icon: Icons.list_alt_rounded,
             label: 'Meus Eventos',
             onTap: () => Navigator.pushNamed(context, '/meus-eventos-bandas'),
