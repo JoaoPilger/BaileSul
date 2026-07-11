@@ -1,68 +1,76 @@
-import { useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { loadBandById } from '../../utils/bands'
+import { useAuth } from '../../contexts/AuthContext'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
+import api from '../../services/api'
 import './vitrine_banda.css'
 
-const BANDA_MOCK = {
-  id: 1,
-  nome: 'Banda Exemplo',
-  avatar: '',
-  cover: '',
-  cidade: 'Florianópolis, SC',
-  seguidores: 1250,
-  sobre: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer in diam purus. Nullam blandit, lectus pretium porttitor dapibus, augue tellus finibus nibh, a imperdiet eros urna in mi. Sed metus ipsum, ornare a sapien vel, congue tempus nibh.',
-  localizacao: 'Florianópolis, SC',
-  formacao: 'Desde 2013',
-  integrantes: 6,
-  estiloMusical: 'Sertanejo, pagode, pop',
-  site: 'bailesul.com.br',
-  stats: {
-    apresentacoes: 10,
-    seguidores: 1250,
-    avaliacao: 4.8,
-    totalAvaliacoes: 156,
-    proximosEventos: 6,
-  },
-  galeria: ['', '', '', ''],
-  avaliacaoBars: { 5: 120, 4: 25, 3: 7, 2: 3, 1: 1 },
-  eventos: [
-    {
-      id: 1,
-      nome: 'FESTA TERCEIRÃO IFC',
-      data: '01/01/2000',
-      hora: '00:00',
-      local: 'Concórdia, SC',
-      confirmados: 850,
-      capacidade: 1000,
-      status: 'agendado',
-      diasFaltando: 15,
-      image: '',
-    },
-    {
-      id: 2,
-      nome: 'FESTA TERCEIRÃO IFC',
-      data: '01/01/2000',
-      hora: '00:00',
-      local: 'Concórdia, SC',
-      confirmados: 850,
-      capacidade: 1000,
-      status: 'andamento',
-      image: '',
-    },
-    {
-      id: 3,
-      nome: 'FESTA TERCEIRÃO IFC',
-      data: '01/01/2000',
-      hora: '00:00',
-      local: 'Concórdia, SC',
-      confirmados: 850,
-      capacidade: 1000,
-      status: 'realizado',
-      dataRealizacao: '02/02/2000',
-      image: '',
-    },
-  ],
+const SEGUINDO_KEY = 'bailesul_seguindo_banda'
+const AVALIACOES_KEY = 'bailesul_avaliacoes_banda'
+
+function getSeguidos(userId) {
+  if (!userId) return []
+  try {
+    return JSON.parse(localStorage.getItem(`${SEGUINDO_KEY}_${userId}`)) || []
+  } catch {
+    return []
+  }
+}
+
+function toggleSeguir(userId, bandId) {
+  if (!userId) return false
+  const lista = getSeguidos(userId)
+  const idx = lista.indexOf(String(bandId))
+  if (idx >= 0) {
+    lista.splice(idx, 1)
+  } else {
+    lista.push(String(bandId))
+  }
+  localStorage.setItem(`${SEGUINDO_KEY}_${userId}`, JSON.stringify(lista))
+  return lista.includes(String(bandId))
+}
+
+function getAvaliacoes(bandId) {
+  try {
+    const all = JSON.parse(localStorage.getItem(AVALIACOES_KEY)) || {}
+    return all[String(bandId)] || []
+  } catch {
+    return []
+  }
+}
+
+function salvarAvaliacao(bandId, userId, nota) {
+  try {
+    const all = JSON.parse(localStorage.getItem(AVALIACOES_KEY)) || {}
+    const lista = all[String(bandId)] || []
+    const idx = lista.findIndex((a) => String(a.userId) === String(userId))
+    if (idx >= 0) {
+      lista[idx].nota = nota
+    } else {
+      lista.push({ userId, nota })
+    }
+    all[String(bandId)] = lista
+    localStorage.setItem(AVALIACOES_KEY, JSON.stringify(all))
+    return lista
+  } catch {
+    return []
+  }
+}
+
+function formatDate(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  if (isNaN(d)) return isoStr
+  return d.toLocaleDateString('pt-BR')
+}
+
+function formatTime(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  if (isNaN(d)) return ''
+  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
 }
 
 function StarsDisplay({ value }) {
@@ -89,31 +97,255 @@ function EventStatusBadge({ status }) {
 
 export default function VitrineBanda() {
   const { id } = useParams()
+  const { usuario } = useAuth()
+  const [banda, setBanda] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [erro, setErro] = useState(false)
   const [abaAtiva, setAbaAtiva] = useState('sobre')
+  
   const [seguindo, setSeguindo] = useState(false)
   const [textoExpandido, setTextoExpandido] = useState(false)
-  const [galeriaOffset, setGaleriaOffset] = useState(0)
 
-  let banda = BANDA_MOCK
-  try {
-    const raw = localStorage.getItem('bailesul_bandas')
-    if (raw) {
-      const list = JSON.parse(raw)
-      const found = list.find((b) => String(b.id) === String(id))
-      if (found) banda = found
+  // Avaliação local interativa
+  const [minhaNota, setMinhaNota] = useState(0)
+  const [hoverNota, setHoverNota] = useState(0)
+  const [avaliacoesList, setAvaliacoesList] = useState([])
+
+  // Estados de edição do perfil (Dono da vitrine)
+  const [modoEdicao, setModoEdicao] = useState(false)
+  const [editNome, setEditNome] = useState('')
+  const [editEstilo, setEditEstilo] = useState('')
+  const [editDescricao, setEditDescricao] = useState('')
+  const [editWhatsapp, setEditWhatsapp] = useState('')
+  const [editVideoUrl, setEditVideoUrl] = useState('')
+  
+  // Upload de mídia na galeria (arquivo real do computador)
+  const [novaMidiaArquivo, setNovaMidiaArquivo] = useState(null)
+  const [novaMidiaPreview, setNovaMidiaPreview] = useState('')
+  const [novaMidiaTipo, setNovaMidiaTipo] = useState('imagem')
+  const [novaMidiaTitulo, setNovaMidiaTitulo] = useState('')
+  const [showAddMidia, setShowAddMidia] = useState(false)
+  const [enviandoMidia, setEnviandoMidia] = useState(false)
+
+  const isDono = usuario && String(usuario.id) === String(id) && usuario.tipo === 'banda'
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (usuario) {
+        setSeguindo(getSeguidos(usuario.id).includes(String(id)))
+        const avs = getAvaliacoes(id)
+        setAvaliacoesList(avs)
+        const userAv = avs.find((a) => String(a.userId) === String(usuario.id))
+        if (userAv) setMinhaNota(userAv.nota)
+      } else {
+        setSeguindo(false)
+        setMinhaNota(0)
+        setAvaliacoesList(getAvaliacoes(id))
+      }
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [id, usuario])
+
+  // Libera a URL temporária de preview quando o componente desmonta
+  // ou quando um novo arquivo é escolhido, evitando vazamento de memória.
+  useEffect(() => {
+    return () => {
+      if (novaMidiaPreview) URL.revokeObjectURL(novaMidiaPreview)
     }
-  } catch {}
+  }, [novaMidiaPreview])
 
-  const { stats, eventos, galeria, avaliacaoBars } = banda
-  const totalBars = Object.values(avaliacaoBars).reduce((a, b) => a + b, 0)
+  const carregarBanda = useCallback(() => {
+    setIsLoading(true)
+    setErro(false)
+    loadBandById(id).then((data) => {
+      if (data) {
+        setBanda(data)
+        setEditNome(data.title || '')
+        setEditEstilo(data.style || '')
+        setEditDescricao(data.description || '')
+        setEditWhatsapp(data.whatsapp || '')
+        setEditVideoUrl(data.video_url || '')
+      } else {
+        setErro(true)
+      }
+      setIsLoading(false)
+    }).catch(() => {
+      setErro(true)
+      setIsLoading(false)
+    })
+  }, [id])
 
-  const galeriaPares = []
-  for (let i = 0; i < galeria.length; i += 2) {
-    galeriaPares.push(galeria.slice(i, i + 2))
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      carregarBanda()
+    }, 0)
+    return () => clearTimeout(timer)
+  }, [carregarBanda])
+
+  function handleSeguir() {
+    if (!usuario) {
+      alert('Você precisa estar logado para seguir esta banda!')
+      return
+    }
+    const agora = toggleSeguir(usuario.id, id)
+    setSeguindo(agora)
   }
-  const paginasGaleria = galeriaPares.length
-  const paginaAtual = galeriaOffset % paginasGaleria || 0
-  const galeriaVisivel = galeriaPares[paginaAtual] || ['', '']
+
+  function handleContato() {
+    if (banda?.whatsapp) {
+      window.open(`https://wa.me/${banda.whatsapp}`, '_blank')
+    }
+  }
+
+  function handleAvaliar(nota) {
+    if (!usuario) {
+      alert('Você precisa estar logado para avaliar esta banda!')
+      return
+    }
+    const novaLista = salvarAvaliacao(id, usuario.id, nota)
+    setAvaliacoesList(novaLista)
+    setMinhaNota(nota)
+  }
+
+  async function handleSalvarPerfil() {
+    try {
+      await api.put('/bandas/me/perfil', {
+        nome_artistico: editNome,
+        estilo_musical: editEstilo,
+        descricao: editDescricao,
+        whatsapp: editWhatsapp,
+        video_url: editVideoUrl,
+      })
+      alert('Perfil atualizado com sucesso no banco de dados!')
+      setModoEdicao(false)
+      carregarBanda()
+    } catch (err) {
+      console.error(err)
+      alert(err.response?.data?.error || 'Erro ao atualizar perfil no banco de dados.')
+    }
+  }
+
+  function handleSelecionarArquivo(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (novaMidiaPreview) URL.revokeObjectURL(novaMidiaPreview)
+    setNovaMidiaArquivo(file)
+    setNovaMidiaTipo(file.type.startsWith('video') ? 'video' : 'imagem')
+    setNovaMidiaPreview(URL.createObjectURL(file))
+  }
+
+  function limparFormMidia() {
+    if (novaMidiaPreview) URL.revokeObjectURL(novaMidiaPreview)
+    setNovaMidiaArquivo(null)
+    setNovaMidiaPreview('')
+    setNovaMidiaTitulo('')
+  }
+
+  async function handleAdicionarMidia(e) {
+    e.preventDefault()
+    if (!novaMidiaArquivo) return
+    setEnviandoMidia(true)
+    try {
+      const formData = new FormData()
+      formData.append('arquivo', novaMidiaArquivo)
+      if (novaMidiaTitulo) formData.append('titulo', novaMidiaTitulo)
+
+      await api.post('/bandas/me/midias', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      alert('Mídia adicionada com sucesso na galeria!')
+      setShowAddMidia(false)
+      limparFormMidia()
+      carregarBanda()
+    } catch (err) {
+      console.error(err)
+      alert(err.response?.data?.error || 'Erro ao adicionar mídia.')
+    } finally {
+      setEnviandoMidia(false)
+    }
+  }
+
+  async function handleRemoverMidia(midiaId) {
+    if (!confirm('Deseja realmente remover esta mídia da galeria?')) return
+    try {
+      await api.delete(`/bandas/me/midias/${midiaId}`)
+      alert('Mídia removida com sucesso!')
+      carregarBanda()
+    } catch (err) {
+      console.error(err)
+      alert('Erro ao remover mídia.')
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="vb-shell">
+        <Header />
+        <main className="vb-main">
+          <div className="vb-loading">
+            <div className="vb-spinner" />
+            <p>Carregando perfil da banda...</p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  if (erro || !banda) {
+    return (
+      <div className="vb-shell">
+        <Header />
+        <main className="vb-main">
+          <div className="vb-loading">
+            <p>Banda não encontrada.</p>
+            <Link to="/bandas" className="vb-btn-contato" style={{ marginTop: '12px' }}>
+              Voltar para bandas
+            </Link>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    )
+  }
+
+  const nome = banda.title || 'Banda'
+  const sobre = banda.description || ''
+  const estiloMusical = banda.style || ''
+  const whatsapp = banda.whatsapp || ''
+  const videoUrl = banda.video_url || ''
+  const eventos = (banda.eventos || []).map((e) => ({
+    id: e.id,
+    nome: e.titulo || '',
+    data: formatDate(e.data_inicio),
+    hora: formatTime(e.data_inicio),
+    local: [e.cidade, e.estado].filter(Boolean).join(', ') || e.local || '',
+    localNome: e.local || '',
+    comunidade: e.comunidade || '',
+    status: 'agendado',
+    image: '',
+  }))
+  const midias = (banda.midias || []).filter((m) => m.url)
+
+  // Calcular stats dinamicamente das avaliações locais do localStorage
+  const totalAvaliacoes = avaliacoesList.length
+  const somaNotas = avaliacoesList.reduce((acc, curr) => acc + curr.nota, 0)
+  const mediaAvaliacao = totalAvaliacoes > 0 ? parseFloat((somaNotas / totalAvaliacoes).toFixed(1)) : 0
+
+  const avaliacaoBars = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  avaliacoesList.forEach((av) => {
+    if (avaliacaoBars[av.nota] !== undefined) {
+      avaliacaoBars[av.nota] += 1
+    }
+  })
+
+  const stats = {
+    apresentacoes: eventos.length,
+    seguidores: seguindo ? 1 : 0,
+    avaliacao: mediaAvaliacao,
+    totalAvaliacoes: totalAvaliacoes,
+    proximosEventos: eventos.length,
+  }
 
   return (
     <div className="vb-shell">
@@ -126,61 +358,97 @@ export default function VitrineBanda() {
 
             <div className="vb-card vb-profile-card">
               <div className="vb-cover">
-                {banda.cover ? (
-                  <img src={banda.cover} alt="Capa" className="vb-cover-img" />
-                ) : (
-                  <div className="vb-cover-placeholder">
-                    <svg viewBox="0 0 24 24">
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <circle cx="8.5" cy="8.5" r="1.5" />
-                      <polyline points="21 15 16 10 5 21" />
-                    </svg>
-                  </div>
-                )}
+                <div className="vb-cover-placeholder">
+                  <svg viewBox="0 0 24 24">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                </div>
               </div>
 
               <div className="vb-avatar-row">
                 <div className="vb-avatar-wrap">
                   <div className="vb-avatar">
-                    {banda.avatar ? (
-                      <img src={banda.avatar} alt={banda.nome} />
-                    ) : (
-                      banda.nome.slice(0, 5)
-                    )}
-                  </div>
-                  <div className="vb-avatar-edit">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4z" />
-                    </svg>
+                    {editNome ? editNome.slice(0, 5) : nome.slice(0, 5)}
                   </div>
                 </div>
                 <span className="vb-seguidores-badge">
-                  {stats.seguidores.toLocaleString('pt-BR')} Seguidores
+                  {stats.seguidores} Seguidores
                 </span>
               </div>
 
               <div className="vb-profile-info">
-                <div className="vb-band-name">{banda.nome}</div>
-                <div className="vb-location-row">
-                  <svg viewBox="0 0 24 24">
-                    <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                    <circle cx="12" cy="10" r="3" />
-                  </svg>
-                  {banda.cidade}
-                </div>
+                {modoEdicao ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '12px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Nome artístico:</label>
+                    <input
+                      className="vb-about-text"
+                      style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                      value={editNome}
+                      onChange={(e) => setEditNome(e.target.value)}
+                    />
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Estilo musical:</label>
+                    <input
+                      className="vb-about-text"
+                      style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                      value={editEstilo}
+                      onChange={(e) => setEditEstilo(e.target.value)}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="vb-band-name">{nome}</div>
+                    {estiloMusical && (
+                      <div className="vb-location-row">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M9 18V5l12-2v13" />
+                          <circle cx="6" cy="18" r="3" />
+                          <circle cx="18" cy="16" r="3" />
+                        </svg>
+                        {estiloMusical}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               <div className="vb-profile-actions">
                 <button className="vb-btn-tag">Banda</button>
-                <button className="vb-btn-tag">Ao vivo</button>
+                {videoUrl && <button className="vb-btn-tag">Ao vivo</button>}
+                
+                {isDono ? (
+                  modoEdicao ? (
+                    <>
+                      <button className="vb-btn-seguir" style={{ background: '#28a745', color: '#fff' }} onClick={handleSalvarPerfil}>
+                        Salvar
+                      </button>
+                      <button className="vb-btn-contato" style={{ background: '#dc3545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
+                        Cancelar
+                      </button>
+                    </>
+                  ) : (
+                    <button className="vb-btn-seguir" onClick={() => setModoEdicao(true)}>
+                      Editar Perfil
+                    </button>
+                  )
+                ) : (
+                  <button
+                    className={`vb-btn-seguir ${seguindo ? 'vb-btn-seguir--seguindo' : ''}`}
+                    onClick={handleSeguir}
+                  >
+                    {seguindo ? '✓ Seguindo' : 'Seguir'}
+                  </button>
+                )}
+                
                 <button
-                  className={`vb-btn-seguir ${seguindo ? 'vb-btn-seguir--seguindo' : ''}`}
-                  onClick={() => setSeguindo(!seguindo)}
+                  className="vb-btn-contato"
+                  onClick={handleContato}
+                  disabled={!whatsapp}
+                  title={whatsapp ? `WhatsApp: ${whatsapp}` : 'Sem contato cadastrado'}
                 >
-                  {seguindo ? '✓ Seguindo' : 'Seguir'}
+                  Contato
                 </button>
-                <button className="vb-btn-contato">Contato</button>
               </div>
             </div>
 
@@ -201,89 +469,103 @@ export default function VitrineBanda() {
                 {abaAtiva === 'sobre' && (
                   <>
                     <div className="vb-section-title">Sobre a banda</div>
-                    <p className="vb-about-text">
-                      {textoExpandido
-                        ? banda.sobre
-                        : banda.sobre.slice(0, 160) + (banda.sobre.length > 160 ? '...' : '')}
-                    </p>
-                    {banda.sobre.length > 160 && (
-                      <button className="vb-ver-mais" onClick={() => setTextoExpandido(!textoExpandido)}>
-                        {textoExpandido ? 'Ver menos ▲' : 'Ver mais ▼'}
-                      </button>
-                    )}
-
-                    <div className="vb-meta-grid">
-                      <div className="vb-meta-item">
-                        <div className="vb-meta-label">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                          Localização
-                        </div>
-                        <span className="vb-meta-value">{banda.localizacao}</span>
+                    {modoEdicao ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                        <textarea
+                          rows={4}
+                          className="vb-about-text"
+                          style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)', width: '100%' }}
+                          value={editDescricao}
+                          onChange={(e) => setEditDescricao(e.target.value)}
+                        />
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>WhatsApp de Contato (Dígitos):</label>
+                        <input
+                          className="vb-about-text"
+                          style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                          value={editWhatsapp}
+                          onChange={(e) => setEditWhatsapp(e.target.value)}
+                          placeholder="Ex: 554999999999"
+                        />
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>URL de Vídeo Destaque (YouTube):</label>
+                        <input
+                          className="vb-about-text"
+                          style={{ padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', background: 'var(--surface)', color: 'var(--text)' }}
+                          value={editVideoUrl}
+                          onChange={(e) => setEditVideoUrl(e.target.value)}
+                          placeholder="https://youtube.com/..."
+                        />
                       </div>
+                    ) : (
+                      <>
+                        {sobre ? (
+                          <>
+                            <p className="vb-about-text">
+                              {textoExpandido
+                                ? sobre
+                                : sobre.slice(0, 160) + (sobre.length > 160 ? '...' : '')}
+                            </p>
+                            {sobre.length > 160 && (
+                              <button className="vb-ver-mais" onClick={() => setTextoExpandido(!textoExpandido)}>
+                                {textoExpandido ? 'Ver menos ▲' : 'Ver mais ▼'}
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <p className="vb-about-text" style={{ opacity: 0.5 }}>
+                            Nenhuma descrição cadastrada.
+                          </p>
+                        )}
 
-                      <div className="vb-meta-item">
-                        <div className="vb-meta-label">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                            <circle cx="9" cy="7" r="4" />
-                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                          </svg>
-                          Integrantes
-                        </div>
-                        <span className="vb-meta-value">{banda.integrantes} membros</span>
-                      </div>
-
-                      <div className="vb-meta-item">
-                        <div className="vb-meta-label">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M9 18V5l12-2v13" />
-                            <circle cx="6" cy="18" r="3" />
-                            <circle cx="18" cy="16" r="3" />
-                          </svg>
-                          Formação
-                        </div>
-                        <span className="vb-meta-value">{banda.formacao}</span>
-                      </div>
-
-                      <div className="vb-meta-item vb-social-row">
-                        <div className="vb-meta-label">
-                          <svg viewBox="0 0 24 24">
-                            <circle cx="12" cy="12" r="10" />
-                            <line x1="2" y1="12" x2="22" y2="12" />
-                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-                          </svg>
-                          Site/redes sociais
-                        </div>
-                        <div className="vb-social-icons">
-                          {[
-                            { label: 'Facebook',  path: 'M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z' },
-                            { label: 'Instagram', path: 'M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z M17.5 6.5h.01 M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5z' },
-                            { label: 'YouTube',   path: 'M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z M9.75 15.02V8.98L15.5 12l-5.75 3.02z' },
-                            { label: 'TikTok',    path: 'M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5' },
-                          ].map((rede) => (
-                            <div key={rede.label} className="vb-social-icon" title={rede.label}>
-                              <svg viewBox="0 0 24 24"><path d={rede.path} /></svg>
+                        <div className="vb-meta-grid">
+                          {estiloMusical && (
+                            <div className="vb-meta-item" style={{ gridColumn: '1 / -1' }}>
+                              <div className="vb-meta-label">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M9 18V5l12-2v13" />
+                                  <circle cx="6" cy="18" r="3" />
+                                  <circle cx="18" cy="16" r="3" />
+                                </svg>
+                                Estilo musical
+                              </div>
+                              <span className="vb-meta-value">{estiloMusical}</span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
+                          )}
 
-                      <div className="vb-meta-item" style={{ gridColumn: '1 / -1' }}>
-                        <div className="vb-meta-label">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M9 18V5l12-2v13" />
-                            <circle cx="6" cy="18" r="3" />
-                            <circle cx="18" cy="16" r="3" />
-                          </svg>
-                          Estilo musical
+                          {whatsapp && (
+                            <div className="vb-meta-item">
+                              <div className="vb-meta-label">
+                                <svg viewBox="0 0 24 24">
+                                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                                </svg>
+                                Contato
+                              </div>
+                              <span className="vb-meta-value">{whatsapp}</span>
+                            </div>
+                          )}
+
+                          {videoUrl && (
+                            <div className="vb-meta-item">
+                              <div className="vb-meta-label">
+                                <svg viewBox="0 0 24 24">
+                                  <polygon points="23 7 16 12 23 17 23 7" />
+                                  <rect x="1" y="5" width="15" height="14" rx="2" />
+                                </svg>
+                                Vídeo
+                              </div>
+                              <a
+                                href={videoUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="vb-meta-value"
+                                style={{ color: 'var(--primary)', textDecoration: 'underline' }}
+                              >
+                                Assistir vídeo
+                              </a>
+                            </div>
+                          )}
                         </div>
-                        <span className="vb-meta-value">{banda.estiloMusical}</span>
-                      </div>
-                    </div>
+                      </>
+                    )}
                   </>
                 )}
 
@@ -307,28 +589,68 @@ export default function VitrineBanda() {
               </div>
             </div>
 
-            <div className="vb-card vb-ratings-card">
+            <div className="vb-card vb-ratings-card" id="avaliacoes">
               <div className="vb-ratings-header">
                 <span className="vb-ratings-title">Avaliações da banda</span>
-                <a href="#avaliacoes" className="vb-ver-todas">Ver todas</a>
               </div>
 
               <div className="vb-rating-big">
                 <span className="vb-rating-score">{stats.avaliacao}</span>
                 <div>
                   <StarsDisplay value={stats.avaliacao} />
-                  <span className="vb-rating-count">Baseado em {stats.totalAvaliacoes} avaliações</span>
+                  <span className="vb-rating-count">
+                    {stats.totalAvaliacoes === 0
+                      ? 'Nenhuma avaliação ainda'
+                      : `Baseado em ${stats.totalAvaliacoes} avaliações`}
+                  </span>
                 </div>
               </div>
 
-              <div className="vb-rating-bars">
+              <div style={{ marginTop: '20px', padding: '15px', borderTop: '1px solid var(--border)' }}>
+                <span style={{ fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
+                  {usuario ? (minhaNota > 0 ? 'Sua avaliação enviada:' : 'Avalie esta banda:') : 'Faça login para avaliar esta banda'}
+                </span>
+                {usuario ? (
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => handleAvaliar(star)}
+                        onMouseEnter={() => setHoverNota(star)}
+                        onMouseLeave={() => setHoverNota(0)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                      >
+                        <svg
+                          style={{
+                            width: '32px',
+                            height: '32px',
+                            fill: star <= (hoverNota || minhaNota) ? '#FFC107' : 'none',
+                            stroke: '#FFC107',
+                            strokeWidth: '1.5'
+                          }}
+                          viewBox="0 0 24 24"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <Link to="/login" className="vb-btn-contato" style={{ display: 'inline-block', textDecoration: 'none', fontSize: '0.85rem', padding: '6px 12px' }}>
+                    Entrar
+                  </Link>
+                )}
+              </div>
+
+              <div className="vb-rating-bars" style={{ marginTop: '16px' }}>
                 {[5, 4, 3, 2, 1].map((n) => (
                   <div key={n} className="vb-rating-bar-row">
                     <span className="vb-bar-label">{n}</span>
                     <div className="vb-bar-track">
                       <div
                         className="vb-bar-fill"
-                        style={{ width: `${((avaliacaoBars[n] || 0) / totalBars) * 100}%` }}
+                        style={{ width: totalAvaliacoes > 0 ? `${((avaliacaoBars[n] || 0) / totalAvaliacoes) * 100}%` : '0%' }}
                       />
                     </div>
                     <span className="vb-bar-count">({avaliacaoBars[n] || 0})</span>
@@ -357,7 +679,7 @@ export default function VitrineBanda() {
                   {
                     icon: <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>,
                     value: stats.avaliacao,
-                    label: `${stats.totalAvaliacoes} avaliações`,
+                    label: stats.totalAvaliacoes === 0 ? 'Sem avaliações' : `${stats.totalAvaliacoes} avaliações`,
                   },
                   {
                     icon: <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="12" y1="14" x2="12" y2="18" /><line x1="10" y1="16" x2="14" y2="16" /></svg>,
@@ -375,42 +697,138 @@ export default function VitrineBanda() {
             </div>
 
             <div className="vb-card vb-gallery-card">
-              <div className="vb-gallery-header">
+              <div className="vb-gallery-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span className="vb-gallery-title">Galeria</span>
-                <Link to="#" className="vb-ver-todas-link">Ver todas</Link>
-              </div>
-
-              <div className="vb-gallery-carousel">
-                <div className="vb-gallery-track">
-                  {galeriaVisivel.map((img, i) => (
-                    <div key={i} className="vb-gallery-item">
-                      {img ? (
-                        <img src={img} alt={`Foto ${i + 1}`} />
-                      ) : (
-                        <div className="vb-gallery-placeholder">
-                          <svg viewBox="0 0 24 24">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {paginasGaleria > 1 && (
+                {isDono && (
                   <button
-                    className="vb-carousel-btn"
-                    onClick={() => setGaleriaOffset((o) => (o + 1) % paginasGaleria)}
-                    aria-label="Próximas fotos"
+                    className="vb-btn-tag"
+                    style={{ cursor: 'pointer', background: 'var(--accent)', color: '#fff', border: 'none' }}
+                    onClick={() => {
+                      if (showAddMidia) limparFormMidia()
+                      setShowAddMidia(!showAddMidia)
+                    }}
                   >
-                    <svg viewBox="0 0 24 24">
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                      <polyline points="12 5 19 12 12 19" />
-                    </svg>
+                    {showAddMidia ? 'Fechar' : 'Adicionar Mídia'}
                   </button>
                 )}
+              </div>
+
+              {showAddMidia && (
+                <form onSubmit={handleAdicionarMidia} className="vb-upload-form">
+                  <label className="vb-upload-dropzone" htmlFor="banda-midia-input">
+                    {novaMidiaPreview ? (
+                      novaMidiaTipo === 'video' ? (
+                        <video src={novaMidiaPreview} className="vb-upload-preview" controls />
+                      ) : (
+                        <img src={novaMidiaPreview} alt="Pré-visualização" className="vb-upload-preview" />
+                      )
+                    ) : (
+                      <div className="vb-upload-placeholder">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="17 8 12 3 7 8" />
+                          <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        <span>Clique para escolher uma foto ou vídeo do seu computador</span>
+                      </div>
+                    )}
+                    <input
+                      id="banda-midia-input"
+                      type="file"
+                      accept="image/*,video/*"
+                      onChange={handleSelecionarArquivo}
+                      className="vb-upload-input-hidden"
+                    />
+                  </label>
+
+                  {novaMidiaArquivo && (
+                    <button
+                      type="button"
+                      className="vb-upload-trocar"
+                      onClick={() => document.getElementById('banda-midia-input').click()}
+                    >
+                      Trocar arquivo
+                    </button>
+                  )}
+
+                  <label className="vb-upload-field-label">Título (opcional):</label>
+                  <input
+                    placeholder="Foto de show..."
+                    className="vb-upload-text-input"
+                    value={novaMidiaTitulo}
+                    onChange={(e) => setNovaMidiaTitulo(e.target.value)}
+                  />
+
+                  <button
+                    type="submit"
+                    className="vb-btn-contato vb-upload-submit"
+                    disabled={!novaMidiaArquivo || enviandoMidia}
+                  >
+                    {enviandoMidia ? 'Enviando...' : 'Salvar na Galeria'}
+                  </button>
+                </form>
+              )}
+
+              <div className="vb-gallery-carousel">
+                <div className="vb-gallery-track" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  {midias.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0', width: '100%' }}>
+                      Nenhuma imagem ou vídeo na galeria
+                    </div>
+                  ) : (
+                    midias.map((img) => (
+                      <div key={img.id} className="vb-gallery-item" style={{ position: 'relative', width: 'calc(50% - 5px)', minHeight: '120px' }}>
+                        {img.tipo === 'video' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000', color: '#fff', width: '100%', height: '100%', borderRadius: '8px', fontSize: '0.8rem', textDecoration: 'none' }}>
+                            <a href={img.url} target="_blank" rel="noopener noreferrer" style={{ color: '#fff' }}>
+                              Assistir Vídeo
+                            </a>
+                          </div>
+                        ) : (
+                          <img src={img.url} alt={img.titulo || 'Imagem'} style={{ objectFit: 'cover', width: '100%', height: '100%', borderRadius: '8px' }} />
+                        )}
+                        {isDono && (
+                          <button
+                          type="button"
+                          onClick={() => handleRemoverMidia(img.id)}
+                          style={{ 
+                            position: 'absolute', 
+                            top: '5px', 
+                            right: '5px', 
+                            background: '#dc3545', 
+                            border: 'none', 
+                            color: '#fff', 
+                            padding: '6px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}
+                          title="Remover mídia"
+                        >
+                          <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            width="16" 
+                            height="16" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            stroke="currentColor" 
+                            strokeWidth="2.5" 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round"
+                          >
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            <line x1="10" y1="11" x2="10" y2="17"></line>
+                            <line x1="14" y1="11" x2="14" y2="17"></line>
+                          </svg>
+                        </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
@@ -421,72 +839,79 @@ export default function VitrineBanda() {
               </div>
 
               <div className="vb-events-list">
-                {eventos.map((ev) => (
-                  <Link to={`/evento/${ev.id}`} key={ev.id} className="vb-event-item">
-                    {ev.image ? (
-                      <img src={ev.image} alt={ev.nome} className="vb-event-thumb" />
-                    ) : (
-                      <div className="vb-event-thumb-placeholder">
-                        <svg viewBox="0 0 24 24">
-                          <rect x="3" y="3" width="18" height="18" rx="2" />
-                          <circle cx="8.5" cy="8.5" r="1.5" />
-                          <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                      </div>
-                    )}
-
-                    <div className="vb-event-info">
-                      <div className="vb-event-name">{ev.nome}</div>
-                      <div className="vb-event-meta">
-                        <div className="vb-event-meta-row">
+                {eventos.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '20px 0' }}>
+                    Nenhum evento agendado
+                  </div>
+                ) : (
+                  eventos.map((ev) => (
+                    <Link to={`/eventos/${ev.id}`} key={ev.id} className="vb-event-item">
+                      {ev.image ? (
+                        <img src={ev.image} alt={ev.nome} className="vb-event-thumb" />
+                      ) : (
+                        <div className="vb-event-thumb-placeholder">
                           <svg viewBox="0 0 24 24">
-                            <rect x="3" y="4" width="18" height="18" rx="2" />
-                            <line x1="16" y1="2" x2="16" y2="6" />
-                            <line x1="8" y1="2" x2="8" y2="6" />
-                            <line x1="3" y1="10" x2="21" y2="10" />
+                            <rect x="3" y="3" width="18" height="18" rx="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
                           </svg>
-                          {ev.data}
-                          <svg viewBox="0 0 24 24" style={{ marginLeft: '4px' }}>
-                            <circle cx="12" cy="12" r="10" />
-                            <polyline points="12 6 12 12 16 14" />
-                          </svg>
-                          {ev.hora}
                         </div>
-                        <div className="vb-event-meta-row">
-                          <svg viewBox="0 0 24 24">
-                            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                            <circle cx="12" cy="10" r="3" />
-                          </svg>
-                          {ev.local}
-                        </div>
-                      </div>
-                      <div className="vb-event-confirmados">
-                        <svg viewBox="0 0 24 24">
-                          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                          <circle cx="9" cy="7" r="4" />
-                          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                        </svg>
-                        {ev.confirmados}/{ev.capacidade} confirmados
-                      </div>
-                    </div>
+                      )}
 
-                    <div className="vb-event-status-area">
-                      <div className="vb-event-arrow">
-                        <svg viewBox="0 0 24 24">
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                          <polyline points="12 5 19 12 12 19" />
-                        </svg>
+                      <div className="vb-event-info">
+                        <div className="vb-event-name">{ev.nome}</div>
+                        <div className="vb-event-meta">
+                          <div className="vb-event-meta-row">
+                            <svg viewBox="0 0 24 24">
+                              <rect x="3" y="4" width="18" height="18" rx="2" />
+                              <line x1="16" y1="2" x2="16" y2="6" />
+                              <line x1="8" y1="2" x2="8" y2="6" />
+                              <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            {ev.data}
+                            {ev.hora && (
+                              <>
+                                <svg viewBox="0 0 24 24" style={{ marginLeft: '4px' }}>
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                {ev.hora}
+                              </>
+                            )}
+                          </div>
+                          {ev.local && (
+                            <div className="vb-event-meta-row">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+                                <circle cx="12" cy="10" r="3" />
+                              </svg>
+                              {ev.local}
+                            </div>
+                          )}
+                          {ev.comunidade && (
+                            <div className="vb-event-meta-row">
+                              <svg viewBox="0 0 24 24">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                              </svg>
+                              {ev.comunidade}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <EventStatusBadge status={ev.status} />
-                      <div className={`vb-event-countdown ${ev.status === 'andamento' ? 'vb-event-countdown--hoje' : ''}`}>
-                        {ev.status === 'agendado' && ev.diasFaltando && `Faltam ${ev.diasFaltando} dias`}
-                        {ev.status === 'andamento' && 'Evento hoje'}
-                        {ev.status === 'realizado' && ev.dataRealizacao}
+
+                      <div className="vb-event-status-area">
+                        <div className="vb-event-arrow">
+                          <svg viewBox="0 0 24 24">
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                            <polyline points="12 5 19 12 12 19" />
+                          </svg>
+                        </div>
+                        <EventStatusBadge status={ev.status} />
                       </div>
-                    </div>
-                  </Link>
-                ))}
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
 
