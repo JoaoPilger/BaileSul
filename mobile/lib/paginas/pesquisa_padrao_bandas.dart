@@ -1,10 +1,16 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
+import 'perfil_banda.dart';
 
+/// Rota: `/pesquisa-bandas`
 class PesquisaPadraoBandas extends StatefulWidget {
   const PesquisaPadraoBandas({super.key});
 
@@ -15,43 +21,15 @@ class PesquisaPadraoBandas extends StatefulWidget {
 class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _allBands = [
-    {
-      'nome': 'Banda exemplo',
-      'cidade': 'Florianópolis, SC',
-      'generos': 'Sertanejo, pop',
-      'foto': 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=200&q=80',
-      'seguidores': '1250',
-    },
-    {
-      'nome': 'Gaudérios do Sul',
-      'cidade': 'Porto Alegre, RS',
-      'generos': 'Tradicionalista, Gaúcha',
-      'foto': 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=200&q=80',
-      'seguidores': '3400',
-    },
-    {
-      'nome': 'Vanera Nova',
-      'cidade': 'Caxias do Sul, RS',
-      'generos': 'Vanera, Sertanejo',
-      'foto': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80',
-      'seguidores': '870',
-    },
-    {
-      'nome': 'Rock da Fronteira',
-      'cidade': 'Uruguaiana, RS',
-      'generos': 'Rock, Pop Rock',
-      'foto': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=200&q=80',
-      'seguidores': '2100',
-    },
-  ];
-
-  List<Map<String, dynamic>> _filteredBands = [];
+  List<BandaApi> _todasBandas = <BandaApi>[];
+  List<BandaApi> _bandasFiltradas = <BandaApi>[];
+  bool _carregando = true;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _filteredBands = List.from(_allBands);
+    _carregarBandas();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -61,17 +39,66 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
     super.dispose();
   }
 
+  Future<void> _carregarBandas() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/bandas');
+      final http.Response response =
+          await http.get(url).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        final List<dynamic> dados = _extrairLista(decoded);
+        final List<BandaApi> bandas = dados
+            .whereType<Map>()
+            .map((Map<dynamic, dynamic> item) =>
+                BandaApi.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+
+        if (!mounted) return;
+        setState(() {
+          _todasBandas = bandas;
+          _bandasFiltradas = List<BandaApi>.from(bandas);
+          _carregando = false;
+        });
+      } else {
+        setState(() {
+          _erro = 'Erro ao buscar bandas (${response.statusCode}).';
+          _carregando = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _erro = 'Não foi possível conectar ao servidor.';
+        _carregando = false;
+      });
+    }
+  }
+
+  List<dynamic> _extrairLista(dynamic decoded) {
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      final dynamic dados =
+          decoded['dados'] ?? decoded['bandas'] ?? decoded['data'] ?? decoded['rows'];
+      if (dados is List) return dados;
+    }
+    return <dynamic>[];
+  }
+
   void _onSearchChanged() {
     final String query = _searchController.text.toLowerCase().trim();
     setState(() {
       if (query.isEmpty) {
-        _filteredBands = List.from(_allBands);
+        _bandasFiltradas = List<BandaApi>.from(_todasBandas);
       } else {
-        _filteredBands = _allBands.where((band) {
-          final String nome = band['nome']!.toLowerCase();
-          final String cidade = band['cidade']!.toLowerCase();
-          final String generos = band['generos']!.toLowerCase();
-          return nome.contains(query) || cidade.contains(query) || generos.contains(query);
+        _bandasFiltradas = _todasBandas.where((BandaApi banda) {
+          return banda.nomeArtistico.toLowerCase().contains(query) ||
+              banda.estiloMusical.toLowerCase().contains(query) ||
+              banda.descricao.toLowerCase().contains(query);
         }).toList();
       }
     });
@@ -79,6 +106,15 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
 
   void _showMenu() {
     MobileAppMenu.show(context, entries: MobileAppMenu.entries(context));
+  }
+
+  void _abrirPerfil(BandaApi banda) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => PerfilBandaPage(bandaId: banda.usuarioId),
+      ),
+    );
   }
 
   @override
@@ -140,7 +176,7 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
                               child: TextField(
                                 controller: _searchController,
                                 decoration: InputDecoration(
-                                  hintText: 'Buscar por nome, cidade ou estilo...',
+                                  hintText: 'Buscar por nome ou estilo musical...',
                                   hintStyle: TextStyle(
                                     color: BaileSulColors.mutedText.withValues(alpha: 0.7),
                                     fontSize: 14,
@@ -165,28 +201,49 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
                       ),
                     ),
 
-                    // Results List
-                    if (_filteredBands.isEmpty)
+                    // Results
+                    if (_carregando)
                       const SliverFillRemaining(
                         hasScrollBody: false,
+                        child: Center(
+                          child: CircularProgressIndicator(color: BaileSulColors.accent),
+                        ),
+                      )
+                    else if (_erro != null)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.music_off_outlined, size: 64, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Nenhuma banda encontrada.',
-                                  style: TextStyle(
-                                    color: BaileSulColors.mutedText,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                          child: _EstadoVazio(
+                            icone: Icons.error_outline_rounded,
+                            titulo: 'Ops!',
+                            subtitulo: _erro!,
+                            labelBotao: 'Tentar novamente',
+                            onBotao: _carregarBandas,
+                          ),
+                        ),
+                      )
+                    else if (_bandasFiltradas.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                          child: _EstadoVazio(
+                            icone: Icons.music_off_outlined,
+                            titulo: 'Nenhuma banda encontrada',
+                            subtitulo: _searchController.text.trim().isNotEmpty
+                                ? 'Tente outro termo de busca.'
+                                : 'Ainda não há bandas cadastradas na plataforma.',
+                            labelBotao: _searchController.text.trim().isNotEmpty
+                                ? 'Limpar busca'
+                                : 'Atualizar',
+                            onBotao: () {
+                              if (_searchController.text.trim().isNotEmpty) {
+                                _searchController.clear();
+                              } else {
+                                _carregarBandas();
+                              }
+                            },
                           ),
                         ),
                       )
@@ -196,10 +253,10 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final band = _filteredBands[index];
-                              return _buildBandCard(band);
+                              final BandaApi banda = _bandasFiltradas[index];
+                              return _buildBandCard(banda);
                             },
-                            childCount: _filteredBands.length,
+                            childCount: _bandasFiltradas.length,
                           ),
                         ),
                       ),
@@ -223,7 +280,7 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
     );
   }
 
-  Widget _buildBandCard(Map<String, dynamic> band) {
+  Widget _buildBandCard(BandaApi banda) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -243,31 +300,25 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () {
-            // For now, all bands navigate to the mock high-fidelity profile page
-            Navigator.pushNamed(context, '/perfil-banda');
-          },
+          onTap: () => _abrirPerfil(banda),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Band Image Avatar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    band['foto']!,
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 70,
-                        height: 70,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.music_note, color: Colors.black26),
-                      );
-                    },
+                // Band Avatar (placeholder, banda não possui foto de perfil própria)
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF7C9AB1), Color(0xFF0D496B)],
+                    ),
                   ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.music_note_rounded, color: Colors.white70, size: 30),
                 ),
                 const SizedBox(width: 14),
 
@@ -276,75 +327,66 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        band['nome']!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: BaileSulColors.headerText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            band['cidade']!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Text(
+                              banda.nomeArtistico,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: BaileSulColors.headerText,
+                              ),
                             ),
                           ),
+                          if (banda.cnpjValidado)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.verified_rounded, size: 16, color: BaileSulColors.accent),
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: BaileSulColors.pageBackground.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          band['generos']!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: BaileSulColors.accent,
-                            fontWeight: FontWeight.bold,
+                      if (banda.descricao.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          banda.descricao,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
+                      ],
+                      if (banda.estiloMusical.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: BaileSulColors.pageBackground.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            banda.estiloMusical,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              color: BaileSulColors.accent,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
 
-                // Followers & Action icon
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      band['seguidores']!,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: BaileSulColors.headerText,
-                      ),
-                    ),
-                    const Text(
-                      'seguidores',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.black45,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Colors.black38,
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.black38,
                 ),
               ],
             ),
@@ -353,4 +395,110 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
       ),
     );
   }
+}
+
+class _EstadoVazio extends StatelessWidget {
+  const _EstadoVazio({
+    required this.icone,
+    required this.titulo,
+    required this.subtitulo,
+    required this.labelBotao,
+    required this.onBotao,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String subtitulo;
+  final String labelBotao;
+  final VoidCallback onBotao;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: BaileSulColors.cardBorder),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icone, size: 52, color: BaileSulColors.mutedText),
+          const SizedBox(height: 16),
+          Text(
+            titulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: BaileSulColors.headerText,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: BaileSulColors.mutedText,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton(
+              onPressed: onBotao,
+              style: FilledButton.styleFrom(
+                backgroundColor: BaileSulColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                labelBotao,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Representa uma banda retornada pela API (`GET /api/bandas`).
+class BandaApi {
+  const BandaApi({
+    required this.usuarioId,
+    required this.nomeArtistico,
+    required this.estiloMusical,
+    required this.descricao,
+    required this.whatsapp,
+    required this.cnpjValidado,
+  });
+
+  factory BandaApi.fromJson(Map<String, dynamic> json) {
+    return BandaApi(
+      usuarioId: int.tryParse(json['usuario_id']?.toString() ?? '') ?? 0,
+      nomeArtistico: json['nome_artistico']?.toString() ?? 'Banda',
+      estiloMusical: json['estilo_musical']?.toString() ?? '',
+      descricao: json['descricao']?.toString() ?? '',
+      whatsapp: json['whatsapp']?.toString() ?? '',
+      cnpjValidado: json['cnpj_validado'] == true,
+    );
+  }
+
+  final int usuarioId;
+  final String nomeArtistico;
+  final String estiloMusical;
+  final String descricao;
+  final String whatsapp;
+  final bool cnpjValidado;
 }
