@@ -8,6 +8,7 @@ import Snackbar from '../../components/ui/Snackbar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
+import AlterarSenhaModal from './AlterarSenhaModal'
 
 export default function Configuracoes() {
   const { usuario, logout } = useAuth()
@@ -16,6 +17,7 @@ export default function Configuracoes() {
   const [snackMsg, setSnackMsg] = useState('')
   const [comunidadesVinculadas, setComunidadesVinculadas] = useState([])
   const [carregandoVendedor, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
+  const [senhaModalOpen, setSenhaModalOpen] = useState(false)
 
   useEffect(() => {
     if (usuario?.tipo !== 'pessoal') {
@@ -61,7 +63,7 @@ export default function Configuracoes() {
           icon: Lock,
           title: 'Alterar senha',
           subtitle: 'Atualize sua senha de acesso',
-          onClick: () => showEmBreve('Alterar senha em breve.'),
+          onClick: () => setSenhaModalOpen(true),
         },
       ]
     }
@@ -87,7 +89,7 @@ export default function Configuracoes() {
           icon: Lock,
           title: 'Alterar senha',
           subtitle: 'Atualize sua senha de acesso',
-          onClick: () => showEmBreve('Alterar senha em breve.'),
+          onClick: () => setSenhaModalOpen(true),
         },
       ]
     }
@@ -106,7 +108,7 @@ export default function Configuracoes() {
           icon: Lock,
           title: 'Alterar senha',
           subtitle: 'Atualize sua senha de acesso',
-          onClick: () => showEmBreve('Alterar senha em breve.'),
+          onClick: () => setSenhaModalOpen(true),
         },
       ]
     }
@@ -178,6 +180,14 @@ export default function Configuracoes() {
       </div>
       <Footer />
       <Snackbar message={snackMsg} open={snackOpen} onClose={() => setSnackOpen(false)} />
+      <AlterarSenhaModal
+        open={senhaModalOpen}
+        onClose={() => setSenhaModalOpen(false)}
+        onSuccess={() => {
+          setSenhaModalOpen(false)
+          showEmBreve('Senha alterada com sucesso.')
+        }}
+      />
     </>
   )
 }
