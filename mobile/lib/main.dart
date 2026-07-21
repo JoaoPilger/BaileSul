@@ -21,6 +21,7 @@ import 'paginas/perfil_banda.dart';
 import 'paginas/perfil_comunidade.dart';
 import 'paginas/vendedores.dart';
 import 'paginas/painel_banda.dart';
+import 'paginas/painel_comunidade.dart';
 import 'paginas/contratos.dart';
 
 Future<void> main() async {
@@ -29,9 +30,9 @@ Future<void> main() async {
   runApp(const MyApp());
 }
 
-/// Tela inicial mostrada em "/". Contas do tipo banda vão direto pro painel
-/// (contratos + agenda), assim como já acontece na versão web — as demais
-/// continuam vendo a home pública normalmente.
+/// Tela inicial mostrada em "/". Contas do tipo banda e comunidade vão direto
+/// pro painel de trabalho delas, assim como já acontece na versão web — as
+/// demais continuam vendo a home pública normalmente.
 class RootGate extends StatelessWidget {
   const RootGate({super.key});
 
@@ -40,8 +41,12 @@ class RootGate extends StatelessWidget {
     return ListenableBuilder(
       listenable: SessaoUsuario.instance,
       builder: (context, _) {
-        if (SessaoUsuario.instance.tipoConta == TipoConta.banda) {
+        final TipoConta? tipo = SessaoUsuario.instance.tipoConta;
+        if (tipo == TipoConta.banda) {
           return const PainelBandaPage();
+        }
+        if (tipo == TipoConta.comunidade) {
+          return const PainelComunidadePage();
         }
         return const HomePage();
       },
@@ -67,7 +72,11 @@ class MyApp extends StatelessWidget {
       ),
       home: const RootGate(),
       routes: {
-        '/painel': (_) => const PainelBandaPage(),
+        '/painel': (_) =>
+            SessaoUsuario.instance.tipoConta == TipoConta.comunidade
+                ? const PainelComunidadePage()
+                : const PainelBandaPage(),
+        '/painel-comunidade': (_) => const PainelComunidadePage(),
         '/contratos': (_) => const ContratosPage(),
         '/notificacoes': (_) => const NotificacoesPage(),
         '/pesquisa-eventos': (_) => const PesquisaPadraoEventos(),
