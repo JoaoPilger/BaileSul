@@ -46,7 +46,7 @@ const listar = async (req, res) => {
 
     const { rows } = await pool.query(
       `SELECT DISTINCT pb.usuario_id, pb.nome_artistico, pb.estilo_musical,
-             pb.descricao, pb.whatsapp, pb.cnpj_validado
+             pb.descricao, pb.whatsapp, pb.cnpj_validado, pb.foto_perfil_url
        FROM perfis_bandas pb
        JOIN usuarios u ON u.id = pb.usuario_id
        ${where}
@@ -73,7 +73,7 @@ const buscarPorId = async (req, res) => {
   try {
     const bandaRes = await pool.query(
       `SELECT pb.usuario_id, pb.nome_artistico, pb.estilo_musical,
-              pb.descricao, pb.whatsapp, pb.video_url, pb.cnpj_validado
+              pb.descricao, pb.whatsapp, pb.video_url, pb.cnpj_validado, pb.foto_perfil_url
        FROM perfis_bandas pb
        WHERE pb.usuario_id = $1`,
       [id]
@@ -219,6 +219,36 @@ const buscarSugestoes = async (req, res) => {
 const { caminhoParaUrl } = require('../middlewares/upload');
 
 /**
+ * POST /api/bandas/me/foto-perfil
+ * Define/substitui a foto de perfil (avatar) da banda.
+ * O arquivo chega via multipart/form-data (campo "arquivo").
+ */
+const atualizarFotoPerfil = async (req, res) => {
+  const usuario_id = req.usuario.id;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo enviado. Selecione uma imagem.' });
+  }
+
+  if (req.file.mimetype.startsWith('video')) {
+    return res.status(400).json({ error: 'Envie uma imagem para a foto de perfil.' });
+  }
+
+  const url = caminhoParaUrl(req.file.path, req);
+
+  try {
+    await pool.query(
+      `UPDATE perfis_bandas SET foto_perfil_url = $1 WHERE usuario_id = $2`,
+      [url, usuario_id]
+    );
+    return res.json({ foto_perfil_url: url });
+  } catch (err) {
+    console.error('Erro ao atualizar foto de perfil da banda:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * POST /api/bandas/me/midias
  * Adiciona imagem ou vídeo na galeria da banda.
  * O arquivo chega via multipart/form-data (campo "arquivo"), processado
@@ -234,9 +264,7 @@ const adicionarMidia = async (req, res) => {
   }
 
   const tipo = req.file.mimetype.startsWith('video') ? 'video' : 'imagem';
-  const path = require('path');
-  const rel = path.relative(path.resolve(__dirname, '..', 'media'), req.file.path);
-  const url = '/media/' + rel.split(path.sep).join('/');
+  const url = caminhoParaUrl(req.file.path, req);
 
   try {
     const { rows } = await pool.query(
@@ -278,4 +306,4 @@ const removerMidia = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, agenda, atualizarPerfil, buscarSugestoes, adicionarMidia, removerMidia };
+module.exports = { listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes, adicionarMidia, removerMidia };

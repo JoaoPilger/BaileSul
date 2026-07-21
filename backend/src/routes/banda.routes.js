@@ -1,5 +1,5 @@
 const router = require('express').Router();
-const { listar, buscarPorId, agenda, atualizarPerfil, buscarSugestoes, adicionarMidia, removerMidia } = require('../controllers/banda.controller');
+const { listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes, adicionarMidia, removerMidia } = require('../controllers/banda.controller');
 const { autenticar, autorizar } = require('../middlewares/auth.middleware');
 const { uploadMidiaPerfil, uploadErrorHandler } = require('../middlewares/upload');
 
@@ -8,6 +8,9 @@ router.get('/me/agenda', autenticar, autorizar('banda'), agenda);
 
 // PUT vitrine da banda
 router.put('/me/perfil', autenticar, autorizar('banda'), atualizarPerfil);
+
+// Foto de perfil (avatar) da banda
+router.post('/me/foto-perfil', autenticar, autorizar('banda'), uploadMidiaPerfil, atualizarFotoPerfil, uploadErrorHandler);
 
 // Mídias da galeria da banda
 router.post('/me/midias', autenticar, autorizar('banda'), uploadMidiaPerfil, adicionarMidia, uploadErrorHandler);

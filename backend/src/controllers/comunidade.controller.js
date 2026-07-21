@@ -34,7 +34,7 @@ const listar = async (req, res) => {
     const { rows } = await pool.query(
       `SELECT pc.usuario_id, pc.nome_entidade, pc.descricao,
               pc.whatsapp, pc.cidade, pc.estado, pc.endereco,
-              pc.latitude, pc.longitude, pc.cnpj_validado
+              pc.latitude, pc.longitude, pc.cnpj_validado, pc.foto_perfil_url
        FROM perfis_comunidades pc
        ${where}
        ORDER BY pc.nome_entidade ASC
@@ -61,7 +61,7 @@ const buscarPorId = async (req, res) => {
     const comRes = await pool.query(
       `SELECT pc.usuario_id, pc.nome_entidade, pc.descricao,
               pc.whatsapp, pc.cidade, pc.estado, pc.endereco,
-              pc.latitude, pc.longitude, pc.cnpj_validado
+              pc.latitude, pc.longitude, pc.cnpj_validado, pc.foto_perfil_url
        FROM perfis_comunidades pc
        WHERE pc.usuario_id = $1`,
       [id]
@@ -134,7 +134,7 @@ const listarMeusEventos = async (req, res) => {
  */
 const atualizarPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
-  const { nome_entidade, descricao, whatsapp, endereco, cidade, estado } = req.body;
+  const { nome_entidade, descricao, whatsapp, endereco, cidade, estado, latitude, longitude } = req.body;
 
   if (whatsapp && !whatsappValido(whatsapp)) {
     return res.status(400).json({
@@ -153,7 +153,15 @@ const atualizarPerfil = async (req, res) => {
     ];
     let coordsUpdate = '';
 
-    if (endereco || cidade) {
+    // Se o cliente enviou coordenadas manuais (pino ajustado no mapa), elas
+    // têm prioridade sobre a geocodificação automática do endereço.
+    const latManual = parseFloat(latitude);
+    const lngManual = parseFloat(longitude);
+
+    if (Number.isFinite(latManual) && Number.isFinite(lngManual)) {
+      params.push(latManual, lngManual);
+      coordsUpdate = `, latitude = $${params.length - 1}, longitude = $${params.length}`;
+    } else if (endereco || cidade) {
       const endGeo = [endereco, cidade, estado, 'Brasil'].filter(Boolean).join(', ');
       const coords = await geocodificarEndereco(endGeo);
       if (coords?.latitude && coords?.longitude) {
@@ -188,6 +196,36 @@ const atualizarPerfil = async (req, res) => {
 const { caminhoParaUrl } = require('../middlewares/upload');
 
 /**
+ * POST /api/comunidades/me/foto-perfil
+ * Define/substitui a foto de perfil (avatar) da comunidade.
+ * O arquivo chega via multipart/form-data (campo "arquivo").
+ */
+const atualizarFotoPerfil = async (req, res) => {
+  const usuario_id = req.usuario.id;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Nenhum arquivo enviado. Selecione uma imagem.' });
+  }
+
+  if (req.file.mimetype.startsWith('video')) {
+    return res.status(400).json({ error: 'Envie uma imagem para a foto de perfil.' });
+  }
+
+  const url = caminhoParaUrl(req.file.path, req);
+
+  try {
+    await pool.query(
+      `UPDATE perfis_comunidades SET foto_perfil_url = $1 WHERE usuario_id = $2`,
+      [url, usuario_id]
+    );
+    return res.json({ foto_perfil_url: url });
+  } catch (err) {
+    console.error('Erro ao atualizar foto de perfil da comunidade:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * POST /api/comunidades/me/midias
  * Adiciona imagem ou vídeo na galeria da comunidade.
  * O arquivo chega via multipart/form-data (campo "arquivo"), processado
@@ -203,9 +241,7 @@ const adicionarMidia = async (req, res) => {
   }
 
   const tipo = req.file.mimetype.startsWith('video') ? 'video' : 'imagem';
-  const path = require('path');
-  const rel = path.relative(path.resolve(__dirname, '..', 'media'), req.file.path);
-  const url = '/media/' + rel.split(path.sep).join('/');
+  const url = caminhoParaUrl(req.file.path, req);
 
   try {
     const { rows } = await pool.query(
@@ -247,4 +283,4 @@ const removerMidia = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, listarMeusEventos, atualizarPerfil, adicionarMidia, removerMidia };
+module.exports = { listar, buscarPorId, listarMeusEventos, atualizarPerfil, atualizarFotoPerfil, adicionarMidia, removerMidia };
