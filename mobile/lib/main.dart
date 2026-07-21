@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import 'paginas/criar_editar_evento.dart';
+import 'paginas/editar_perfil_banda.dart';
+import 'paginas/editar_perfil_comunidade.dart';
 import 'paginas/home.dart';
 import 'paginas/calendario.dart';
 import 'paginas/login.dart';
@@ -109,6 +111,8 @@ class MyApp extends StatelessWidget {
         },
         '/perfil-banda': (_) => const PerfilBandaPage(),
         '/perfil-comunidade': (_) => const PerfilComunidadePage(),
+        '/editar-perfil-comunidade': (_) => const EditarPerfilComunidadePage(),
+        '/editar-perfil-banda': (_) => const EditarPerfilBandaPage(),
         '/vendedores': (_) => const VendedoresPage(),
       },
     );

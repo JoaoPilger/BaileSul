@@ -297,6 +297,8 @@ class _PerfilComunidadePageState extends State<PerfilComunidadePage> {
     final String? bannerUrl = _midias.isNotEmpty
         ? ApiConfig.resolveMediaUrl(_midias.first['url']?.toString())
         : null;
+    final String fotoPerfilUrl =
+        ApiConfig.resolveMediaUrl(_comunidade?['foto_perfil_url']?.toString());
 
     return Stack(
       clipBehavior: Clip.none,
@@ -331,74 +333,29 @@ class _PerfilComunidadePageState extends State<PerfilComunidadePage> {
         Positioned(
           bottom: -45,
           left: 16,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-                child: const Center(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      'Comunidade',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              if (_isMinhaConta)
-                // Camera edit icon at bottom right
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Editar foto da comunidade.')),
-                      );
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300, width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_outlined,
-                        size: 16,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: fotoPerfilUrl.isNotEmpty
+                ? Image.network(
+                    fotoPerfilUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _avatarFallback(),
+                  )
+                : _avatarFallback(),
           ),
         ),
       ],
@@ -416,6 +373,23 @@ class _PerfilComunidadePageState extends State<PerfilComunidadePage> {
         ),
       ),
       child: const Icon(Icons.apartment, color: Colors.white24, size: 64),
+    );
+  }
+
+  Widget _avatarFallback() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 4),
+        child: Text(
+          'Comunidade',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 11,
+          ),
+        ),
+      ),
     );
   }
 
@@ -509,8 +483,14 @@ class _PerfilComunidadePageState extends State<PerfilComunidadePage> {
                   height: 40,
                   child: _isMinhaConta
                       ? OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/configuracoes');
+                          onPressed: () async {
+                            final bool? atualizado = await Navigator.pushNamed(
+                              context,
+                              '/editar-perfil-comunidade',
+                            ) as bool?;
+                            if (atualizado == true) {
+                              _carregarPerfil();
+                            }
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           style: OutlinedButton.styleFrom(

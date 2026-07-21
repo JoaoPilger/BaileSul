@@ -286,6 +286,8 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
     final String? bannerUrl = _midias.isNotEmpty
         ? ApiConfig.resolveMediaUrl(_midias.first['url']?.toString())
         : null;
+    final String fotoPerfilUrl =
+        ApiConfig.resolveMediaUrl(_banda?['foto_perfil_url']?.toString());
 
     return Stack(
       clipBehavior: Clip.none,
@@ -320,70 +322,29 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
         Positioned(
           bottom: -45,
           left: 16,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 3),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.15),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+          child: Container(
+            width: 90,
+            height: 90,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
                 ),
-                child: const Center(
-                  child: Text(
-                    'Banda',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                ),
-              ),
-              if (_isMinhaConta)
-                // Camera edit icon at bottom right of avatar
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: GestureDetector(
-                    onTap: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Editar foto de perfil.')),
-                      );
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300, width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.camera_alt_outlined,
-                        size: 16,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: fotoPerfilUrl.isNotEmpty
+                ? Image.network(
+                    fotoPerfilUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => _avatarFallback(),
+                  )
+                : _avatarFallback(),
           ),
         ),
       ],
@@ -401,6 +362,19 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
         ),
       ),
       child: const Icon(Icons.music_note, color: Colors.white24, size: 64),
+    );
+  }
+
+  Widget _avatarFallback() {
+    return const Center(
+      child: Text(
+        'Banda',
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
     );
   }
 
@@ -495,8 +469,14 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
                   height: 40,
                   child: _isMinhaConta
                       ? OutlinedButton.icon(
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/configuracoes');
+                          onPressed: () async {
+                            final bool? atualizado = await Navigator.pushNamed(
+                              context,
+                              '/editar-perfil-banda',
+                            ) as bool?;
+                            if (atualizado == true) {
+                              _carregarPerfil();
+                            }
                           },
                           icon: const Icon(Icons.edit_outlined, size: 18),
                           style: OutlinedButton.styleFrom(
