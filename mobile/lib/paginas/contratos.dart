@@ -183,12 +183,11 @@ class _ContratosPageState extends State<ContratosPage> {
                 ? const _AcessoNegado()
                 : RefreshIndicator(
                     onRefresh: _carregar,
-                    child: SingleChildScrollView(
+                    child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Align(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Align(
                             alignment: Alignment.topCenter,
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 800),
@@ -226,9 +225,18 @@ class _ContratosPageState extends State<ContratosPage> {
                               ),
                             ),
                           ),
-                          MobileFooter(logoHeight: 44, horizontalPadding: 20),
-                        ],
-                      ),
+                        ),
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              MobileFooter(logoHeight: 44, horizontalPadding: 20),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
           ),

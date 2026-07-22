@@ -127,151 +127,153 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
           children: [
             MobileHeader(onMenuPressed: _showMenu),
             Expanded(
-              child: Container(
-                color: BaileSulColors.pageBackground,
-                child: CustomScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  slivers: [
-                    // Search Header Section
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                      child: IntrinsicHeight(
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            const Text(
-                              'Banda',
-                              style: TextStyle(
-                                color: BaileSulColors.headerText,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                height: 1.1,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Pesquise bandas cadastradas na plataforma.',
-                              style: TextStyle(
-                                color: BaileSulColors.mutedText,
-                                fontSize: 15,
-                                height: 1.35,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
+                            Expanded(
+                              child: Container(
+                                color: BaileSulColors.pageBackground,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Search Header Section
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Banda',
+                                            style: TextStyle(
+                                              color: BaileSulColors.headerText,
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.w800,
+                                              height: 1.1,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          const Text(
+                                            'Pesquise bandas cadastradas na plataforma.',
+                                            style: TextStyle(
+                                              color: BaileSulColors.mutedText,
+                                              fontSize: 15,
+                                              height: 1.35,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 20),
 
-                            // Search bar input
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: BaileSulColors.cardBorder),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: 'Buscar por nome ou estilo musical...',
-                                  hintStyle: TextStyle(
-                                    color: BaileSulColors.mutedText.withValues(alpha: 0.7),
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.search_rounded,
-                                    color: BaileSulColors.accent,
-                                  ),
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear, size: 20),
-                                          onPressed: () => _searchController.clear(),
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                          // Search bar input
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius: BorderRadius.circular(10),
+                                              border: Border.all(color: BaileSulColors.cardBorder),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withValues(alpha: 0.03),
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
+                                            ),
+                                            child: TextField(
+                                              controller: _searchController,
+                                              decoration: InputDecoration(
+                                                hintText: 'Buscar por nome ou estilo musical...',
+                                                hintStyle: TextStyle(
+                                                  color: BaileSulColors.mutedText.withValues(alpha: 0.7),
+                                                  fontSize: 14,
+                                                ),
+                                                prefixIcon: const Icon(
+                                                  Icons.search_rounded,
+                                                  color: BaileSulColors.accent,
+                                                ),
+                                                suffixIcon: _searchController.text.isNotEmpty
+                                                    ? IconButton(
+                                                        icon: const Icon(Icons.clear, size: 20),
+                                                        onPressed: () => _searchController.clear(),
+                                                      )
+                                                    : null,
+                                                border: InputBorder.none,
+                                                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+
+                                    // Results
+                                    if (_carregando)
+                                      const Padding(
+                                        padding: EdgeInsets.symmetric(vertical: 60),
+                                        child: Center(
+                                          child: CircularProgressIndicator(color: BaileSulColors.accent),
+                                        ),
+                                      )
+                                    else if (_erro != null)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                                        child: _EstadoVazio(
+                                          icone: Icons.error_outline_rounded,
+                                          titulo: 'Ops!',
+                                          subtitulo: _erro!,
+                                          labelBotao: 'Tentar novamente',
+                                          onBotao: _carregarBandas,
+                                        ),
+                                      )
+                                    else if (_bandasFiltradas.isEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                                        child: _EstadoVazio(
+                                          icone: Icons.music_off_outlined,
+                                          titulo: 'Nenhuma banda encontrada',
+                                          subtitulo: _searchController.text.trim().isNotEmpty
+                                              ? 'Tente outro termo de busca.'
+                                              : 'Ainda não há bandas cadastradas na plataforma.',
+                                          labelBotao: _searchController.text.trim().isNotEmpty
+                                              ? 'Limpar busca'
+                                              : 'Atualizar',
+                                          onBotao: () {
+                                            if (_searchController.text.trim().isNotEmpty) {
+                                              _searchController.clear();
+                                            } else {
+                                              _carregarBandas();
+                                            }
+                                          },
+                                        ),
+                                      )
+                                    else
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                        child: Column(
+                                          children: _bandasFiltradas
+                                              .map((BandaApi banda) => _buildBandCard(banda))
+                                              .toList(),
+                                        ),
+                                      ),
+
+                                    const SizedBox(height: 24),
+                                  ],
                                 ),
                               ),
                             ),
+                            const MobileFooter(),
                           ],
                         ),
                       ),
                     ),
-
-                    // Results
-                    if (_carregando)
-                      const SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Center(
-                          child: CircularProgressIndicator(color: BaileSulColors.accent),
-                        ),
-                      )
-                    else if (_erro != null)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                          child: _EstadoVazio(
-                            icone: Icons.error_outline_rounded,
-                            titulo: 'Ops!',
-                            subtitulo: _erro!,
-                            labelBotao: 'Tentar novamente',
-                            onBotao: _carregarBandas,
-                          ),
-                        ),
-                      )
-                    else if (_bandasFiltradas.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
-                          child: _EstadoVazio(
-                            icone: Icons.music_off_outlined,
-                            titulo: 'Nenhuma banda encontrada',
-                            subtitulo: _searchController.text.trim().isNotEmpty
-                                ? 'Tente outro termo de busca.'
-                                : 'Ainda não há bandas cadastradas na plataforma.',
-                            labelBotao: _searchController.text.trim().isNotEmpty
-                                ? 'Limpar busca'
-                                : 'Atualizar',
-                            onBotao: () {
-                              if (_searchController.text.trim().isNotEmpty) {
-                                _searchController.clear();
-                              } else {
-                                _carregarBandas();
-                              }
-                            },
-                          ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        sliver: SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final BandaApi banda = _bandasFiltradas[index];
-                              return _buildBandCard(banda);
-                            },
-                            childCount: _bandasFiltradas.length,
-                          ),
-                        ),
-                      ),
-
-                    // Space before footer
-                    const SliverToBoxAdapter(
-                      child: SizedBox(height: 24),
-                    ),
-
-                    // Footer
-                    const SliverToBoxAdapter(
-                      child: MobileFooter(),
-                    ),
-                  ],
-                ),
+                  );
+                },
               ),
             ),
           ],
