@@ -741,6 +741,82 @@
   color: var(--text-muted);
 }
 
+.me-upload-area {
+  position: relative;
+  width: 100%;
+  min-height: 150px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: rgba(17, 17, 17, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.me-upload-area:hover {
+  border-color: rgba(13, 73, 107, 0.4);
+  background: rgba(13, 73, 107, 0.03);
+}
+
+.me-upload-preview {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
+}
+
+.me-upload-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(13, 15, 22, 0.45);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.me-upload-area:hover .me-upload-overlay {
+  opacity: 1;
+}
+
+.me-upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.me-upload-placeholder svg {
+  width: 30px;
+  height: 30px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.me-upload-placeholder span {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.me-upload-placeholder small {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
 .me-modal-actions {
   display: flex;
   align-items: center;
@@ -749,11 +825,30 @@
   margin-top: 6px;
 }
 
-.me-modal-actions .me-btn-ghost,
+.me-modal-actions .me-btn-cancelar,
 .me-modal-actions .me-btn-solid {
   height: 40px;
   padding: 0 20px;
   cursor: pointer;
+}
+
+.me-btn-cancelar {
+  display: flex;
+  align-items: center;
+  border: none;
+  border-radius: 8px;
+  background: rgba(13, 73, 107, 0.08);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
+}
+
+.me-btn-cancelar:hover {
+  background: rgba(13, 73, 107, 0.15);
+  color: var(--accent-hover);
 }
 
 .me-modal-actions button:disabled {

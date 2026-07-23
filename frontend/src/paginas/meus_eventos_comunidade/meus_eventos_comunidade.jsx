@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -47,6 +47,9 @@ export default function MeusEventosComunidade() {
   const [formEdicao, setFormEdicao] = useState(null)
   const [salvandoEdicao, setSalvandoEdicao] = useState(false)
   const [erroEdicao, setErroEdicao] = useState('')
+  const [imagemFile, setImagemFile] = useState(null)
+  const [imagemPreview, setImagemPreview] = useState('')
+  const fileEdicaoRef = useRef(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -58,18 +61,20 @@ export default function MeusEventosComunidade() {
     }
   }, [isAuthenticated, usuario, navigate])
 
+  const carregarEventos = async () => {
+    try {
+      const res = await api.get('/comunidades/me/eventos')
+      setEventos(res.data.eventos || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
-      api.get('/comunidades/me/eventos')
-        .then((res) => {
-          setEventos(res.data.eventos || [])
-          setCarregando(false)
-        })
-        .catch((err) => {
-          console.error(err)
-          setCarregando(false)
-        })
+      carregarEventos().finally(() => setCarregando(false))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, usuario])
 
   const handleCancelar = async (id) => {
@@ -82,6 +87,13 @@ export default function MeusEventosComunidade() {
   }
 
   const soData = (valor) => (valor ? String(valor).split('T')[0] : '')
+
+  const normalizarMedia = (url) => {
+    if (url && url.includes('/media/')) {
+      return url.substring(url.indexOf('/media/'))
+    }
+    return url || ''
+  }
 
   const abrirEdicao = (id) => {
     const ev = eventos.find((e) => e.id === id)
@@ -97,6 +109,9 @@ export default function MeusEventosComunidade() {
           ? String(ev.valor_ingresso).replace('.', ',')
           : '',
     })
+    setImagemFile(null)
+    setImagemPreview(normalizarMedia(ev.foto_capa_url))
+    if (fileEdicaoRef.current) fileEdicaoRef.current.value = ''
     setErroEdicao('')
     setEventoEditando(id)
   }
@@ -105,10 +120,29 @@ export default function MeusEventosComunidade() {
     setEventoEditando(null)
     setFormEdicao(null)
     setErroEdicao('')
+    setImagemFile(null)
+    setImagemPreview('')
+    if (fileEdicaoRef.current) fileEdicaoRef.current.value = ''
   }
 
   const handleCampoEdicao = (campo, valor) => {
     setFormEdicao((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  const handleImagemEdicao = (file) => {
+    if (!file) return
+    const tiposValidos = ['image/png', 'image/jpeg', 'image/webp']
+    if (!tiposValidos.includes(file.type)) {
+      setErroEdicao('Formato de imagem inválido. Use PNG, JPG ou WEBP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErroEdicao('A imagem deve ter no máximo 5 MB.')
+      return
+    }
+    setImagemFile(file)
+    setImagemPreview(URL.createObjectURL(file))
+    setErroEdicao('')
   }
 
   const handleSalvarEdicao = async (e) => {
@@ -140,34 +174,22 @@ export default function MeusEventosComunidade() {
       valorNum = n
     }
 
-    const payload = {
-      titulo: formEdicao.titulo.trim(),
-      descricao: formEdicao.descricao,
-      data_inicio: formEdicao.data_inicio,
-      data_fim: dataFim,
-      local_nome: formEdicao.local_nome,
-    }
-    if (valorNum !== null) payload.valor_ingresso = valorNum
+    const formData = new FormData()
+    formData.append('titulo', formEdicao.titulo.trim())
+    formData.append('descricao', formEdicao.descricao || '')
+    formData.append('data_inicio', formEdicao.data_inicio)
+    formData.append('data_fim', dataFim)
+    formData.append('local_nome', formEdicao.local_nome || '')
+    if (valorNum !== null) formData.append('valor_ingresso', String(valorNum))
+    if (imagemFile) formData.append('foto_capa', imagemFile)
 
     setSalvandoEdicao(true)
     setErroEdicao('')
     try {
-      await api.put(`/eventos/${eventoEditando}`, payload)
-      setEventos((prev) =>
-        prev.map((ev) =>
-          ev.id === eventoEditando
-            ? {
-                ...ev,
-                titulo: payload.titulo,
-                descricao: payload.descricao,
-                data_inicio: payload.data_inicio,
-                data_fim: payload.data_fim,
-                local_nome: payload.local_nome,
-                valor_ingresso: valorNum !== null ? valorNum : ev.valor_ingresso,
-              }
-            : ev,
-        ),
-      )
+      await api.put(`/eventos/${eventoEditando}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      await carregarEventos()
       fecharEdicao()
     } catch (err) {
       console.error(err)
@@ -621,6 +643,45 @@ export default function MeusEventosComunidade() {
               </div>
 
               <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']}>Imagem de capa</label>
+                <div
+                  className={styles['me-upload-area']}
+                  onClick={() => fileEdicaoRef.current?.click()}
+                  onDrop={(e) => { e.preventDefault(); handleImagemEdicao(e.dataTransfer.files[0]) }}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  {imagemPreview ? (
+                    <>
+                      <img src={imagemPreview} alt="Prévia da capa" className={styles['me-upload-preview']} />
+                      <span className={styles['me-upload-overlay']}>Clique para trocar a imagem</span>
+                    </>
+                  ) : (
+                    <div className={styles['me-upload-placeholder']}>
+                      <svg viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <span>Clique para enviar uma imagem</span>
+                      <small>PNG, JPG ou WEBP · Máx 5 MB</small>
+                    </div>
+                  )}
+                  <input
+                    ref={fileEdicaoRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleImagemEdicao(e.target.files[0])}
+                  />
+                </div>
+                {imagemFile && (
+                  <span className={styles['me-form-hint']}>
+                    Nova imagem selecionada: {imagemFile.name}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles['me-form-field']}>
                 <label className={styles['me-form-label']} htmlFor="edit-valor">Valor do ingresso (R$)</label>
                 <input
                   id="edit-valor"
@@ -686,7 +747,7 @@ export default function MeusEventosComunidade() {
               </div>
 
               <div className={styles['me-modal-actions']}>
-                <button type="button" className={styles['me-btn-ghost']} onClick={fecharEdicao} disabled={salvandoEdicao}>
+                <button type="button" className={styles['me-btn-cancelar']} onClick={fecharEdicao} disabled={salvandoEdicao}>
                   Cancelar
                 </button>
                 <button type="submit" className={styles['me-btn-solid']} disabled={salvandoEdicao}>
