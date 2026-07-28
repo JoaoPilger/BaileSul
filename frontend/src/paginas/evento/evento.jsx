@@ -8,6 +8,7 @@ import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
 import { useAuth } from '../../contexts/AuthContext'
+import EventoDashboard from './dashboard_evento'
 import styles from './evento.module.css';
 
 // Corrige o caminho dos ícones padrão do Leaflet, que quebram com bundlers
@@ -106,7 +107,7 @@ function getDescription(evento) {
 export default function EventoPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { token } = useAuth()
+  const { token, usuario } = useAuth()
   const [evento, setEvento] = useState(null)
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER)
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
@@ -236,6 +237,13 @@ export default function EventoPage() {
         <Footer />
       </>
     )
+  }
+
+  const isDonoComunidade =
+    usuario?.tipo === 'comunidade' && Number(evento.comunidade_id) === Number(usuario.id)
+
+  if (isDonoComunidade) {
+    return <EventoDashboard eventoId={id} />
   }
 
   const imageSrc = evento.image || DEFAULT_IMAGE

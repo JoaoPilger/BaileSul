@@ -1,12 +1,16 @@
 const router = require('express').Router();
 const {
-  listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato, convidarBanda
+  listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato, convidarBanda,
+  dashboardEvento,
 } = require('../controllers/evento.controller');
 const { autenticar, autorizar, autenticarOpcional } = require('../middlewares/auth.middleware');
 const { uploadCapaEvento, uploadErrorHandler } = require('../middlewares/upload');
 
 // RF06 – Calendário compartilhado (DEVE vir antes de /:id)
 router.get('/calendario', autenticar, autorizar('comunidade'), calendario);
+
+// Dashboard exclusivo da comunidade dona (DEVE vir antes de /:id)
+router.get('/:id/dashboard', autenticar, autorizar('comunidade'), dashboardEvento);
 
 // RF14, RF16 – Listagem pública com filtros
 router.get('/', listar);

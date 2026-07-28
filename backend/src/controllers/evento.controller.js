@@ -119,6 +119,7 @@ const buscarPorId = async (req, res) => {
               e.local_nome, e.local_endereco,
               e.latitude, e.longitude,
               e.valor_ingresso, e.foto_capa_url, e.status, e.tipo_evento,
+              e.capacidade_maxima,
               pc.usuario_id AS comunidade_id,
               pc.nome_entidade AS comunidade,
               pc.whatsapp AS comunidade_whatsapp,
@@ -133,7 +134,8 @@ const buscarPorId = async (req, res) => {
     }
 
     const evento = eventoRes.rows[0];
-    const souDono = req.usuario?.tipo === 'comunidade' && req.usuario.id === evento.comunidade_id;
+    const souDono = req.usuario?.tipo === 'comunidade'
+      && Number(req.usuario.id) === Number(evento.comunidade_id);
 
     if (!souDono) {
       const precisaConfirmacao = evento.tipo_evento?.startsWith('musical_');
@@ -201,7 +203,7 @@ const criar = async (req, res) => {
   const comunidade_id = req.usuario.id;
   const {
     titulo, descricao, data_inicio, data_fim,
-    local_nome, local_endereco, valor_ingresso, tipo_evento,
+    local_nome, local_endereco, valor_ingresso, tipo_evento, capacidade_maxima,
   } = req.body;
 
   if (!titulo || !data_inicio || !data_fim) {
@@ -236,9 +238,9 @@ const criar = async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO eventos
           (comunidade_id, titulo, descricao, data_inicio, data_fim,
-           local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'))
-        RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento`,
+           local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento, capacidade_maxima)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'),$13)
+        RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento, capacidade_maxima`,
       [
         comunidade_id,
         titulo.trim(),
@@ -252,6 +254,7 @@ const criar = async (req, res) => {
         latitude,
         longitude,
         tipo_evento || null,
+        req.body.capacidade_maxima != null ? parseInt(req.body.capacidade_maxima, 10) : null,
       ]
     );
 
@@ -283,7 +286,7 @@ const atualizar = async (req, res) => {
   const comunidade_id = req.usuario.id;
   const {
     titulo, descricao, data_inicio, data_fim,
-    local_nome, local_endereco, valor_ingresso, status, tipo_evento,
+    local_nome, local_endereco, valor_ingresso, status, tipo_evento, capacidade_maxima,
   } = req.body;
 
   if (data_inicio && data_fim && new Date(data_fim) < new Date(data_inicio)) {
@@ -353,6 +356,10 @@ const atualizar = async (req, res) => {
     campo('status', status);
     campo('foto_capa_url', foto_capa_url);
     campo('tipo_evento', tipo_evento);
+    if (capacidade_maxima !== undefined && capacidade_maxima !== '') {
+      sets.push(`capacidade_maxima = $${i++}`);
+      params.push(capacidade_maxima != null ? parseInt(capacidade_maxima, 10) : null);
+    }
 
     if (latitude !== undefined) {
       sets.push(`latitude = $${i++}`);
@@ -693,6 +700,160 @@ const calendario = async (req, res) => {
   }
 };
 
+/**
+ * GET /api/eventos/:id/dashboard
+ * Dashboard exclusivo da comunidade dona do evento.
+ * Retorna métricas de reservas, vendedores, bandas, dias e histórico.
+ */
+const dashboardEvento = async (req, res) => {
+  const { id } = req.params;
+  const comunidade_id = req.usuario.id;
+
+  try {
+    // Guard: verifica que a comunidade autenticada é dona do evento
+    const donoRes = await pool.query(
+      `SELECT e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim,
+              e.local_nome, e.local_endereco, e.valor_ingresso,
+              e.foto_capa_url, e.status, e.tipo_evento,
+              e.capacidade_maxima, e.latitude, e.longitude,
+              pc.nome_entidade AS comunidade, pc.cidade, pc.estado
+       FROM eventos e
+       JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
+       WHERE e.id = $1 AND e.comunidade_id = $2`,
+      [id, comunidade_id]
+    );
+
+    if (donoRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
+    }
+
+    const evento = donoRes.rows[0];
+
+    // ── Métricas de reservas ──────────────────────────────────
+    const reservasMetricsRes = await pool.query(
+      `SELECT
+         COUNT(*)::int                                                         AS total_reservas,
+         COUNT(*) FILTER (WHERE status_pagamento = 'pendente')::int           AS reservas_pendentes,
+         COUNT(*) FILTER (WHERE status_pagamento = 'confirmado')::int         AS reservas_confirmadas,
+         COUNT(*) FILTER (WHERE status_pagamento = 'cancelado')::int          AS reservas_canceladas,
+         COUNT(*) FILTER (WHERE status_pagamento = 'rejeitado')::int          AS reservas_rejeitadas,
+         COALESCE(SUM(quantidade) FILTER
+           (WHERE status_pagamento IN ('pendente','confirmado')), 0)::int     AS total_ingressos_reservados,
+         COALESCE(SUM(quantidade) FILTER
+           (WHERE status_pagamento = 'confirmado'), 0)::int                   AS total_ingressos_confirmados,
+         COALESCE(SUM(quantidade * COALESCE($2::numeric, 0)) FILTER
+           (WHERE status_pagamento = 'confirmado'), 0)::float                 AS receita_estimada
+       FROM reservas
+       WHERE evento_id = $1`,
+      [id, evento.valor_ingresso]
+    );
+
+    const metricas = reservasMetricsRes.rows[0];
+
+    // ── Lista de reservas (últimas 50) ────────────────────────
+    const reservasRes = await pool.query(
+      `SELECT r.id, r.quantidade, r.status_pagamento, r.forma_pagamento,
+              r.nome_retirada, r.criado_em,
+              pp.nome AS comprador_nome, u.email AS comprador_email,
+              v.nome AS vendedor_nome, v.whatsapp AS vendedor_whatsapp
+       FROM reservas r
+       JOIN usuarios u ON u.id = r.comprador_id
+       LEFT JOIN perfis_pessoais pp ON pp.usuario_id = r.comprador_id
+       LEFT JOIN vendedores v ON v.id = r.vendedor_id
+       WHERE r.evento_id = $1
+       ORDER BY r.criado_em DESC
+       LIMIT 50`,
+      [id]
+    );
+
+    // ── Vendedores ativos da comunidade ───────────────────────
+    const vendedoresRes = await pool.query(
+      `SELECT v.id, v.nome, v.whatsapp, v.ativo, v.criado_em,
+              COALESCE(SUM(r.quantidade) FILTER
+                (WHERE r.evento_id = $1 AND r.status_pagamento = 'confirmado'), 0)::int
+                AS ingressos_vendidos_evento,
+              COALESCE(SUM(r.quantidade * COALESCE(e2.valor_ingresso, 0)) FILTER
+                (WHERE r.evento_id = $1 AND r.status_pagamento = 'confirmado'), 0)::float
+                AS receita_evento
+       FROM vendedores v
+       LEFT JOIN reservas r ON r.vendedor_id = v.id
+       LEFT JOIN eventos e2 ON e2.id = r.evento_id
+       WHERE v.comunidade_id = $2 AND v.ativo = true
+       GROUP BY v.id
+       ORDER BY v.nome ASC`,
+      [id, comunidade_id]
+    );
+
+    // ── Bandas / contratos ────────────────────────────────────
+    const bandasRes = await pool.query(
+      `SELECT c.id AS contrato_id, c.status_aceite, c.data_assinatura,
+              pb.usuario_id AS banda_id, pb.nome_artistico, pb.estilo_musical, pb.whatsapp
+       FROM contratos c
+       JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
+       WHERE c.evento_id = $1
+       ORDER BY c.criado_em ASC`,
+      [id]
+    );
+
+    // ── Dias do evento ────────────────────────────────────────
+    const diasRes = await pool.query(
+      `SELECT id, data, data_fim_dia, hora_inicio, hora_fim, observacao
+       FROM evento_dias
+       WHERE evento_id = $1
+       ORDER BY data ASC, hora_inicio ASC`,
+      [id]
+    );
+
+    // ── Histórico de logs de pagamento ────────────────────────
+    const historicoRes = await pool.query(
+      `SELECT lp.id, lp.reserva_id, lp.status_anterior, lp.status_novo, lp.criado_em,
+              pp.nome AS operador_nome, u.email AS operador_email
+       FROM logs_status_pagamentos lp
+       JOIN reservas r ON r.id = lp.reserva_id
+       LEFT JOIN usuarios u ON u.id = lp.usuario_id
+       LEFT JOIN perfis_pessoais pp ON pp.usuario_id = lp.usuario_id
+       WHERE r.evento_id = $1
+       ORDER BY lp.criado_em DESC
+       LIMIT 100`,
+      [id]
+    );
+
+    // ── Crescimento de reservas por dia ───────────────────────
+    const crescimentoRes = await pool.query(
+      `SELECT DATE(r.criado_em AT TIME ZONE 'America/Sao_Paulo') AS data,
+              COUNT(*)::int AS novas_reservas,
+              SUM(quantidade)::int AS novos_ingressos
+       FROM reservas r
+       WHERE r.evento_id = $1
+       GROUP BY DATE(r.criado_em AT TIME ZONE 'America/Sao_Paulo')
+       ORDER BY 1 ASC`,
+      [id]
+    );
+
+    return res.json({
+      evento,
+      metricas: {
+        ...metricas,
+        capacidade_maxima: evento.capacidade_maxima,
+        percentual_ocupacao:
+          evento.capacidade_maxima && metricas.total_ingressos_confirmados
+            ? Math.round((metricas.total_ingressos_confirmados / evento.capacidade_maxima) * 100)
+            : null,
+      },
+      reservas: reservasRes.rows,
+      vendedores: vendedoresRes.rows,
+      bandas: bandasRes.rows,
+      dias: diasRes.rows,
+      historico_pagamentos: historicoRes.rows,
+      crescimento: crescimentoRes.rows,
+    });
+
+  } catch (err) {
+    console.error('Erro ao buscar dashboard do evento:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
 module.exports = {
   listar,
   buscarPorId,
@@ -705,5 +866,6 @@ module.exports = {
   removerMidia,
   convidarBanda,
   responderContrato,
-  calendario
-};
+  calendario,
+  dashboardEvento,
+};

@@ -68,6 +68,7 @@ function mapDatabaseEvent(row) {
 
   return {
     id: row.id,
+    comunidade_id: row.comunidade_id,   // necessário para a lógica condicional de dashboard
     title: row.titulo,
     description: row.descricao || '',
     band: band || row.comunidade || 'Organização',
@@ -87,6 +88,7 @@ function mapDatabaseEvent(row) {
     vendors: row.vendors || [],
     latitude: row.latitude,
     longitude: row.longitude,
+    capacidade_maxima: row.capacidade_maxima ?? null,
   }
 }
 
@@ -115,3 +117,20 @@ export async function loadEventById(id) {
 
   return null
 }
+
+/**
+ * Busca dados completos do dashboard de um evento.
+ * Requer autenticação de comunidade e ser a dona do evento.
+ * @param {string|number} id - ID do evento
+ * @returns {Promise<Object|null>}
+ */
+export async function fetchEventoDashboard(id) {
+  if (!id) return null
+  try {
+    const res = await api.get(`/eventos/${id}/dashboard`)
+    return res.data
+  } catch (err) {
+    console.error(`Erro ao buscar dashboard do evento ${id}:`, err)
+    return null
+  }
+}

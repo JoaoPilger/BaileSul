@@ -21,7 +21,7 @@
 CREATE TYPE tipo_usuario    AS ENUM ('pessoal', 'banda', 'comunidade');
 CREATE TYPE status_evento   AS ENUM ('agendado', 'cancelado', 'finalizado');
 CREATE TYPE status_contrato AS ENUM ('pendente', 'aceito', 'recusado');
-CREATE TYPE status_pagamento AS ENUM ('pendente', 'confirmado', 'cancelado');
+CREATE TYPE status_pagamento AS ENUM ('pendente', 'confirmado', 'cancelado', 'rejeitado');
 CREATE TYPE tipo_midia      AS ENUM ('imagem', 'video');
 CREATE TYPE dono_midia      AS ENUM ('banda', 'comunidade');
 
@@ -196,12 +196,14 @@ CREATE TABLE eventos (
   latitude        DECIMAL(10, 7),
   longitude       DECIMAL(10, 7),
   valor_ingresso  DECIMAL(10, 2),
-  foto_capa_url   VARCHAR(500),
-  status          status_evento NOT NULL DEFAULT 'agendado',
+  foto_capa_url     VARCHAR(500),
+  capacidade_maxima INT,
+  status            status_evento NOT NULL DEFAULT 'agendado',
   criado_em       TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_datas         CHECK (data_fim >= data_inicio),
   CONSTRAINT chk_ingresso      CHECK (valor_ingresso IS NULL OR valor_ingresso >= 0),
+  CONSTRAINT chk_capacidade_maxima CHECK (capacidade_maxima IS NULL OR capacidade_maxima >= 1),
   CONSTRAINT chk_foto_capa_url CHECK (
     foto_capa_url IS NULL
     OR foto_capa_url ~ '^https?://'
