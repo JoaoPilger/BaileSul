@@ -39,8 +39,8 @@ class _PainelBandaPageState extends State<PainelBandaPage> {
     super.dispose();
   }
 
-  Future<void> _carregarAgenda() async {
-    setState(() => _carregando = true);
+  Future<void> _carregarAgenda({bool mostrarLoading = true}) async {
+    if (mostrarLoading) setState(() => _carregando = true);
 
     try {
       final Uri url = Uri.parse('${ApiConfig.baseUrl}/bandas/me/agenda');
@@ -90,15 +90,22 @@ class _PainelBandaPageState extends State<PainelBandaPage> {
           )
           .timeout(const Duration(seconds: 15));
 
-      if (resp.statusCode >= 200 && resp.statusCode < 300 && mounted) {
-        setState(() {
-          _agenda = _agenda.map((a) {
-            if (a['contrato_id'] == contratoId) {
-              return {...a, 'status_aceite': aceitar ? 'aceito' : 'recusado'};
-            }
-            return a;
-          }).toList();
-        });
+      if (!mounted) return;
+
+      if (resp.statusCode >= 200 && resp.statusCode < 300) {
+        // Recarrega a agenda real do servidor em vez de só editar o estado
+        // local, garantindo que a UI nunca fique dessincronizada do banco.
+        await _carregarAgenda(mostrarLoading: false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível processar essa resposta. Tente novamente.')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Não foi possível conectar ao servidor. Tente novamente.')),
+        );
       }
     } finally {
       if (mounted) setState(() => _processandoContratoId = null);

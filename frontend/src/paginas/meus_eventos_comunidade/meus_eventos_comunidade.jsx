@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -43,6 +43,13 @@ export default function MeusEventosComunidade() {
   const [ordenarPor, setOrdenarPor] = useState('recentes')
   const [viewMode, setViewMode] = useState('lista')
   const [pagina, setPagina] = useState(1)
+  const [eventoEditando, setEventoEditando] = useState(null)
+  const [formEdicao, setFormEdicao] = useState(null)
+  const [salvandoEdicao, setSalvandoEdicao] = useState(false)
+  const [erroEdicao, setErroEdicao] = useState('')
+  const [imagemFile, setImagemFile] = useState(null)
+  const [imagemPreview, setImagemPreview] = useState('')
+  const fileEdicaoRef = useRef(null)
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -54,18 +61,20 @@ export default function MeusEventosComunidade() {
     }
   }, [isAuthenticated, usuario, navigate])
 
+  const carregarEventos = async () => {
+    try {
+      const res = await api.get('/comunidades/me/eventos')
+      setEventos(res.data.eventos || [])
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
-      api.get('/comunidades/me/eventos')
-        .then((res) => {
-          setEventos(res.data.eventos || [])
-          setCarregando(false)
-        })
-        .catch((err) => {
-          console.error(err)
-          setCarregando(false)
-        })
+      carregarEventos().finally(() => setCarregando(false))
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, usuario])
 
   const handleCancelar = async (id) => {
@@ -74,6 +83,119 @@ export default function MeusEventosComunidade() {
       setEventos((prev) => prev.map(e => e.id === id ? { ...e, status: 'cancelado' } : e))
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const soData = (valor) => (valor ? String(valor).split('T')[0] : '')
+
+  const normalizarMedia = (url) => {
+    if (url && url.includes('/media/')) {
+      return url.substring(url.indexOf('/media/'))
+    }
+    return url || ''
+  }
+
+  const abrirEdicao = (id) => {
+    const ev = eventos.find((e) => e.id === id)
+    if (!ev) return
+    setFormEdicao({
+      titulo: ev.titulo || '',
+      descricao: ev.descricao || '',
+      data_inicio: soData(ev.data_inicio),
+      data_fim: soData(ev.data_fim),
+      local_nome: ev.local_nome || '',
+      valor_ingresso:
+        ev.valor_ingresso != null && ev.valor_ingresso !== ''
+          ? String(ev.valor_ingresso).replace('.', ',')
+          : '',
+    })
+    setImagemFile(null)
+    setImagemPreview(normalizarMedia(ev.foto_capa_url))
+    if (fileEdicaoRef.current) fileEdicaoRef.current.value = ''
+    setErroEdicao('')
+    setEventoEditando(id)
+  }
+
+  const fecharEdicao = () => {
+    setEventoEditando(null)
+    setFormEdicao(null)
+    setErroEdicao('')
+    setImagemFile(null)
+    setImagemPreview('')
+    if (fileEdicaoRef.current) fileEdicaoRef.current.value = ''
+  }
+
+  const handleCampoEdicao = (campo, valor) => {
+    setFormEdicao((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  const handleImagemEdicao = (file) => {
+    if (!file) return
+    const tiposValidos = ['image/png', 'image/jpeg', 'image/webp']
+    if (!tiposValidos.includes(file.type)) {
+      setErroEdicao('Formato de imagem inválido. Use PNG, JPG ou WEBP.')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErroEdicao('A imagem deve ter no máximo 5 MB.')
+      return
+    }
+    setImagemFile(file)
+    setImagemPreview(URL.createObjectURL(file))
+    setErroEdicao('')
+  }
+
+  const handleSalvarEdicao = async (e) => {
+    e.preventDefault()
+    if (!formEdicao || !eventoEditando) return
+
+    if (!formEdicao.titulo.trim()) {
+      setErroEdicao('O título é obrigatório.')
+      return
+    }
+    if (!formEdicao.data_inicio) {
+      setErroEdicao('A data de início é obrigatória.')
+      return
+    }
+    const dataFim = formEdicao.data_fim || formEdicao.data_inicio
+    if (new Date(dataFim) < new Date(formEdicao.data_inicio)) {
+      setErroEdicao('A data de término não pode ser anterior à data de início.')
+      return
+    }
+
+    let valorNum = null
+    const valorTxt = String(formEdicao.valor_ingresso).replace(',', '.').trim()
+    if (valorTxt !== '') {
+      const n = parseFloat(valorTxt)
+      if (Number.isNaN(n) || n < 0) {
+        setErroEdicao('Informe um valor de ingresso válido.')
+        return
+      }
+      valorNum = n
+    }
+
+    const formData = new FormData()
+    formData.append('titulo', formEdicao.titulo.trim())
+    formData.append('descricao', formEdicao.descricao || '')
+    formData.append('data_inicio', formEdicao.data_inicio)
+    formData.append('data_fim', dataFim)
+    formData.append('local_nome', formEdicao.local_nome || '')
+    if (valorNum !== null) formData.append('valor_ingresso', String(valorNum))
+    if (imagemFile) formData.append('foto_capa', imagemFile)
+
+    setSalvandoEdicao(true)
+    setErroEdicao('')
+    try {
+      await api.put(`/eventos/${eventoEditando}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      await carregarEventos()
+      fecharEdicao()
+    } catch (err) {
+      console.error(err)
+      setErroEdicao(err.response?.data?.error || 'Não foi possível salvar. Tente novamente.')
+    } finally {
+      setSalvandoEdicao(false)
     }
   }
 
@@ -106,6 +228,11 @@ export default function MeusEventosComunidade() {
       image = image.substring(idx)
     }
 
+    let valorFormatado = 'Grátis'
+    if (ev.valor_ingresso != null && ev.valor_ingresso !== '' && Number(ev.valor_ingresso) > 0) {
+      valorFormatado = `R$ ${Number(ev.valor_ingresso).toFixed(2).replace('.', ',')}`
+    }
+
     return {
       id: ev.id,
       titulo: ev.titulo,
@@ -113,6 +240,7 @@ export default function MeusEventosComunidade() {
       data: formattedDate,
       hora: '20:00',
       local: city,
+      valor: valorFormatado,
       confirmados: Math.floor(Math.random() * 200) + 50,
       status: ev.status,
       diasFaltando: diasFaltando > 0 ? diasFaltando : 0,
@@ -383,6 +511,13 @@ export default function MeusEventosComunidade() {
                       </svg>
                       {ev.local}
                     </span>
+                    <span className={styles['me-event-meta-item']}>
+                      <svg viewBox="0 0 24 24">
+                        <path d="M4 6a2 2 0 0 0-2 2v3a2 2 0 0 1 0 4v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a2 2 0 0 1 0-4V8a2 2 0 0 0-2-2z" />
+                        <line x1="12" y1="6" x2="12" y2="20" />
+                      </svg>
+                      {ev.valor}
+                    </span>
                   </div>
                   <div className={styles['me-event-confirmados']}>
                     <svg viewBox="0 0 24 24">
@@ -407,13 +542,21 @@ export default function MeusEventosComunidade() {
                 <div className={styles['me-event-actions']}>
                   <Link to={`/eventos/${ev.id}`} className={styles['me-btn-ghost']}>Ver detalhes</Link>
                   {ev.status === 'agendado' && (
-                    <button 
-                      onClick={() => handleCancelar(ev.id)} 
-                      className={cn(styles['me-btn-solid'], styles['me-badge--cancelado'])}
-                      style={{ background: 'var(--danger)' }}
-                    >
-                      Cancelar Evento
-                    </button>
+                    <>
+                      <button
+                        onClick={() => abrirEdicao(ev.id)}
+                        className={styles['me-btn-solid']}
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleCancelar(ev.id)}
+                        className={cn(styles['me-btn-solid'], styles['me-badge--cancelado'])}
+                        style={{ background: 'var(--danger)' }}
+                      >
+                        Cancelar Evento
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -457,6 +600,164 @@ export default function MeusEventosComunidade() {
           </div>
         )}
       </main>
+
+      {eventoEditando && formEdicao && (
+        <div className={styles['me-modal-overlay']} onClick={fecharEdicao}>
+          <div
+            className={styles['me-modal']}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="me-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles['me-modal-header']}>
+              <h2 id="me-modal-title" className={styles['me-modal-title']}>Editar evento</h2>
+              <button
+                type="button"
+                className={styles['me-modal-close']}
+                onClick={fecharEdicao}
+                aria-label="Fechar"
+              >
+                <svg viewBox="0 0 24 24">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            <form className={styles['me-modal-body']} onSubmit={handleSalvarEdicao}>
+              {erroEdicao && (
+                <div className={styles['me-modal-alert']} role="alert">{erroEdicao}</div>
+              )}
+
+              <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']} htmlFor="edit-titulo">Título do evento</label>
+                <input
+                  id="edit-titulo"
+                  type="text"
+                  className={styles['me-form-input']}
+                  value={formEdicao.titulo}
+                  onChange={(e) => handleCampoEdicao('titulo', e.target.value)}
+                  maxLength={120}
+                />
+              </div>
+
+              <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']}>Imagem de capa</label>
+                <div
+                  className={styles['me-upload-area']}
+                  onClick={() => fileEdicaoRef.current?.click()}
+                  onDrop={(e) => { e.preventDefault(); handleImagemEdicao(e.dataTransfer.files[0]) }}
+                  onDragOver={(e) => e.preventDefault()}
+                >
+                  {imagemPreview ? (
+                    <>
+                      <img src={imagemPreview} alt="Prévia da capa" className={styles['me-upload-preview']} />
+                      <span className={styles['me-upload-overlay']}>Clique para trocar a imagem</span>
+                    </>
+                  ) : (
+                    <div className={styles['me-upload-placeholder']}>
+                      <svg viewBox="0 0 24 24">
+                        <rect x="3" y="3" width="18" height="18" rx="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                      </svg>
+                      <span>Clique para enviar uma imagem</span>
+                      <small>PNG, JPG ou WEBP · Máx 5 MB</small>
+                    </div>
+                  )}
+                  <input
+                    ref={fileEdicaoRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleImagemEdicao(e.target.files[0])}
+                  />
+                </div>
+                {imagemFile && (
+                  <span className={styles['me-form-hint']}>
+                    Nova imagem selecionada: {imagemFile.name}
+                  </span>
+                )}
+              </div>
+
+              <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']} htmlFor="edit-valor">Valor do ingresso (R$)</label>
+                <input
+                  id="edit-valor"
+                  type="text"
+                  inputMode="decimal"
+                  className={styles['me-form-input']}
+                  placeholder="Ex: 20,00 — deixe em branco para não alterar"
+                  value={formEdicao.valor_ingresso}
+                  onChange={(e) => handleCampoEdicao('valor_ingresso', e.target.value.replace(/[^\d.,]/g, ''))}
+                />
+                <span className={styles['me-form-hint']}>
+                  Deixe 0 para entrada gratuita.
+                </span>
+              </div>
+
+              <div className={styles['me-form-row']}>
+                <div className={styles['me-form-field']}>
+                  <label className={styles['me-form-label']} htmlFor="edit-inicio">Data de início</label>
+                  <input
+                    id="edit-inicio"
+                    type="date"
+                    className={styles['me-form-input']}
+                    value={formEdicao.data_inicio}
+                    onChange={(e) => handleCampoEdicao('data_inicio', e.target.value)}
+                  />
+                </div>
+                <div className={styles['me-form-field']}>
+                  <label className={styles['me-form-label']} htmlFor="edit-fim">Data de término</label>
+                  <input
+                    id="edit-fim"
+                    type="date"
+                    className={styles['me-form-input']}
+                    value={formEdicao.data_fim}
+                    min={formEdicao.data_inicio || undefined}
+                    onChange={(e) => handleCampoEdicao('data_fim', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']} htmlFor="edit-local">Local</label>
+                <input
+                  id="edit-local"
+                  type="text"
+                  className={styles['me-form-input']}
+                  placeholder="Ex: Concórdia, SC"
+                  value={formEdicao.local_nome}
+                  onChange={(e) => handleCampoEdicao('local_nome', e.target.value)}
+                  maxLength={120}
+                />
+              </div>
+
+              <div className={styles['me-form-field']}>
+                <label className={styles['me-form-label']} htmlFor="edit-descricao">Descrição</label>
+                <textarea
+                  id="edit-descricao"
+                  className={cn(styles['me-form-input'], styles['me-form-textarea'])}
+                  value={formEdicao.descricao}
+                  onChange={(e) => handleCampoEdicao('descricao', e.target.value)}
+                  maxLength={1000}
+                  rows={4}
+                />
+              </div>
+
+              <div className={styles['me-modal-actions']}>
+                <button type="button" className={styles['me-btn-cancelar']} onClick={fecharEdicao} disabled={salvandoEdicao}>
+                  Cancelar
+                </button>
+                <button type="submit" className={styles['me-btn-solid']} disabled={salvandoEdicao}>
+                  {salvandoEdicao ? 'Salvando...' : 'Salvar alterações'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

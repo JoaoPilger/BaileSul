@@ -1,9 +1,14 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
+import 'pesquisa_padrao_eventos.dart' show EventoApi;
 
 /// Cores compartilhadas do app BaileSul.
 class BaileSulColors {
@@ -98,46 +103,63 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  static const List<EventItem> _events = [
-    EventItem(
-      title: 'Eletrônica Night',
-      genre: 'Eletrônica',
-      location: 'Concórdia, SC',
-      dateTime: '14 Jun · 22h',
-      price: 'R\$ 50,00',
-      imageUrl:
-          'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80',
-    ),
-    EventItem(
-      title: 'Funk Party',
-      genre: 'Funk',
-      location: 'Seara, SC',
-      dateTime: '21 Jun · 21h',
-      price: 'R\$ 30,00',
-      imageUrl:
-          'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=600&q=80',
-    ),
-    EventItem(
-      title: 'Pagode ao Vivo',
-      genre: 'Pagode',
-      location: 'Peritiba, SC',
-      dateTime: '28 Jun · 20h',
-      price: 'Grátis',
-      imageUrl:
-          'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=600&q=80',
-    ),
+  // Mesmos estilos exibidos na home do site (frontend/src/paginas/home/home.jsx).
+  static const List<_StyleItem> _styles = [
+    _StyleItem('Gaúcha', 'Chamamé e ginga', Icons.nightlife_rounded, 1),
+    _StyleItem('Vanera', 'Ritmo do sul', Icons.graphic_eq_rounded, 0),
   ];
 
-  static const List<_StyleItem> _styles = [
-    _StyleItem('Eletrônica', Icons.headphones_rounded, 0),
-    _StyleItem('Funk', Icons.graphic_eq_rounded, 1),
-    _StyleItem('Pagode', Icons.album_rounded, 0),
-    _StyleItem('Rock', Icons.electric_bolt_rounded, 1),
-    _StyleItem('Sertanejo', Icons.agriculture_rounded, 0),
-    _StyleItem('Gaúcha', Icons.nightlife_rounded, 1),
-    _StyleItem('Forró', Icons.festival_rounded, 0),
-    _StyleItem('Pop', Icons.mic_rounded, 1),
-  ];
+  List<EventoApi> _eventosApi = <EventoApi>[];
+  bool _carregandoEventos = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarEventos();
+  }
+
+  Future<void> _carregarEventos() async {
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/eventos?limite=6');
+      final http.Response response =
+          await http.get(url).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        final List<dynamic> dados = _extrairListaEventos(decoded);
+        final List<EventoApi> eventos = dados
+            .whereType<Map>()
+            .map((Map<dynamic, dynamic> item) =>
+                EventoApi.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+
+        if (!mounted) return;
+        setState(() {
+          _eventosApi = eventos.take(6).toList();
+          _carregandoEventos = false;
+        });
+        return;
+      }
+    } catch (_) {
+      // segue para o estado vazio, igual ao comportamento do site
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _eventosApi = <EventoApi>[];
+      _carregandoEventos = false;
+    });
+  }
+
+  List<dynamic> _extrairListaEventos(dynamic decoded) {
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      final dynamic eventos =
+          decoded['dados'] ?? decoded['eventos'] ?? decoded['data'] ?? decoded['rows'];
+      if (eventos is List) return eventos;
+    }
+    return <dynamic>[];
+  }
 
   void _showMenu() {
     MobileAppMenu.show(
@@ -170,7 +192,10 @@ class _HomePageState extends State<HomePage> {
                   slivers: [
                     const SliverToBoxAdapter(child: _HeroBlock()),
                     SliverToBoxAdapter(
-                      child: _UpcomingEventsSection(events: _events),
+                      child: _UpcomingEventsSection(
+                        eventos: _eventosApi,
+                        carregando: _carregandoEventos,
+                      ),
                     ),
                     SliverToBoxAdapter(
                       child: _StylesSection(styles: _styles),
@@ -262,14 +287,8 @@ class _HeroBlock extends StatelessWidget {
                       label: 'Explorar Eventos',
                       icon: Icons.search_rounded,
                       filled: true,
-                      onPressed: () {},
-                    ),
-                    const SizedBox(height: 12),
-                    _HeroButton(
-                      label: 'Ver no Mapa',
-                      icon: Icons.location_on_rounded,
-                      filled: false,
-                      onPressed: () {},
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/pesquisa-eventos'),
                     ),
                     const SizedBox(height: 32),
                     Container(
@@ -287,7 +306,7 @@ class _HeroBlock extends StatelessWidget {
                     const SizedBox(height: 24),
                     const Row(
                       children: [
-                        Expanded(child: _HeroStat(value: '50+', label: 'FESTAS')),
+                        Expanded(child: _HeroStat(value: '50+', label: 'EVENTOS')),
                         Expanded(child: _HeroStat(value: '30+', label: 'BANDAS')),
                         Expanded(child: _HeroStat(value: '13', label: 'CIDADES')),
                       ],
@@ -449,9 +468,24 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _UpcomingEventsSection extends StatelessWidget {
-  const _UpcomingEventsSection({required this.events});
+  const _UpcomingEventsSection({required this.eventos, required this.carregando});
 
-  final List<EventItem> events;
+  final List<EventoApi> eventos;
+  final bool carregando;
+
+  static const String _imagemPadrao =
+      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80';
+
+  EventItem _paraEventItem(EventoApi evento) {
+    return EventItem(
+      title: evento.titulo,
+      genre: evento.comunidadeNome,
+      location: evento.localComCidadeEstado,
+      dateTime: evento.dataFormatada,
+      price: evento.valorFormatado,
+      imageUrl: evento.fotoCapaUrl ?? _imagemPadrao,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -469,16 +503,66 @@ class _UpcomingEventsSection extends StatelessWidget {
             subtitle: 'Os melhores bailes chegando na região',
           ),
           const SizedBox(height: 24),
-          ...events.map(
-            (event) => Padding(
-              padding: const EdgeInsets.only(bottom: 18),
-              child: _EventCard(event: event),
+          if (carregando)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 40),
+              child: Center(
+                child: CircularProgressIndicator(color: BaileSulColors.accent),
+              ),
+            )
+          else if (eventos.isEmpty)
+            const _EventosVazio()
+          else
+            ...eventos.map(
+              (evento) => Padding(
+                padding: const EdgeInsets.only(bottom: 18),
+                child: _EventCard(event: _paraEventItem(evento)),
+              ),
             ),
-          ),
+          const SizedBox(height: 4),
           _PrimaryOutlineButton(
             label: 'Ver todos os eventos',
             icon: Icons.keyboard_arrow_down_rounded,
             onPressed: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EventosVazio extends StatelessWidget {
+  const _EventosVazio();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 36),
+      margin: const EdgeInsets.only(bottom: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BaileSulColors.cardBorder),
+      ),
+      child: Column(
+        children: [
+          Icon(Icons.calendar_month_rounded, size: 36, color: BaileSulColors.mutedText),
+          const SizedBox(height: 12),
+          const Text(
+            'Nenhum evento encontrado',
+            style: TextStyle(
+              color: BaileSulColors.headerText,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Seja o primeiro a criar um evento!',
+            style: TextStyle(
+              color: BaileSulColors.mutedText.withValues(alpha: 0.8),
+              fontSize: 13,
+            ),
           ),
         ],
       ),
@@ -764,7 +848,7 @@ class _StylesSection extends StatelessWidget {
               crossAxisCount: 2,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
-              childAspectRatio: 1.2,
+              childAspectRatio: 0.95,
             ),
             itemCount: styles.length,
             itemBuilder: (context, index) => _StyleTile(style: styles[index]),
@@ -802,7 +886,7 @@ class _StyleTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           borderRadius: BorderRadius.circular(14),
-          onTap: () {},
+          onTap: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
           splashColor: BaileSulColors.accent.withValues(alpha: 0.12),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
@@ -835,6 +919,16 @@ class _StyleTile extends StatelessWidget {
                     letterSpacing: -0.2,
                   ),
                 ),
+                const SizedBox(height: 2),
+                Text(
+                  style.desc,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: BaileSulColors.mutedText.withValues(alpha: 0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
           ),
@@ -863,9 +957,10 @@ class EventItem {
 }
 
 class _StyleItem {
-  const _StyleItem(this.label, this.icon, this.variant);
+  const _StyleItem(this.label, this.desc, this.icon, this.variant);
 
   final String label;
+  final String desc;
   final IconData icon;
   final int variant;
 }

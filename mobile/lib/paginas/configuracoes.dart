@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
+import '../widgets/dialogo_alterar_senha.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
+
+const String _acaoAlterarSenha = 'alterar-senha';
 
 class ConfiguracoesPage extends StatelessWidget {
   const ConfiguracoesPage({super.key});
@@ -41,6 +44,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.lock_outline,
             titulo: 'Alterar senha',
             subtitulo: 'Atualize sua senha de acesso',
+            acao: _acaoAlterarSenha,
           ),
           _ConfiguracaoItem(
             icon: Icons.notifications_outlined,
@@ -60,6 +64,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.lock_outline,
             titulo: 'Alterar senha',
             subtitulo: 'Atualize sua senha de acesso',
+            acao: _acaoAlterarSenha,
           ),
         ];
       case TipoConta.comunidade:
@@ -79,6 +84,7 @@ class ConfiguracoesPage extends StatelessWidget {
             icon: Icons.lock_outline,
             titulo: 'Alterar senha',
             subtitulo: 'Atualize sua senha de acesso',
+            acao: _acaoAlterarSenha,
           ),
         ];
     }
@@ -291,12 +297,14 @@ class _ConfiguracaoItem {
     required this.titulo,
     required this.subtitulo,
     this.rota,
+    this.acao,
   });
 
   final IconData icon;
   final String titulo;
   final String subtitulo;
   final String? rota;
+  final String? acao;
 }
 
 class _ConfiguracaoTile extends StatelessWidget {
@@ -312,7 +320,9 @@ class _ConfiguracaoTile extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
-          if (item.rota != null) {
+          if (item.acao == _acaoAlterarSenha) {
+            mostrarDialogoAlterarSenha(context);
+          } else if (item.rota != null) {
             Navigator.pushNamed(context, item.rota!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(

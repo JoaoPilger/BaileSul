@@ -82,7 +82,8 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   List<dynamic> _extrairListaEventos(dynamic decoded) {
     if (decoded is List) return decoded;
     if (decoded is Map) {
-      final dynamic eventos = decoded['eventos'] ?? decoded['data'] ?? decoded['rows'];
+      final dynamic eventos =
+          decoded['dados'] ?? decoded['eventos'] ?? decoded['data'] ?? decoded['rows'];
       if (eventos is List) return eventos;
     }
     return <dynamic>[];

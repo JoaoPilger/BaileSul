@@ -1,10 +1,16 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
+import 'perfil_comunidade.dart';
 
+/// Rota: `/pesquisa-comunidades`
 class PesquisaPadraoComunidade extends StatefulWidget {
   const PesquisaPadraoComunidade({super.key});
 
@@ -15,36 +21,15 @@ class PesquisaPadraoComunidade extends StatefulWidget {
 class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
   final TextEditingController _searchController = TextEditingController();
 
-  final List<Map<String, dynamic>> _allCommunities = [
-    {
-      'nome': 'CTG Porteira Aberta',
-      'cidade': 'Concórdia, SC',
-      'descricao': 'Tradicionalismo, dança gaúcha e culinária típica.',
-      'foto': 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=200&q=80',
-      'membros': '1500',
-    },
-    {
-      'nome': 'Clube 25 de Julho',
-      'cidade': 'Porto Alegre, RS',
-      'descricao': 'Associação cultural com foco em bailes e festas de casais.',
-      'foto': 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?auto=format&fit=crop&w=200&q=80',
-      'membros': '2300',
-    },
-    {
-      'nome': 'Associação Recreativa Concórdia',
-      'cidade': 'Concórdia, SC',
-      'descricao': 'Clube recreativo, esporte, bailes regionais e jantares.',
-      'foto': 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=200&q=80',
-      'membros': '920',
-    },
-  ];
-
-  List<Map<String, dynamic>> _filteredCommunities = [];
+  List<ComunidadeApi> _todasComunidades = <ComunidadeApi>[];
+  List<ComunidadeApi> _comunidadesFiltradas = <ComunidadeApi>[];
+  bool _carregando = true;
+  String? _erro;
 
   @override
   void initState() {
     super.initState();
-    _filteredCommunities = List.from(_allCommunities);
+    _carregarComunidades();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -54,17 +39,67 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
     super.dispose();
   }
 
+  Future<void> _carregarComunidades() async {
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/comunidades');
+      final http.Response response =
+          await http.get(url).timeout(const Duration(seconds: 10));
+
+      if (response.statusCode == 200) {
+        final dynamic decoded = jsonDecode(response.body);
+        final List<dynamic> dados = _extrairLista(decoded);
+        final List<ComunidadeApi> comunidades = dados
+            .whereType<Map>()
+            .map((Map<dynamic, dynamic> item) =>
+                ComunidadeApi.fromJson(Map<String, dynamic>.from(item)))
+            .toList();
+
+        if (!mounted) return;
+        setState(() {
+          _todasComunidades = comunidades;
+          _comunidadesFiltradas = List<ComunidadeApi>.from(comunidades);
+          _carregando = false;
+        });
+      } else {
+        setState(() {
+          _erro = 'Erro ao buscar comunidades (${response.statusCode}).';
+          _carregando = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _erro = 'Não foi possível conectar ao servidor.';
+        _carregando = false;
+      });
+    }
+  }
+
+  List<dynamic> _extrairLista(dynamic decoded) {
+    if (decoded is List) return decoded;
+    if (decoded is Map) {
+      final dynamic dados =
+          decoded['dados'] ?? decoded['comunidades'] ?? decoded['data'] ?? decoded['rows'];
+      if (dados is List) return dados;
+    }
+    return <dynamic>[];
+  }
+
   void _onSearchChanged() {
     final String query = _searchController.text.toLowerCase().trim();
     setState(() {
       if (query.isEmpty) {
-        _filteredCommunities = List.from(_allCommunities);
+        _comunidadesFiltradas = List<ComunidadeApi>.from(_todasComunidades);
       } else {
-        _filteredCommunities = _allCommunities.where((community) {
-          final String nome = community['nome']!.toLowerCase();
-          final String cidade = community['cidade']!.toLowerCase();
-          final String descricao = community['descricao']!.toLowerCase();
-          return nome.contains(query) || cidade.contains(query) || descricao.contains(query);
+        _comunidadesFiltradas = _todasComunidades.where((ComunidadeApi comunidade) {
+          return comunidade.nomeEntidade.toLowerCase().contains(query) ||
+              comunidade.cidade.toLowerCase().contains(query) ||
+              comunidade.estado.toLowerCase().contains(query) ||
+              comunidade.descricao.toLowerCase().contains(query);
         }).toList();
       }
     });
@@ -72,6 +107,15 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
 
   void _showMenu() {
     MobileAppMenu.show(context, entries: MobileAppMenu.entries(context));
+  }
+
+  void _abrirPerfil(ComunidadeApi comunidade) {
+    Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => PerfilComunidadePage(comunidadeId: comunidade.usuarioId),
+      ),
+    );
   }
 
   @override
@@ -133,7 +177,7 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                               child: TextField(
                                 controller: _searchController,
                                 decoration: InputDecoration(
-                                  hintText: 'Buscar por nome, cidade ou descrição...',
+                                  hintText: 'Buscar por nome, cidade ou estado...',
                                   hintStyle: TextStyle(
                                     color: BaileSulColors.mutedText.withValues(alpha: 0.7),
                                     fontSize: 14,
@@ -158,28 +202,49 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                       ),
                     ),
 
-                    // Results List
-                    if (_filteredCommunities.isEmpty)
+                    // Results
+                    if (_carregando)
                       const SliverFillRemaining(
                         hasScrollBody: false,
+                        child: Center(
+                          child: CircularProgressIndicator(color: BaileSulColors.accent),
+                        ),
+                      )
+                    else if (_erro != null)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
                         child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.location_off_outlined, size: 64, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text(
-                                  'Nenhuma comunidade encontrada.',
-                                  style: TextStyle(
-                                    color: BaileSulColors.mutedText,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                          child: _EstadoVazio(
+                            icone: Icons.error_outline_rounded,
+                            titulo: 'Ops!',
+                            subtitulo: _erro!,
+                            labelBotao: 'Tentar novamente',
+                            onBotao: _carregarComunidades,
+                          ),
+                        ),
+                      )
+                    else if (_comunidadesFiltradas.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                          child: _EstadoVazio(
+                            icone: Icons.location_off_outlined,
+                            titulo: 'Nenhuma comunidade encontrada',
+                            subtitulo: _searchController.text.trim().isNotEmpty
+                                ? 'Tente outro termo de busca.'
+                                : 'Ainda não há comunidades cadastradas na plataforma.',
+                            labelBotao: _searchController.text.trim().isNotEmpty
+                                ? 'Limpar busca'
+                                : 'Atualizar',
+                            onBotao: () {
+                              if (_searchController.text.trim().isNotEmpty) {
+                                _searchController.clear();
+                              } else {
+                                _carregarComunidades();
+                              }
+                            },
                           ),
                         ),
                       )
@@ -189,10 +254,10 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final community = _filteredCommunities[index];
-                              return _buildCommunityCard(community);
+                              final ComunidadeApi comunidade = _comunidadesFiltradas[index];
+                              return _buildCommunityCard(comunidade);
                             },
-                            childCount: _filteredCommunities.length,
+                            childCount: _comunidadesFiltradas.length,
                           ),
                         ),
                       ),
@@ -216,7 +281,7 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
     );
   }
 
-  Widget _buildCommunityCard(Map<String, dynamic> community) {
+  Widget _buildCommunityCard(ComunidadeApi comunidade) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -236,30 +301,25 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
         borderRadius: BorderRadius.circular(12),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: () {
-            Navigator.pushNamed(context, '/perfil-comunidade');
-          },
+          onTap: () => _abrirPerfil(comunidade),
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
               children: [
-                // Community Image Avatar
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    community['foto']!,
-                    width: 70,
-                    height: 70,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        width: 70,
-                        height: 70,
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.apartment, color: Colors.black26),
-                      );
-                    },
+                // Community Avatar (placeholder, comunidade não possui foto de perfil própria)
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF7C9AB1), Color(0xFF0D496B)],
+                    ),
                   ),
+                  alignment: Alignment.center,
+                  child: const Icon(Icons.apartment_rounded, color: Colors.white70, size: 30),
                 ),
                 const SizedBox(width: 14),
 
@@ -268,69 +328,68 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        community['nome']!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: BaileSulColors.headerText,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            community['cidade']!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontWeight: FontWeight.w500,
+                          Expanded(
+                            child: Text(
+                              comunidade.nomeEntidade,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: BaileSulColors.headerText,
+                              ),
                             ),
                           ),
+                          if (comunidade.cnpjValidado)
+                            const Padding(
+                              padding: EdgeInsets.only(left: 6),
+                              child: Icon(Icons.verified_rounded, size: 16, color: BaileSulColors.accent),
+                            ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        community['descricao']!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: BaileSulColors.mutedText,
+                      if (comunidade.cidadeEstado.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(Icons.location_on_outlined, size: 14, color: Colors.grey.shade500),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                comunidade.cidadeEstado,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+                      ],
+                      if (comunidade.descricao.isNotEmpty) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          comunidade.descricao,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: BaileSulColors.mutedText,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
 
-                // Members & Action icon
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      community['membros']!,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: BaileSulColors.headerText,
-                      ),
-                    ),
-                    const Text(
-                      'membros',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.black45,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      color: Colors.black38,
-                    ),
-                  ],
+                const SizedBox(width: 8),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.black38,
                 ),
               ],
             ),
@@ -338,5 +397,121 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
         ),
       ),
     );
+  }
+}
+
+class _EstadoVazio extends StatelessWidget {
+  const _EstadoVazio({
+    required this.icone,
+    required this.titulo,
+    required this.subtitulo,
+    required this.labelBotao,
+    required this.onBotao,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String subtitulo;
+  final String labelBotao;
+  final VoidCallback onBotao;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: BaileSulColors.cardBorder),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icone, size: 52, color: BaileSulColors.mutedText),
+          const SizedBox(height: 16),
+          Text(
+            titulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: BaileSulColors.headerText,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitulo,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: BaileSulColors.mutedText,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 22),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton(
+              onPressed: onBotao,
+              style: FilledButton.styleFrom(
+                backgroundColor: BaileSulColors.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                labelBotao,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Representa uma comunidade retornada pela API (`GET /api/comunidades`).
+class ComunidadeApi {
+  const ComunidadeApi({
+    required this.usuarioId,
+    required this.nomeEntidade,
+    required this.descricao,
+    required this.whatsapp,
+    required this.cidade,
+    required this.estado,
+    required this.cnpjValidado,
+  });
+
+  factory ComunidadeApi.fromJson(Map<String, dynamic> json) {
+    return ComunidadeApi(
+      usuarioId: int.tryParse(json['usuario_id']?.toString() ?? '') ?? 0,
+      nomeEntidade: json['nome_entidade']?.toString() ?? 'Comunidade',
+      descricao: json['descricao']?.toString() ?? '',
+      whatsapp: json['whatsapp']?.toString() ?? '',
+      cidade: json['cidade']?.toString() ?? '',
+      estado: json['estado']?.toString() ?? '',
+      cnpjValidado: json['cnpj_validado'] == true,
+    );
+  }
+
+  final int usuarioId;
+  final String nomeEntidade;
+  final String descricao;
+  final String whatsapp;
+  final String cidade;
+  final String estado;
+  final bool cnpjValidado;
+
+  String get cidadeEstado {
+    if (cidade.isEmpty && estado.isEmpty) return '';
+    if (estado.isEmpty) return cidade;
+    if (cidade.isEmpty) return estado;
+    return '$cidade/$estado';
   }
 }

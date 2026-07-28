@@ -145,11 +145,11 @@ class _VendedoresPageState extends State<VendedoresPage> {
           children: [
             MobileHeader(logoHeight: 58, horizontalPadding: 16, onMenuPressed: _abrirMenu),
             Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Container(
                       color: BaileSulColors.pageBackground,
                       alignment: Alignment.center,
                       padding: const EdgeInsets.all(24),
@@ -159,9 +159,16 @@ class _VendedoresPageState extends State<VendedoresPage> {
                         style: TextStyle(color: BaileSulColors.mutedText, fontSize: 15),
                       ),
                     ),
-                    const MobileFooter(),
-                  ],
-                ),
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: const [MobileFooter()],
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -179,12 +186,11 @@ class _VendedoresPageState extends State<VendedoresPage> {
           Expanded(
             child: RefreshIndicator(
               onRefresh: _carregar,
-              child: SingleChildScrollView(
+              child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Container(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Container(
                       width: double.infinity,
                       color: BaileSulColors.pageBackground,
                       padding: const EdgeInsets.fromLTRB(16, 22, 16, 24),
@@ -320,9 +326,16 @@ class _VendedoresPageState extends State<VendedoresPage> {
                         ],
                       ),
                     ),
-                    const MobileFooter(),
-                  ],
-                ),
+                  ),
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: const [MobileFooter()],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

@@ -91,6 +91,7 @@ CREATE TABLE perfis_bandas (
   cnpj_validado   BOOLEAN     NOT NULL DEFAULT FALSE,
   whatsapp        VARCHAR(20),
   video_url       VARCHAR(500),
+  foto_perfil_url VARCHAR(500),
   criado_em       TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_banda_cnpj CHECK (
@@ -98,6 +99,11 @@ CREATE TABLE perfis_bandas (
   ),
   CONSTRAINT chk_banda_video_url CHECK (
     video_url IS NULL OR video_url ~ '^https?://'
+  ),
+  CONSTRAINT chk_banda_foto_perfil_url CHECK (
+    foto_perfil_url IS NULL
+    OR foto_perfil_url ~ '^https?://'
+    OR foto_perfil_url ~ '^/media/'
   )
 );
 
@@ -106,21 +112,27 @@ CREATE TRIGGER trg_perfis_bandas_atualizado_em
   FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
 
 CREATE TABLE perfis_comunidades (
-  usuario_id    BIGINT PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
-  nome_entidade VARCHAR(150) NOT NULL,
-  descricao     TEXT,
-  cnpj          VARCHAR(18) UNIQUE,
-  cnpj_validado BOOLEAN     NOT NULL DEFAULT FALSE,
-  whatsapp      VARCHAR(20),
-  endereco      VARCHAR(255),
-  cidade        VARCHAR(100),
-  estado        VARCHAR(2),
-  latitude      DECIMAL(10, 7),
-  longitude     DECIMAL(10, 7),
-  criado_em     TIMESTAMPTZ DEFAULT NOW(),
-  atualizado_em TIMESTAMPTZ DEFAULT NOW(),
+  usuario_id      BIGINT PRIMARY KEY REFERENCES usuarios(id) ON DELETE CASCADE,
+  nome_entidade   VARCHAR(150) NOT NULL,
+  descricao       TEXT,
+  cnpj            VARCHAR(18) UNIQUE,
+  cnpj_validado   BOOLEAN     NOT NULL DEFAULT FALSE,
+  whatsapp        VARCHAR(20),
+  endereco        VARCHAR(255),
+  cidade          VARCHAR(100),
+  estado          VARCHAR(2),
+  latitude        DECIMAL(10, 7),
+  longitude       DECIMAL(10, 7),
+  foto_perfil_url VARCHAR(500),
+  criado_em       TIMESTAMPTZ DEFAULT NOW(),
+  atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_comunidade_cnpj CHECK (
     cnpj IS NULL OR cnpj ~ '^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$'
+  ),
+  CONSTRAINT chk_comunidade_foto_perfil_url CHECK (
+    foto_perfil_url IS NULL
+    OR foto_perfil_url ~ '^https?://'
+    OR foto_perfil_url ~ '^/media/'
   )
 );
 

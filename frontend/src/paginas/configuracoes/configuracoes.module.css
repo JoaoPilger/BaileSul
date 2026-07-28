@@ -91,3 +91,122 @@
   background: #fff;
   padding: 10px 24px;
 }
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1200;
+}
+
+.modalCard {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  padding: 24px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.modalTitle {
+  font-family: var(--font-head);
+  font-size: 1.3rem;
+  color: var(--black);
+  margin: 0;
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 4px;
+  display: flex;
+}
+
+.modalClose:hover { color: var(--black); }
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modalField label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.modalInput,
+.modalInputError {
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  padding: 0 12px;
+  font-size: 0.92rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.modalInput:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(13, 73, 107, 0.12);
+}
+
+.modalInputError {
+  border-color: #a32d2d;
+  box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.1);
+}
+
+.modalFieldHint {
+  font-size: 0.78rem;
+  color: #a32d2d;
+  margin: 0;
+}
+
+.modalErroGeral {
+  font-size: 0.84rem;
+  color: #a32d2d;
+  background: rgba(163, 45, 45, 0.07);
+  border: 1px solid rgba(163, 45, 45, 0.18);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0;
+}
+
+.modalSubmit {
+  height: 46px;
+  border-radius: 10px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: opacity 0.2s;
+}
+
+.modalSubmit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

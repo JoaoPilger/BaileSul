@@ -71,9 +71,9 @@ class _ContratosPageState extends State<ContratosPage> {
     super.dispose();
   }
 
-  Future<void> _carregar() async {
+  Future<void> _carregar({bool mostrarLoading = true}) async {
     setState(() {
-      _carregando = true;
+      if (mostrarLoading) _carregando = true;
       _erro = null;
     });
 
@@ -121,13 +121,11 @@ class _ContratosPageState extends State<ContratosPage> {
           .timeout(const Duration(seconds: 15));
 
       if (resp.statusCode >= 200 && resp.statusCode < 300 && mounted) {
-        setState(() {
-          _contratos = _contratos.map((c) {
-            if (c['contrato_id'] == contratoId) return {...c, 'status_aceite': novoStatus};
-            return c;
-          }).toList();
-          _feedbackId = contratoId;
-        });
+        // Recarrega os contratos reais do servidor em vez de só editar o
+        // estado local, garantindo que a UI nunca fique dessincronizada do banco.
+        await _carregar(mostrarLoading: false);
+        if (!mounted) return;
+        setState(() => _feedbackId = contratoId);
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) setState(() => _feedbackId = null);
         });
@@ -185,12 +183,11 @@ class _ContratosPageState extends State<ContratosPage> {
                 ? const _AcessoNegado()
                 : RefreshIndicator(
                     onRefresh: _carregar,
-                    child: SingleChildScrollView(
+                    child: CustomScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Align(
+                      slivers: [
+                        SliverToBoxAdapter(
+                          child: Align(
                             alignment: Alignment.topCenter,
                             child: ConstrainedBox(
                               constraints: const BoxConstraints(maxWidth: 800),
@@ -228,9 +225,18 @@ class _ContratosPageState extends State<ContratosPage> {
                               ),
                             ),
                           ),
-                          MobileFooter(logoHeight: 44, horizontalPadding: 20),
-                        ],
-                      ),
+                        ),
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              MobileFooter(logoHeight: 44, horizontalPadding: 20),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
           ),

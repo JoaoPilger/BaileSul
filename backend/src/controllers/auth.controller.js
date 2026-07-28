@@ -320,4 +320,49 @@ const logout = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout };
+/**
+ * PUT /api/auth/senha
+ * Altera a senha do usuário autenticado (requer confirmação da senha atual).
+ */
+const alterarSenha = async (req, res) => {
+  const { senha_atual, nova_senha } = req.body;
+  const usuario_id = req.usuario.id;
+
+  if (!senha_atual || !nova_senha) {
+    return res.status(400).json({ error: 'Campos obrigatórios: senha_atual, nova_senha' });
+  }
+
+  if (!senhaValida(nova_senha)) {
+    return res.status(400).json({
+      error: 'A nova senha deve ter ao menos 8 caracteres, incluindo letras e números',
+    });
+  }
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT senha_hash FROM usuarios WHERE id = $1',
+      [usuario_id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Usuário não encontrado' });
+    }
+
+    const senhaCorreta = await bcrypt.compare(senha_atual, rows[0].senha_hash);
+    if (!senhaCorreta) {
+      return res.status(401).json({ error: 'Senha atual incorreta' });
+    }
+
+    const novaSenhaHash = await bcrypt.hash(nova_senha, 10);
+    await pool.query(
+      'UPDATE usuarios SET senha_hash = $1 WHERE id = $2',
+      [novaSenhaHash, usuario_id]
+    );
+
+    return res.json({ message: 'Senha alterada com sucesso' });
+  } catch (err) {
+    console.error('Erro ao alterar senha:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { register, login, logout, alterarSenha };
