@@ -111,12 +111,16 @@ const listarMeusEventos = async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      `SELECT id, titulo, descricao, data_inicio, data_fim, local_nome,
-              local_endereco, valor_ingresso, foto_capa_url, status,
-              latitude, longitude
-       FROM eventos
-       WHERE comunidade_id = $1
-       ORDER BY data_inicio DESC`,
+      `SELECT e.id, e.titulo, e.descricao, e.data_inicio, e.data_fim, e.local_nome,
+              e.local_endereco, e.valor_ingresso, e.foto_capa_url, e.status,
+              e.latitude, e.longitude,
+              (SELECT COALESCE(SUM(r.quantidade), 0)
+                 FROM reservas r
+                WHERE r.evento_id = e.id
+                  AND r.status_pagamento = 'confirmado')::int AS confirmados
+       FROM eventos e
+       WHERE e.comunidade_id = $1
+       ORDER BY e.data_inicio DESC`,
       [comunidade_id]
     );
 

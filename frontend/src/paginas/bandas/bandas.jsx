@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadBands } from '../../utils/bands'
@@ -44,7 +44,6 @@ export default function Bandas() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setIsLoading(true)
     loadBands().then((all) => {
       setItems(all)
       setDisplayed(all)

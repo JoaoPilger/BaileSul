@@ -439,10 +439,10 @@ export default function VitrineComunidade() {
                   {isDono ? (
                     modoEdicao ? (
                       <>
-                        <button className={styles['vc-btn-seguir']} style={{ background: '#28a745', color: '#fff' }} onClick={handleSalvarPerfil}>
+                        <button className={styles['vc-btn-seguir']} style={{ background: '#0F6E56', color: '#fff' }} onClick={handleSalvarPerfil}>
                           Salvar
                         </button>
-                        <button className={styles['vc-btn-contato']} style={{ background: '#dc3545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
+                        <button className={styles['vc-btn-contato']} style={{ background: '#C24545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
                           Cancelar
                         </button>
                       </>

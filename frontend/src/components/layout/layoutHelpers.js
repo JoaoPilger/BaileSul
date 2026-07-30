@@ -1,4 +1,4 @@
-import { Calendar, MapPin, Music, ListMusic, Ticket, Users, Wallet, FileText } from 'lucide-react';
+import { Calendar, Music, ListMusic, Ticket, Users, Wallet, FileText } from 'lucide-react';
 
 export function getNavConfig(tipo, isVendedor = false) {
   const base = [

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import shared from '../../styles/shared.module.css'
@@ -16,17 +16,13 @@ export default function Configuracoes() {
   const [snackOpen, setSnackOpen] = useState(false)
   const [snackMsg, setSnackMsg] = useState('')
   const [comunidadesVinculadas, setComunidadesVinculadas] = useState([])
-  const [carregandoVendedor, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
+  const [, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
   const [senhaModalOpen, setSenhaModalOpen] = useState(false)
 
   useEffect(() => {
-    if (usuario?.tipo !== 'pessoal') {
-      setCarregandoVendedor(false)
-      return
-    }
+    if (usuario?.tipo !== 'pessoal') return
 
     let ativo = true
-    setCarregandoVendedor(true)
 
     api.get('/vendedores/me')
       .then(({ data }) => { if (ativo) setComunidadesVinculadas(data ?? []) })

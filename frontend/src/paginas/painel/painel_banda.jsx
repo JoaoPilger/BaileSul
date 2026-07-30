@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 import Header from '../../components/header/Header'
@@ -31,20 +31,16 @@ const BADGE = {
 
 export default function PainelBanda() {
   const { usuario, token } = useAuth()
-  const navigate = useNavigate()
   const [agenda, setAgenda] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [processandoId, setProcessandoId] = useState(null)
 
-  const carregar = () => {
-    setCarregando(true)
+  useEffect(() => {
     api.get('/bandas/me/agenda')
       .then((r) => setAgenda(Array.isArray(r.data) ? r.data : []))
       .catch(() => setAgenda([]))
       .finally(() => setCarregando(false))
-  }
-
-  useEffect(() => { carregar() }, [])
+  }, [])
 
   const responder = async (contrato_id, evento_id, aceitar) => {
     setProcessandoId(contrato_id)

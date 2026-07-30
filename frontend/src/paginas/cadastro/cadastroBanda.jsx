@@ -55,8 +55,6 @@ export default function CadastroBanda() {
 
   const passo = form.nomeBanda && form.email ? (form.estilo ? 3 : 2) : 1
   const showError = (field) => touched[field] && errors[field]
-  const inputClass = (field, extra = '') =>
-    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
 
   const updateField = (name, value) => {
     setForm((prev) => {
@@ -84,15 +82,6 @@ export default function CadastroBanda() {
 
     updateField(name, next)
     setErro('')
-  }
-
-  const handleBlur = (e) => {
-    const { name } = e.target
-    setTouched((prev) => ({ ...prev, [name]: true }))
-    setErrors((prev) => ({
-      ...prev,
-      [name]: validateCadastroBandaField(name, form[name], form),
-    }))
   }
 
   const handleImagem = (file) => {
@@ -308,7 +297,7 @@ export default function CadastroBanda() {
                     <button
                       type="button"
                       className={styles['upload-remove']}
-                      onClick={(e) => { e.stopPropagation(); setImagemCapa(null); setImagemPreview(null) }}
+                      onClick={(e) => { e.stopPropagation(); setImagemPreview(null) }}
                     >
                       ✕ Remover
                     </button>

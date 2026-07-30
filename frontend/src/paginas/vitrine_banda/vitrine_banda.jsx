@@ -420,10 +420,10 @@ export default function VitrineBanda() {
                 {isDono ? (
                   modoEdicao ? (
                     <>
-                      <button className="vb-btn-seguir" style={{ background: '#28a745', color: '#fff' }} onClick={handleSalvarPerfil}>
+                      <button className="vb-btn-seguir" style={{ background: '#0F6E56', color: '#fff' }} onClick={handleSalvarPerfil}>
                         Salvar
                       </button>
-                      <button className="vb-btn-contato" style={{ background: '#dc3545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
+                      <button className="vb-btn-contato" style={{ background: '#C24545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
                         Cancelar
                       </button>
                     </>

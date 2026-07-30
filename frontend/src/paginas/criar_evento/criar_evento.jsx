@@ -82,7 +82,7 @@ export default function CriarEvento() {
   const [bandaId, setBandaId]                 = useState(null)
   const [bandaSugestoes, setBandaSugestoes]    = useState([])
   const [bandaSugestoesOpen, setBandaSugestoesOpen] = useState(false)
-  const [bandaBuscando, setBandaBuscando]      = useState(false)
+  const [, setBandaBuscando]      = useState(false)
 
   const [vendedoresComunidade, setVendedoresComunidade] = useState([])
   const [vendorSugestoes, setVendorSugestoes]           = useState([])
@@ -177,13 +177,12 @@ export default function CriarEvento() {
   // Atualiza o mapa dinamicamente conforme o endereço é preenchido (debounce 800ms)
   useEffect(() => {
     const { rua, bairro, city, cep } = form
-    if (!city.trim()) {
-      setMapSrc(MAP_DEFAULT)
-      return
-    }
-
     let cancelled = false
     const timer = setTimeout(async () => {
+      if (!city.trim()) {
+        if (!cancelled) setMapSrc(MAP_DEFAULT)
+        return
+      }
       setMapLoading(true)
       try {
         let data = []
@@ -249,31 +248,33 @@ export default function CriarEvento() {
   }, [form.rua, form.bairro, form.city, form.cep])
 
   useEffect(() => {
-    if (form.tipoEvento !== 'musical') {
-      setBandaSugestoes([])
-      setBandaSugestoesOpen(false)
-      return
-    }
-
-    // Se o texto não bate mais com a banda selecionada, desvincula
-    if (bandaId && form.band.trim() === '') setBandaId(null)
-
-    // Já vinculada a uma banda selecionada: não busca de novo
-    if (bandaId) {
-      setBandaSugestoesOpen(false)
-      return
-    }
-
-    const termo = form.band.trim()
-    if (termo.length < 2) {
-      setBandaSugestoes([])
-      setBandaSugestoesOpen(false)
-      return
-    }
-
     let cancelado = false
-    setBandaBuscando(true)
     const t = setTimeout(async () => {
+      if (form.tipoEvento !== 'musical') {
+        if (!cancelado) {
+          setBandaSugestoes([])
+          setBandaSugestoesOpen(false)
+        }
+        return
+      }
+
+      if (bandaId && form.band.trim() === '') setBandaId(null)
+
+      if (bandaId) {
+        if (!cancelado) setBandaSugestoesOpen(false)
+        return
+      }
+
+      const termo = form.band.trim()
+      if (termo.length < 2) {
+        if (!cancelado) {
+          setBandaSugestoes([])
+          setBandaSugestoesOpen(false)
+        }
+        return
+      }
+
+      if (!cancelado) setBandaBuscando(true)
       try {
         const { data } = await api.get('/bandas/sugestoes', {
           params: { nome: termo },
@@ -321,23 +322,21 @@ export default function CriarEvento() {
     const cep = form.cep.replace(/\D/g, '')
     if (cep.length !== 8) return
     setCepLoading(true)
-    try {
-      const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await res.json()
-      if (!data.erro) {
-        setForm((p) => {
-          const updated = {
-            ...p,
-            city:   data.localidade || p.city,
-            bairro: data.bairro     || p.bairro,
-            rua:    data.logradouro || p.rua,
-          }
-          setFieldErrors(updated, ['city', 'bairro', 'rua'])
-          return updated
-        })
-      }
-    } catch {}
-    finally { setCepLoading(false) }
+    const res  = await fetch(`https://viacep.com.br/ws/${cep}/json/`).catch(() => null)
+    const data = res ? await res.json().catch(() => null) : null
+    if (data && !data.erro) {
+      setForm((p) => {
+        const updated = {
+          ...p,
+          city:   data.localidade || p.city,
+          bairro: data.bairro     || p.bairro,
+          rua:    data.logradouro || p.rua,
+        }
+        setFieldErrors(updated, ['city', 'bairro', 'rua'])
+        return updated
+      })
+    }
+    setCepLoading(false)
   }
 
   const addVendor = () => {

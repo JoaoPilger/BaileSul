@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { loadEvents } from '../../utils/events'
 import HeaderCal from '../../components/header/HeaderCal'
 import FooterCal from '../../components/footer/FooterCal'
 import styles from './calendario.module.css';
@@ -25,53 +25,14 @@ function pad(n) {
   return String(n).padStart(2, '0')
 }
 
-const MOCK_EVENTS = {
-  '14/05/2026': [{
-    id: 1,
-    title: 'Baile do Rancho',
-    city: 'Concórdia',
-    style: 'Sertanejo',
-    price: 'R$ 30',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&q=80',
-  }],
-  '21/05/2026': [
-    {
-      id: 2,
-      title: 'Forró na Praça',
-      city: 'Seara',
-      style: 'Forró',
-      price: 'Grátis',
-      image: 'https://images.unsplash.com/photo-1429962714451-bb934ecdc4ec?w=400&q=80',
-    },
-    {
-      id: 3,
-      title: 'Noite Gaúcha',
-      city: 'Peritiba',
-      style: 'Gaúcha',
-      price: 'R$ 20',
-      image: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=400&q=80',
-    },
-  ],
-  '07/06/2026': [{
-    id: 4,
-    title: 'Bailão do Sul',
-    city: 'Concórdia',
-    style: 'Bailão',
-    price: 'R$ 25',
-    image: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&q=80',
-  }],
-}
-
-
 function formatKey(day, month, year) {
   return `${pad(day)}/${pad(month + 1)}/${year}`
 }
 
 export default function Calendario() {
   const today = new Date()
-  const { usuario, isAuthenticated } = useAuth()
+  const { usuario } = useAuth()
   const podeCriarEvento = !usuario?.tipo || usuario.tipo === 'comunidade' || usuario.tipo === 'banda'
-  const contaLink = isAuthenticated ? '/perfil' : '/login'
 
   const [view, setView] = useState({
     year: today.getFullYear(),
@@ -83,26 +44,20 @@ export default function Calendario() {
     year: today.getFullYear(),
   })
 
-  const [eventsMap, setEventsMap] = useState(MOCK_EVENTS)
+  const [eventsMap, setEventsMap] = useState({})
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem('bailesul_events')
-      if (!raw) return
-      const parsed = JSON.parse(raw)
-      // start with MOCK_EVENTS then merge saved events (saved events appear first)
-      const map = { ...MOCK_EVENTS }
-      parsed.forEach((ev) => {
+    loadEvents().then((all) => {
+      const map = {}
+      all.forEach((ev) => {
         if (!ev.date) return
-        const d = new Date(ev.date)
-        const key = formatKey(d.getDate(), d.getMonth(), d.getFullYear())
+        const [y, m, d] = ev.date.split('-')
+        const key = `${d}/${m}/${y}`
         if (!map[key]) map[key] = []
-        map[key].unshift(ev)
+        map[key].push(ev)
       })
       setEventsMap(map)
-    } catch (e) {
-      // ignore parse errors
-    }
+    })
   }, [])
 
   const { year: viewYear, month: viewMonth } = view

@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { cn } from '../../utils/cn';
 import { useNavigate, useParams } from 'react-router-dom'
-import { MapPin, Calendar, Clock, Tag, ArrowLeft } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'

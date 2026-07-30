@@ -53,11 +53,10 @@ export default function Vendedores() {
   }, [isAuthenticated, usuario, navigate])
 
   const fetchVendedores = async () => {
-    setLoading(true)
-    setError('')
     try {
       const res = await api.get('/vendedores')
       setVendedores(res.data)
+      setError('')
     } catch (err) {
       console.error('Erro ao buscar vendedores:', err)
       setError('Não foi possível carregar a lista de vendedores. Recarregue a página ou tente novamente.')
@@ -68,13 +67,15 @@ export default function Vendedores() {
 
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
-      fetchVendedores()
+      api.get('/vendedores')
+        .then((res) => { setVendedores(res.data); setError('') })
+        .catch((err) => {
+          console.error('Erro ao buscar vendedores:', err)
+          setError('Não foi possível carregar a lista de vendedores. Recarregue a página ou tente novamente.')
+        })
+        .finally(() => setLoading(false))
     }
   }, [isAuthenticated, usuario])
-
-  useEffect(() => {
-    console.table(vendedores.map(v => ({ id: v.id, nome: v.nome, usuario_id: v.usuario_id })))
-  }, [vendedores])
 
   const removerVendedor = async (id, nome) => {
     if (!window.confirm(`Tem certeza que deseja remover o vendedor "${nome}"?`)) return

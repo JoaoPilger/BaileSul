@@ -130,7 +130,11 @@ const agenda = async (req, res) => {
               e.id, e.titulo, e.data_inicio, e.data_fim, e.local_nome,
               e.status AS status_evento, c.status_aceite,
               pc.nome_entidade AS comunidade, pc.whatsapp AS comunidade_whatsapp,
-              pc.cidade, pc.estado
+              pc.cidade, pc.estado,
+              (SELECT COALESCE(SUM(r.quantidade), 0)
+                 FROM reservas r
+                WHERE r.evento_id = e.id
+                  AND r.status_pagamento = 'confirmado')::int AS confirmados
        FROM contratos c
        JOIN eventos e ON e.id = c.evento_id
        JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadCommunities } from '../../utils/communities'
@@ -49,7 +49,6 @@ export default function Comunidades() {
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    setIsLoading(true)
     loadCommunities().then((all) => {
       setItems(all)
       setDisplayed(all)

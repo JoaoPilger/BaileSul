@@ -1,5 +1,3 @@
-import React from 'react';
-import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom';
 import { User } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
