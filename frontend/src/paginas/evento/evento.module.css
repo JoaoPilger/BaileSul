@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg:            #D9D9D9;
@@ -12,8 +12,8 @@
   --text-muted:    rgba(17, 17, 17, 0.5);
   --border:        rgba(17, 17, 17, 0.13);
   --nav-h:         68px;
-  --font-head:     'Playfair Display', Georgia, serif;
-  --font-body:     'DM Sans', system-ui, sans-serif;
+  --font-head:     'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:     'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 .ev-modal {
@@ -626,4 +626,12 @@
   .ev-title {
     font-size: 1.8rem;
   }
+}
+
+:global(.leaflet-container),
+:global(.leaflet-container .leaflet-control),
+:global(.leaflet-popup-content),
+:global(.leaflet-control-zoom-in),
+:global(.leaflet-control-zoom-out) {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
 }

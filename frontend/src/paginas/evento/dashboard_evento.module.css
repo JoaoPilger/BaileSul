@@ -19,8 +19,8 @@
   --text:         #111111;
   --text-muted:   rgba(17, 17, 17, 0.5);
   --border:       rgba(17, 17, 17, 0.13);
-  --font-head:    'Playfair Display', Georgia, serif;
-  --font-body:    'DM Sans', system-ui, sans-serif;
+  --font-head:    'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:    'Plus Jakarta Sans', system-ui, sans-serif;
   --nav-h:        68px;
 }
 

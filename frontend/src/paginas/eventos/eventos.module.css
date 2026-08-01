@@ -75,7 +75,7 @@
 }
 
 .event-detail-left h1 {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: clamp(1.8rem, 3.2vw, 2.6rem);
   line-height: 1.15;
   color: #111;

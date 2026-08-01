@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :global(*), :global(*::before), :global(*::after) { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,8 +25,8 @@
   --nav-link-size:   .88rem;
   --nav-icon-size:   17px;
   --nav-action-icon: 20px;
-  --font-head:   'Playfair Display', Georgia, serif;
-  --font-body:   'DM Sans', system-ui, sans-serif;
+  --font-head:   'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body:   'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 :global(body) {
