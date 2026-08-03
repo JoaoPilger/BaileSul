@@ -1,7 +1,4 @@
-import React from 'react';
-import { cn } from '../../utils/cn';
 import { Link } from 'react-router-dom';
-import { MapPin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import styles from './FooterCal.module.css';
 

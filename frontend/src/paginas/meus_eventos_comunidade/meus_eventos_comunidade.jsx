@@ -72,9 +72,11 @@ export default function MeusEventosComunidade() {
 
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
-      carregarEventos().finally(() => setCarregando(false))
+      api.get('/comunidades/me/eventos')
+        .then((res) => setEventos(res.data.eventos || []))
+        .catch((err) => console.error(err))
+        .finally(() => setCarregando(false))
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, usuario])
 
   const handleCancelar = async (id) => {
@@ -238,13 +240,11 @@ export default function MeusEventosComunidade() {
       titulo: ev.titulo,
       subtitulo: subtitulo,
       data: formattedDate,
-      hora: '20:00',
       local: city,
       valor: valorFormatado,
-      confirmados: Math.floor(Math.random() * 200) + 50,
+      confirmados: Number(ev.confirmados) || 0,
       status: ev.status,
       diasFaltando: diasFaltando > 0 ? diasFaltando : 0,
-      ultimaEdicao: 'Recente',
       dataRealizacao: formattedDate,
       dataCancelamento: formattedDate,
       image: image
@@ -496,13 +496,6 @@ export default function MeusEventosComunidade() {
                         <line x1="3" y1="10" x2="21" y2="10" />
                       </svg>
                       {ev.data}
-                    </span>
-                    <span className={styles['me-event-meta-item']}>
-                      <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      {ev.hora}
                     </span>
                     <span className={styles['me-event-meta-item']}>
                       <svg viewBox="0 0 24 24">

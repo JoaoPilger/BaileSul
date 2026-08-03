@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, ArrowLeft, Calendar, Clock, MapPin } from 'lucide-react'
+import { Search, Calendar, Clock, MapPin } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { useAuth } from '../../contexts/AuthContext'
@@ -119,8 +119,6 @@ export default function MeusIngressosPage() {
 
   useEffect(() => {
     let cancelled = false
-    setIsLoading(true)
-    setErro('')
 
     api
       .get('/reservas/minhas', {

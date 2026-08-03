@@ -38,14 +38,9 @@ export default function ConfirmarPagamentos() {
   const podeGerenciar = usuario?.tipo === 'pessoal';
 
   useEffect(() => {
-    if (!podeGerenciar) {
-      setIsLoading(false);
-      return;
-    }
+    if (!podeGerenciar) return;
 
     let cancelado = false;
-    setIsLoading(true);
-    setErro('');
 
     api
       .get('/vendedores/reservas', { headers: { Authorization: `Bearer ${token}` } })

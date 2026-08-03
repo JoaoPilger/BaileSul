@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MapPin, Calendar } from 'lucide-react'
 import Header from '../../components/header/Header'
@@ -38,7 +38,6 @@ function ListingCard({ event }) {
 
 export default function Eventos() {
   const [events, setEvents] = useState([])
-  const [displayed, setDisplayed] = useState([])
   const [query, setQuery] = useState('')
   const [dateFilter, setDateFilter] = useState('')
   const [timeFilter, setTimeFilter] = useState('')
@@ -47,11 +46,10 @@ export default function Eventos() {
   useEffect(() => {
     loadEvents().then((data) => {
       setEvents(data)
-      setDisplayed(data)
     })
   }, [])
 
-  useEffect(() => {
+  const displayed = useMemo(() => {
     let filtered = events.slice()
 
     const lower = query.trim().toLowerCase()
@@ -76,7 +74,7 @@ export default function Eventos() {
       filtered.sort((a, b) => new Date(a.date) - new Date(b.date))
     }
 
-    setDisplayed(filtered)
+    return filtered
   }, [query, dateFilter, timeFilter, sortBy, events])
 
   return (

@@ -1,5 +1,4 @@
 import { useNavigate, Link } from 'react-router-dom'
-import { cn } from '../../utils/cn';
 import HeaderCal from '../../components/header/HeaderCal'
 import styles from './cadastro.module.css';
 

@@ -37,7 +37,7 @@ function mapDatabaseEvent(row) {
   let rua = ''
   let bairro = ''
   let referencia = ''
-  let city = ''
+  let city
   let cep = ''
 
   if (row.local_endereco) {

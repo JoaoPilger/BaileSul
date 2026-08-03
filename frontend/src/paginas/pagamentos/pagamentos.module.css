@@ -30,7 +30,7 @@
 }
 
 .heroTitle {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: #111827;
@@ -38,7 +38,7 @@
 }
 
 .heroSub {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.875rem;
   color: #6b7280;
   margin: 0;
@@ -55,7 +55,7 @@
 }
 
 .totalLabel {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -64,7 +64,7 @@
 }
 
 .totalValue {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 1.45rem;
   font-weight: 700;
   color: #fff;
@@ -100,13 +100,13 @@
 }
 
 .abaLabel {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.78rem;
   color: #6b7280;
 }
 
 .abaCount {
-  font-family: 'Playfair Display', serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 1.6rem;
   font-weight: 700;
   color: #111827;
@@ -137,7 +137,7 @@
   border-radius: 12px;
   border: 2px solid #e5e7eb;
   background: #fff;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.9rem;
   color: #111827;
   outline: none;
@@ -163,7 +163,7 @@
   border-radius: 12px;
   padding: 2.5rem;
   text-align: center;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.9rem;
   color: #9ca3af;
 }
@@ -206,7 +206,7 @@
 }
 
 .nome {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.9rem;
   font-weight: 600;
   color: #111827;
@@ -216,7 +216,7 @@
 }
 
 .email {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.75rem;
   color: #9ca3af;
   white-space: nowrap;
@@ -233,7 +233,7 @@
 }
 
 .eventoNome {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.85rem;
   font-weight: 600;
   color: #0D496B;
@@ -248,20 +248,20 @@
 }
 
 .fieldLabel {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.7rem;
   color: #9ca3af;
 }
 
 .valorTotal {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.95rem;
   font-weight: 700;
   color: #16a34a;
 }
 
 .valorParcelas {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.7rem;
   color: #9ca3af;
 }
@@ -282,7 +282,7 @@
   border: none;
   background: #16a34a;
   color: #fff;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -302,7 +302,7 @@
   border: 2px solid #ef4444;
   background: transparent;
   color: #ef4444;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -319,7 +319,7 @@
   border-radius: 20px;
   background: #dcfce7;
   color: #16a34a;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -329,7 +329,7 @@
   border-radius: 20px;
   background: #fee2e2;
   color: #ef4444;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
 }

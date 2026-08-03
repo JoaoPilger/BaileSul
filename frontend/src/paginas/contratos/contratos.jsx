@@ -46,10 +46,8 @@ export default function ContratosPage() {
 
   // ── carregar agenda ─────────────────────────────────────────
   useEffect(() => {
-    if (!ehBanda) { setIsLoading(false); return; }
+    if (!ehBanda) return;
     let cancelado = false;
-    setIsLoading(true);
-    setErro('');
 
     api
       .get('/bandas/me/agenda', { headers: { Authorization: `Bearer ${token}` } })

@@ -52,8 +52,6 @@ export default function CadastroPessoal() {
   const passo = form.nome && form.email ? (form.senha ? 3 : 2) : 1
 
   const showError = (field) => touched[field] && errors[field]
-  const inputClass = (field, extra = '') =>
-    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
 
   const updateField = (name, value) => {
     setForm((prev) => {

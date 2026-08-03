@@ -50,8 +50,6 @@ export default function CadastroComunidade() {
 
   const passo = form.nomeComunidade && form.email ? (form.cep ? 3 : 2) : 1
   const showError = (field) => touched[field] && errors[field]
-  const inputClass = (field, extra = '') =>
-    `field-input${extra ? ` ${extra}` : ''}${showError(field) ? ' field-input--error' : ''}`
 
   const updateField = (name, value) => {
     setForm((prev) => {
@@ -82,16 +80,6 @@ export default function CadastroComunidade() {
     setErro('')
   }
 
-  const handleBlur = (e) => {
-    const { name } = e.target
-    setTouched((prev) => ({ ...prev, [name]: true }))
-    setErrors((prev) => ({
-      ...prev,
-      [name]: validateCadastroComunidadeField(name, form[name], form),
-    }))
-    if (name === 'cep') buscarCep()
-  }
-
   const handleImagem = (file) => {
     if (!file) return
     const imageError = validateImageFile(file)
@@ -108,31 +96,27 @@ export default function CadastroComunidade() {
     const cep = form.cep.replace(/\D/g, '')
     if (cep.length !== 8) return
     setCepCarregando(true)
-    try {
-      const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-      const data = await res.json()
-      if (!data.erro) {
-        setForm((prev) => {
-          const updated = {
-            ...prev,
-            cidade: data.localidade || prev.cidade,
-            estado: data.uf || prev.estado,
-            bairro: data.bairro || prev.bairro,
-            rua: data.logradouro || prev.rua,
-          }
-          setErrors((errs) => ({
-            ...errs,
-            cidade: validateCadastroComunidadeField('cidade', updated.cidade, updated),
-            bairro: validateCadastroComunidadeField('bairro', updated.bairro, updated),
-            rua: validateCadastroComunidadeField('rua', updated.rua, updated),
-          }))
-          return updated
-        })
-      }
-    } catch {
-    } finally {
-      setCepCarregando(false)
+    const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`).catch(() => null)
+    const data = res ? await res.json().catch(() => null) : null
+    if (data && !data.erro) {
+      setForm((prev) => {
+        const updated = {
+          ...prev,
+          cidade: data.localidade || prev.cidade,
+          estado: data.uf || prev.estado,
+          bairro: data.bairro || prev.bairro,
+          rua: data.logradouro || prev.rua,
+        }
+        setErrors((errs) => ({
+          ...errs,
+          cidade: validateCadastroComunidadeField('cidade', updated.cidade, updated),
+          bairro: validateCadastroComunidadeField('bairro', updated.bairro, updated),
+          rua: validateCadastroComunidadeField('rua', updated.rua, updated),
+        }))
+        return updated
+      })
     }
+    setCepCarregando(false)
   }
 
   const handleSubmit = async (e) => {
@@ -308,7 +292,7 @@ export default function CadastroComunidade() {
                     <button
                       type="button"
                       className={styles['upload-remove']}
-                      onClick={(e) => { e.stopPropagation(); setImagemCapa(null); setImagemPreview(null) }}
+                      onClick={(e) => { e.stopPropagation(); setImagemPreview(null) }}
                     >
                       ✕ Remover
                     </button>

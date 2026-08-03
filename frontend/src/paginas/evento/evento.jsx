@@ -143,6 +143,7 @@ export default function EventoPage() {
     const lat = parseFloat(evento.latitude)
     const lon = parseFloat(evento.longitude)
     if (!Number.isNaN(lat) && !Number.isNaN(lon) && lat !== 0 && lon !== 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMapCenter([lat, lon])
       setMapZoom(EVENT_ZOOM)
       return

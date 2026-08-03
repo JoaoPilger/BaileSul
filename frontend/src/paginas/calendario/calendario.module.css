@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --bg:            #D9D9D9;
@@ -14,8 +14,8 @@
   --border:        rgba(17,17,17,.12);
   --border-accent: rgba(13,73,107,.30);
   --header-h:      62px;
-  --fn-head:       'Playfair Display', Georgia, serif;
-  --fn-body:       'DM Sans', system-ui, sans-serif;
+  --fn-head:       'Plus Jakarta Sans', system-ui, sans-serif;
+  --fn-body:       'Plus Jakarta Sans', system-ui, sans-serif;
 }
 
 *,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }

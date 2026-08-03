@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import HeaderCal from '../../components/header/HeaderCal'
@@ -23,7 +22,6 @@ export default function Login() {
   const [touched, setTouched] = useState({})
 
   const showError = (field) => touched[field] && errors[field]
-  const inputClass = (field) => `field-input${showError(field) ? ' field-input--error' : ''}`
 
   const handleSubmit = async (e) => {
     e.preventDefault()

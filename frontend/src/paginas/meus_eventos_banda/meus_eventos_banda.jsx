@@ -119,13 +119,11 @@ export default function MeusEventosBanda() {
       titulo: ev.titulo,
       subtitulo: `Contratado por: ${ev.comunidade || 'Organização'}`,
       data: formattedDate,
-      hora: '20:00',
       local: city,
-      confirmados: Math.floor(Math.random() * 200) + 50,
+      confirmados: Number(ev.confirmados) || 0,
       status: ev.status_evento,
       status_aceite: ev.status_aceite,
       diasFaltando: diasFaltando > 0 ? diasFaltando : 0,
-      ultimaEdicao: 'Recente',
       dataRealizacao: formattedDate,
       dataCancelamento: formattedDate,
       image: image
@@ -388,13 +386,6 @@ export default function MeusEventosBanda() {
                         <line x1="3" y1="10" x2="21" y2="10" />
                       </svg>
                       {ev.data}
-                    </span>
-                    <span className={styles['mb-event-meta-item']}>
-                      <svg viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                      {ev.hora}
                     </span>
                     <span className={styles['mb-event-meta-item']}>
                       <svg viewBox="0 0 24 24">

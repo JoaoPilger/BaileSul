@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import api from '../services/api'
 
@@ -83,6 +84,7 @@ export function AuthProvider({ children }) {
     })
   }, [persistAuth])
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const logout = useCallback(async () => {
     try {
       if (auth?.token) {
@@ -130,7 +132,7 @@ export function AuthProvider({ children }) {
 
     const verificar = () => {
       const raw = localStorage.getItem(STORAGE_KEY)
-      let tokenAtual = null
+      let tokenAtual
       try {
         tokenAtual = raw ? JSON.parse(raw)?.token : null
       } catch {
@@ -170,6 +172,7 @@ export function AuthProvider({ children }) {
   // usuário). Checa isso uma vez, sempre que a sessão de um "pessoal" muda.
   useEffect(() => {
     if (auth?.usuario?.tipo !== 'pessoal' || !auth?.token) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsVendedor(false)
       return
     }

@@ -509,7 +509,6 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
   const [abaAtiva, setAbaAtiva] = useState('geral')
 
   const carregar = useCallback(async () => {
-    setCarregando(true)
     const resultado = await fetchEventoDashboard(eventoId)
     if (resultado) {
       setDados(resultado)
@@ -519,7 +518,16 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
     setCarregando(false)
   }, [eventoId])
 
-  useEffect(() => { carregar() }, [carregar])
+  useEffect(() => {
+    let cancelado = false
+    fetchEventoDashboard(eventoId).then((resultado) => {
+      if (cancelado) return
+      if (resultado) setDados(resultado)
+      else setErro('Não foi possível carregar o dashboard do evento.')
+      setCarregando(false)
+    })
+    return () => { cancelado = true }
+  }, [eventoId])
 
   if (carregando) {
     return (

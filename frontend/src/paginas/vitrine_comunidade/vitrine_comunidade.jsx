@@ -441,9 +441,20 @@ export default function VitrineComunidade() {
                 )}
                 <div className={styles['vc-profile-actions']} style={{ marginTop: '16px' }}>
                   {isDono ? (
-                    <Link to="/editar-perfil" className={styles['vc-btn-seguir']}>
-                      Editar Perfil
-                    </Link>
+                    modoEdicao ? (
+                      <>
+                        <button className={styles['vc-btn-seguir']} style={{ background: '#0F6E56', color: '#fff' }} onClick={handleSalvarPerfil}>
+                          Salvar
+                        </button>
+                        <button className={styles['vc-btn-contato']} style={{ background: '#C24545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
+                          Cancelar
+                        </button>
+                      </>
+                    ) : (
+                      <button className={styles['vc-btn-seguir']} onClick={() => setModoEdicao(true)}>
+                        Editar Perfil
+                      </button>
+                    )
                   ) : (
                     <button
                       className={cn(styles['vc-btn-seguir'], seguindo && styles['vc-btn-seguir--seguindo'])}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, ArrowRight, Calendar } from 'lucide-react';
 import Header from '../../components/header/Header';
@@ -192,10 +192,9 @@ function StylesSection() {
 
 export default function Home() {
   const [events, setEvents] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    setIsLoading(true);
     loadEvents()
       .then((data) => {
         setEvents(data);
