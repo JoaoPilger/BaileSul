@@ -422,11 +422,6 @@ export default function VitrineBanda() {
                 {videoUrl && <button className="vb-btn-tag">Ao vivo</button>}
                 
                 {isDono ? (
-<<<<<<< HEAD
-                  <Link to="/editar-perfil" className="vb-btn-seguir">
-                    Editar Perfil
-                  </Link>
-=======
                   modoEdicao ? (
                     <>
                       <button className="vb-btn-seguir" style={{ background: '#0F6E56', color: '#fff' }} onClick={handleSalvarPerfil}>
@@ -441,7 +436,6 @@ export default function VitrineBanda() {
                       Editar Perfil
                     </button>
                   )
->>>>>>> 889f7eed9d455b7d71b6e67e92ab681e45341677
                 ) : (
                   <button
                     className={`vb-btn-seguir ${seguindo ? 'vb-btn-seguir--seguindo' : ''}`}
