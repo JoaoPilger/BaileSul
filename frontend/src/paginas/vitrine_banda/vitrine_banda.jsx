@@ -370,7 +370,11 @@ export default function VitrineBanda() {
               <div className="vb-avatar-row">
                 <div className="vb-avatar-wrap">
                   <div className="vb-avatar">
-                    {editNome ? editNome.slice(0, 5) : nome.slice(0, 5)}
+                    {banda.foto_perfil_url ? (
+                      <img src={banda.foto_perfil_url} alt={nome} />
+                    ) : (
+                      editNome ? editNome.slice(0, 5) : nome.slice(0, 5)
+                    )}
                   </div>
                 </div>
                 <span className="vb-seguidores-badge">
@@ -418,20 +422,9 @@ export default function VitrineBanda() {
                 {videoUrl && <button className="vb-btn-tag">Ao vivo</button>}
                 
                 {isDono ? (
-                  modoEdicao ? (
-                    <>
-                      <button className="vb-btn-seguir" style={{ background: '#28a745', color: '#fff' }} onClick={handleSalvarPerfil}>
-                        Salvar
-                      </button>
-                      <button className="vb-btn-contato" style={{ background: '#dc3545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
-                        Cancelar
-                      </button>
-                    </>
-                  ) : (
-                    <button className="vb-btn-seguir" onClick={() => setModoEdicao(true)}>
-                      Editar Perfil
-                    </button>
-                  )
+                  <Link to="/editar-perfil" className="vb-btn-seguir">
+                    Editar Perfil
+                  </Link>
                 ) : (
                   <button
                     className={`vb-btn-seguir ${seguindo ? 'vb-btn-seguir--seguindo' : ''}`}

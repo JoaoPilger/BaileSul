@@ -387,7 +387,11 @@ export default function VitrineComunidade() {
               <div className={styles['vc-avatar-row']}>
                 <div className={styles['vc-avatar-wrap']}>
                   <div className={styles['vc-avatar']}>
-                    {editNome ? editNome.slice(0, 3) : nome.slice(0, 3)}
+                    {comunidade.foto_perfil_url ? (
+                      <img src={comunidade.foto_perfil_url} alt={nome} />
+                    ) : (
+                      editNome ? editNome.slice(0, 3) : nome.slice(0, 3)
+                    )}
                   </div>
                 </div>
                 <span className={styles['vc-seguidores-badge']}>
@@ -437,20 +441,9 @@ export default function VitrineComunidade() {
                 )}
                 <div className={styles['vc-profile-actions']} style={{ marginTop: '16px' }}>
                   {isDono ? (
-                    modoEdicao ? (
-                      <>
-                        <button className={styles['vc-btn-seguir']} style={{ background: '#28a745', color: '#fff' }} onClick={handleSalvarPerfil}>
-                          Salvar
-                        </button>
-                        <button className={styles['vc-btn-contato']} style={{ background: '#dc3545', color: '#fff' }} onClick={() => setModoEdicao(false)}>
-                          Cancelar
-                        </button>
-                      </>
-                    ) : (
-                      <button className={styles['vc-btn-seguir']} onClick={() => setModoEdicao(true)}>
-                        Editar Perfil
-                      </button>
-                    )
+                    <Link to="/editar-perfil" className={styles['vc-btn-seguir']}>
+                      Editar Perfil
+                    </Link>
                   ) : (
                     <button
                       className={cn(styles['vc-btn-seguir'], seguindo && styles['vc-btn-seguir--seguindo'])}

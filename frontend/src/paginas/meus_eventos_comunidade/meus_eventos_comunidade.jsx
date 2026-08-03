@@ -540,7 +540,7 @@ export default function MeusEventosComunidade() {
                 </div>
 
                 <div className={styles['me-event-actions']}>
-                  <Link to={`/eventos/${ev.id}`} className={styles['me-btn-ghost']}>Ver detalhes</Link>
+                  <Link to={`/eventos/${ev.id}/dashboard`} className={styles['me-btn-ghost']}>Ver detalhes</Link>
                   {ev.status === 'agendado' && (
                     <>
                       <button

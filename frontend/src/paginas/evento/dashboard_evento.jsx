@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { fetchEventoDashboard } from '../../utils/events'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
@@ -499,8 +499,10 @@ const TABS = [
 
 const DEFAULT_IMAGE = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=1200&q=80'
 
-export default function EventoDashboard({ eventoId }) {
+export default function EventoDashboard({ eventoId: propEventoId }) {
   const navigate = useNavigate()
+  const params = useParams()
+  const eventoId = propEventoId || params.id
   const [dados, setDados] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')

@@ -74,8 +74,8 @@ export default function Configuracoes() {
           key: 'perfil-comunidade',
           icon: Music,
           title: 'Perfil da Comunidade',
-          subtitle: 'Perfil Comunidade',
-          onClick: () => navigate(`/comunidades/${usuario.id}`),
+          subtitle: 'Editar dados, foto de perfil e galeria de mídias',
+          onClick: () => navigate('/editar-perfil'),
         },
         {
           key: 'agenda',
@@ -119,8 +119,8 @@ export default function Configuracoes() {
         key: 'perfil-banda',
         icon: Music,
         title: 'Perfil da banda',
-        subtitle: 'Nome artístico, estilo e descrição',
-        onClick: () => navigate(`/bandas/${usuario.id}`),
+        subtitle: 'Nome artístico, estilo, foto e mídias',
+        onClick: () => navigate('/editar-perfil'),
       },
       {
         key: 'agenda',
@@ -134,7 +134,7 @@ export default function Configuracoes() {
         icon: Lock,
         title: 'Alterar senha',
         subtitle: 'Atualize sua senha de acesso',
-        onClick: () => showEmBreve('Alterar senha em breve.'),
+        onClick: () => setSenhaModalOpen(true),
       },
     ]
   }

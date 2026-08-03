@@ -31,6 +31,13 @@ export async function loadBandById(id) {
   return null
 }
 
+function normalizarMedia(url) {
+  if (url && url.includes('/media/')) {
+    return url.substring(url.indexOf('/media/'))
+  }
+  return url || ''
+}
+
 function mapBandaRow(row) {
   return {
     id: row.usuario_id,
@@ -39,6 +46,7 @@ function mapBandaRow(row) {
     description: row.descricao || '',
     whatsapp: row.whatsapp || '',
     cnpj_validado: row.cnpj_validado || false,
+    foto_perfil_url: normalizarMedia(row.foto_perfil_url),
   }
 }
 
@@ -56,6 +64,6 @@ function mapBandaDetail(row) {
       cidade: e.cidade,
       estado: e.estado,
     })),
-    midias: row.midias || [],
+    midias: (row.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })),
   }
 }

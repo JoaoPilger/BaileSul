@@ -31,6 +31,13 @@ export async function loadCommunityById(id) {
   return null
 }
 
+function normalizarMedia(url) {
+  if (url && url.includes('/media/')) {
+    return url.substring(url.indexOf('/media/'))
+  }
+  return url || ''
+}
+
 function mapComunidadeRow(row) {
   return {
     id: row.usuario_id,
@@ -43,6 +50,7 @@ function mapComunidadeRow(row) {
     latitude: row.latitude,
     longitude: row.longitude,
     cnpj_validado: row.cnpj_validado || false,
+    foto_perfil_url: normalizarMedia(row.foto_perfil_url),
   }
 }
 
@@ -59,6 +67,6 @@ function mapComunidadeDetail(row) {
       foto_capa_url: e.foto_capa_url,
       status: e.status,
     })),
-    midias: row.midias || [],
+    midias: (row.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })),
   }
 }

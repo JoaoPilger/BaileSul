@@ -10,6 +10,7 @@ import Login from './paginas/login/login.jsx'
 import CriarEvento from './paginas/criar_evento/criar_evento.jsx'
 import Eventos from './paginas/eventos/eventos.jsx'
 import Evento from './paginas/evento/evento.jsx'
+import EventoDashboard from './paginas/evento/dashboard_evento.jsx'
 import Bandas from './paginas/bandas/bandas.jsx'
 import Comunidades from './paginas/comunidades/comunidades.jsx'
 import VitrineComunidade from './paginas/vitrine_comunidade/vitrine_comunidade.jsx'
@@ -22,6 +23,8 @@ import MeusEventosComunidade from './paginas/meus_eventos_comunidade/meus_evento
 import Painel from './paginas/painel/painel.jsx'
 import ContratosPage from './paginas/contratos/contratos.jsx'
 import MeusEventosBanda from './paginas/meus_eventos_banda/meus_eventos_banda.jsx'
+
+import EditarPerfil from './paginas/editar_perfil/editar_perfil.jsx'
 
 // "/" mostra a home pública normalmente para visitantes e usuários "pessoal".
 // Banda e comunidade logam pra trabalhar, não pra navegar a vitrine pública
@@ -51,12 +54,14 @@ function App() {
           <Route path="/criar-evento" element={<CriarEvento />} />
           <Route path="/eventos" element={<Eventos />} />
           <Route path="/eventos/:id" element={<Evento />} />
+          <Route path="/eventos/:id/dashboard" element={<EventoDashboard />} />
           <Route path="/bandas" element={<Bandas />} />
           <Route path="/comunidades" element={<Comunidades />} />
           <Route path="/comunidades/:id" element={<VitrineComunidade />} />
           <Route path="/bandas/:id" element={<VitrineBanda />} />
           <Route path="/vendedores" element={<Vendedores />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/editar-perfil" element={<EditarPerfil />} />
           <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="/meus-ingressos" element={<MeusIngressosPage />} />
           <Route path="/meus-eventos" element={<MeusEventosComunidade />} />

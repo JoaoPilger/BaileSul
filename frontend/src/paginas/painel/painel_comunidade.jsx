@@ -5,6 +5,7 @@ import api from '../../services/api'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import styles from './painel.module.css'
+import GerenciadorMidiasModal from './GerenciadorMidiasModal'
 
 const ICONS = {
   calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>,
@@ -17,6 +18,7 @@ const ICONS = {
   settings: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>,
   chevronLeft: <><polyline points="15 18 9 12 15 6" /></>,
   chevronRight: <><polyline points="9 18 15 12 9 6" /></>,
+  image: <><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>,
 }
 
 function Icon({ name }) {
@@ -54,6 +56,7 @@ export default function PainelComunidade() {
   const [eventos, setEventos] = useState([])
   const [vendedoresAtivos, setVendedoresAtivos] = useState(0)
   const [carregando, setCarregando] = useState(true)
+  const [midiasModalOpen, setMidiasModalOpen] = useState(false)
 
   // ── calendário ──────────────────────────────────────────────
   const hoje = new Date()
@@ -96,8 +99,9 @@ export default function PainelComunidade() {
   const acoes = [
     { to: '/criar-evento', label: 'Criar Evento', sub: 'Novo evento pra sua comunidade', icon: 'plus' },
     { to: '/meus-eventos', label: 'Meus Eventos', sub: 'Ver e gerenciar todos', icon: 'list' },
+    { action: () => setMidiasModalOpen(true), label: 'Gerenciar Mídias', sub: 'Fotos e vídeos do CTG', icon: 'image' },
     { to: '/vendedores', label: 'Vendedores', sub: 'Gerenciar equipe de venda', icon: 'users' },
-    { to: '/configuracoes', label: 'Configurações', sub: 'Dados da comunidade', icon: 'settings' },
+    { to: '/editar-perfil', label: 'Editar Vitrine', sub: 'Dados e perfil da comunidade', icon: 'settings' },
   ]
 
   // ── mini calendário ─────────────────────────────────────────
@@ -183,16 +187,34 @@ export default function PainelComunidade() {
 
             <h2 className={styles['pn-section-title']}>Atalhos</h2>
             <div className={styles['pn-actions-grid']}>
-              {acoes.map((a) => (
-                <Link key={a.to} to={a.to} className={styles['pn-action-card']}>
-                  <div className={styles['pn-action-icon']}>
-                    <Icon name={a.icon} />
-                  </div>
-                  <div>
-                    <div className={styles['pn-action-label']}>{a.label}</div>
-                    <div className={styles['pn-action-sub']}>{a.sub}</div>
-                  </div>
-                </Link>
+              {acoes.map((a, idx) => (
+                a.to ? (
+                  <Link key={a.to || idx} to={a.to} className={styles['pn-action-card']}>
+                    <div className={styles['pn-action-icon']}>
+                      <Icon name={a.icon} />
+                    </div>
+                    <div>
+                      <div className={styles['pn-action-label']}>{a.label}</div>
+                      <div className={styles['pn-action-sub']}>{a.sub}</div>
+                    </div>
+                  </Link>
+                ) : (
+                  <button
+                    key={idx}
+                    type="button"
+                    className={styles['pn-action-card']}
+                    onClick={a.action}
+                    style={{ background: 'none', textTransform: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
+                  >
+                    <div className={styles['pn-action-icon']}>
+                      <Icon name={a.icon} />
+                    </div>
+                    <div>
+                      <div className={styles['pn-action-label']}>{a.label}</div>
+                      <div className={styles['pn-action-sub']}>{a.sub}</div>
+                    </div>
+                  </button>
+                )
               ))}
             </div>
 
@@ -283,7 +305,7 @@ export default function PainelComunidade() {
                         <button
                           type="button"
                           className={styles['pn-btn-solid']}
-                          onClick={() => navigate(`/eventos/${e.id}`)}
+                          onClick={() => navigate(`/eventos/${e.id}/dashboard`)}
                         >
                           Ver
                         </button>
@@ -308,7 +330,7 @@ export default function PainelComunidade() {
                     <button
                       type="button"
                       className={styles['pn-btn-solid']}
-                      onClick={() => navigate(`/eventos/${e.id}`)}
+                      onClick={() => navigate(`/eventos/${e.id}/dashboard`)}
                     >
                       Ver
                     </button>
@@ -321,6 +343,12 @@ export default function PainelComunidade() {
           </>
         )}
       </main>
+
+      <GerenciadorMidiasModal
+        open={midiasModalOpen}
+        onClose={() => setMidiasModalOpen(false)}
+      />
+
       <Footer />
     </div>
   )
