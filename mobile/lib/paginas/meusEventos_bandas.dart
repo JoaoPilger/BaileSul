@@ -8,7 +8,6 @@ import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import '../widgets/mobile_footer.dart';
-import 'criar_editar_evento.dart';
 import 'home.dart';
 
 class MeusEventosBandasPage extends StatefulWidget {
@@ -36,8 +35,9 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
   int _total = 0;
   int _proximos = 0;
   int _realizados = 0;
-  double? _avaliacaoMedia;
+  int _canceladosRecusados = 0;
   String? _defaultImageUrl;
+  String _busca = '';
 
   @override
   void initState() {
@@ -78,14 +78,11 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
       final List<Map<String, dynamic>> eventos = eventosRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
       final List<dynamic> midiasRaw = decoded is Map && decoded['midias'] is List ? decoded['midias'] as List<dynamic> : <dynamic>[];
       final String? imagem = _extrairImagemBanda(midiasRaw);
-      double? avaliacao = _parseAvaliacao(decoded is Map ? decoded['avaliacao_media'] : null);
-      avaliacao ??= _calcularAvaliacaoMediaDosEventos(eventos);
 
       if (!mounted) return;
       setState(() {
         _eventos = eventos;
         _defaultImageUrl = imagem;
-        _avaliacaoMedia = avaliacao;
         _recalcularEstatisticas();
       });
     } catch (err) {
@@ -110,21 +107,6 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
     return null;
   }
 
-  double? _parseAvaliacao(dynamic raw) {
-    if (raw == null) return null;
-    if (raw is num) return raw.toDouble();
-    return double.tryParse(raw.toString());
-  }
-
-  double? _calcularAvaliacaoMediaDosEventos(List<Map<String, dynamic>> eventos) {
-    final List<double> notas = eventos.map((e) {
-      return _parseAvaliacao(e['avaliacao_media'] ?? e['avaliacao'] ?? e['nota']);
-    }).whereType<double>().toList();
-
-    if (notas.isEmpty) return null;
-    return notas.reduce((value, element) => value + element) / notas.length;
-  }
-
   void _recalcularEstatisticas() {
     final now = DateTime.now();
     final in30 = now.add(const Duration(days: 30));
@@ -141,6 +123,10 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
     }).length;
 
     _realizados = _eventos.where((e) => (e['status']?.toString() ?? '') == 'finalizado').length;
+    _canceladosRecusados = _eventos.where((e) {
+      final String status = (e['status']?.toString() ?? '').toLowerCase();
+      return status == 'cancelado' || status == 'recusado';
+    }).length;
   }
 
   void _abrirMenu() {
@@ -149,7 +135,12 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> listaFiltrada = _eventos.where(_filtrarPorStatus).toList();
+    final String buscaNormalizada = _busca.trim().toLowerCase();
+    final List<Map<String, dynamic>> listaFiltrada = _eventos.where(_filtrarPorStatus).where((evento) {
+      if (buscaNormalizada.isEmpty) return true;
+      final String titulo = (evento['titulo']?.toString() ?? '').toLowerCase();
+      return titulo.contains(buscaNormalizada);
+    }).toList();
 
     return Scaffold(
       backgroundColor: MobileFooter.backgroundColor,
@@ -173,65 +164,13 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 12),
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final bool isNarrow = constraints.maxWidth < 700;
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
-                                    if (isNarrow) ...[
-                                      Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
-                                      const SizedBox(height: 12),
-                                      _buildFilterTabs(),
-                                      const SizedBox(height: 12),
-                                      ElevatedButton.icon(
-                                        onPressed: () => Navigator.push(
-                                          context,
-                                          MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
-                                        ),
-                                        icon: const Icon(Icons.add, size: 18),
-                                        label: const Text('Criar Evento'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF0D496B),
-                                          foregroundColor: Colors.white,
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                        ),
-                                      ),
-                                    ] else ...[
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
-                                        children: [
-                                          Expanded(
-                                            child: Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          ElevatedButton.icon(
-                                            onPressed: () => Navigator.push(
-                                              context,
-                                              MaterialPageRoute(builder: (context) => const CriarEditarEventoPage()),
-                                            ),
-                                            icon: const Icon(Icons.add, size: 18),
-                                            label: const Text('Criar Evento'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: const Color(0xFF0D496B),
-                                              foregroundColor: Colors.white,
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      _buildFilterTabs(),
-                                    ],
-                                    const SizedBox(height: 16),
-                                  ],
-                                );
-                              },
-                            ),
+                            Text('Meus eventos', style: const TextStyle(color: BaileSulColors.headerText, fontSize: 22, fontWeight: FontWeight.w800)),
                             const SizedBox(height: 12),
+                            _buildFilterTabs(),
+                            const SizedBox(height: 16),
                             _buildStatsGrid(),
+                            const SizedBox(height: 16),
+                            _buildSearchBar(),
                             const SizedBox(height: 16),
                             if (_loading)
                               const Center(child: CircularProgressIndicator())
@@ -373,10 +312,35 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
             SizedBox(width: itemWidth, child: _buildStatTile('Total de Eventos', '$_total')),
             SizedBox(width: itemWidth, child: _buildStatTile('Próximos', '$_proximos')),
             SizedBox(width: itemWidth, child: _buildStatTile('Realizados', '$_realizados')),
-            SizedBox(width: itemWidth, child: _buildStatTile('Avaliação média', _avaliacaoMedia != null ? _avaliacaoMedia!.toStringAsFixed(1) : '-')),
+            SizedBox(width: itemWidth, child: _buildStatTile('Cancelados/Recusados', '$_canceladosRecusados')),
           ],
         );
       },
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return TextField(
+      onChanged: (value) => setState(() => _busca = value),
+      decoration: InputDecoration(
+        hintText: 'Buscar evento...',
+        prefixIcon: const Icon(Icons.search, color: BaileSulColors.mutedText),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: Color(0xFF0D496B)),
+        ),
+      ),
     );
   }
 }

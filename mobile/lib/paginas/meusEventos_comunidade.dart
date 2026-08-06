@@ -1,7 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
@@ -102,6 +106,74 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
     );
     if (!mounted) return;
     _carregarEventos();
+  }
+
+  Future<void> _abrirEditarEvento(Map<String, dynamic> evento) async {
+    final bool? salvou = await showDialog<bool>(
+      context: context,
+      builder: (context) => _EditarEventoDialog(evento: evento),
+    );
+    if (salvou == true && mounted) {
+      _carregarEventos();
+    }
+  }
+
+  Future<void> _confirmarCancelarEvento(Map<String, dynamic> evento) async {
+    final bool? confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar evento'),
+        content: Text(
+          'Tem certeza que deseja cancelar o evento "${evento['titulo'] ?? ''}"? Essa ação não pode ser desfeita.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Voltar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Cancelar evento'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmou != true) return;
+
+    final String? token = SessaoUsuario.instance.token;
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login novamente para cancelar o evento.')),
+      );
+      return;
+    }
+
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/eventos/${evento['id']}');
+      final http.Response resp = await http.delete(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      ).timeout(const Duration(seconds: 15));
+
+      if (resp.statusCode != 200) {
+        final Map<String, dynamic> body = resp.body.isNotEmpty ? jsonDecode(resp.body) as Map<String, dynamic> : {};
+        throw Exception(body['error']?.toString() ?? 'Erro ao cancelar evento.');
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento cancelado com sucesso.')),
+      );
+      _carregarEventos();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
   }
 
   void _recalcularEstatisticas() {
@@ -217,7 +289,11 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                               Column(
                                 children: [
                                   for (final event in listaFiltrada) ...[
-                                    _EventoListCard(event: event),
+                                    _EventoListCard(
+                                      event: event,
+                                      onEditar: () => _abrirEditarEvento(event),
+                                      onCancelar: () => _confirmarCancelarEvento(event),
+                                    ),
                                     const SizedBox(height: 12),
                                   ],
                                 ],
@@ -356,9 +432,15 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
 }
 
 class _EventoListCard extends StatelessWidget {
-  const _EventoListCard({required this.event});
+  const _EventoListCard({
+    required this.event,
+    this.onEditar,
+    this.onCancelar,
+  });
 
   final Map<String, dynamic> event;
+  final VoidCallback? onEditar;
+  final VoidCallback? onCancelar;
 
   String _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return '';
@@ -368,6 +450,44 @@ class _EventoListCard extends StatelessWidget {
     } catch (_) {
       return raw.length >= 10 ? raw.substring(0, 10) : raw;
     }
+  }
+
+  Widget _buildActions() {
+    final bool podeCancelar = (event['status']?.toString() ?? '') == 'agendado';
+
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: onEditar,
+            icon: const Icon(Icons.edit_outlined, size: 16),
+            label: const Text('Editar'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF0D496B),
+              side: const BorderSide(color: Color(0xFF0D496B)),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        if (podeCancelar) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onCancelar,
+              icon: const Icon(Icons.cancel_outlined, size: 16),
+              label: const Text('Cancelar'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.red,
+                side: const BorderSide(color: Colors.red),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   @override
@@ -418,6 +538,8 @@ class _EventoListCard extends StatelessWidget {
                             const SizedBox(width: 8),
                             Expanded(child: Text(event['local_nome']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w600))),
                           ]),
+                          const SizedBox(height: 12),
+                          _buildActions(),
                         ],
                       ),
                     ),
@@ -458,6 +580,8 @@ class _EventoListCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(child: Text(event['local_nome']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w600))),
                             ]),
+                            const SizedBox(height: 12),
+                            _buildActions(),
                           ],
                         ),
                       ),
@@ -466,6 +590,395 @@ class _EventoListCard extends StatelessWidget {
                 ),
         );
       },
+    );
+  }
+}
+
+class _EditarEventoDialog extends StatefulWidget {
+  const _EditarEventoDialog({required this.evento});
+
+  final Map<String, dynamic> evento;
+
+  @override
+  State<_EditarEventoDialog> createState() => _EditarEventoDialogState();
+}
+
+class _EditarEventoDialogState extends State<_EditarEventoDialog> {
+  late final TextEditingController _tituloController;
+  late final TextEditingController _descricaoController;
+  late final TextEditingController _dataInicioController;
+  late final TextEditingController _dataFimController;
+  late final TextEditingController _localNomeController;
+  late final TextEditingController _localEnderecoController;
+  late final TextEditingController _valorIngressoController;
+
+  Uint8List? _novaCapaBytes;
+  String _novaCapaFilename = 'capa.jpg';
+  bool _salvando = false;
+  String? _erro;
+
+  static String _isoParaExibicao(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    final DateTime? d = DateTime.tryParse(raw);
+    if (d == null) return '';
+    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  }
+
+  static String? _exibicaoParaIso(String value) {
+    final List<String> partes = value.trim().split('/');
+    if (partes.length != 3) return null;
+
+    final int? dia = int.tryParse(partes[0]);
+    final int? mes = int.tryParse(partes[1]);
+    final int? ano = int.tryParse(partes[2]);
+    if (dia == null || mes == null || ano == null) return null;
+
+    final DateTime data = DateTime(ano, mes, dia);
+    if (data.day != dia || data.month != mes || data.year != ano) return null;
+
+    return '$ano-${mes.toString().padLeft(2, '0')}-${dia.toString().padLeft(2, '0')}';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.evento;
+    _tituloController = TextEditingController(text: e['titulo']?.toString() ?? '');
+    _descricaoController = TextEditingController(text: e['descricao']?.toString() ?? '');
+    _dataInicioController = TextEditingController(text: _isoParaExibicao(e['data_inicio']?.toString()));
+    _dataFimController = TextEditingController(text: _isoParaExibicao(e['data_fim']?.toString()));
+    _localNomeController = TextEditingController(text: e['local_nome']?.toString() ?? '');
+    _localEnderecoController = TextEditingController(text: e['local_endereco']?.toString() ?? '');
+    final valor = e['valor_ingresso'];
+    _valorIngressoController = TextEditingController(text: valor == null ? '' : valor.toString());
+  }
+
+  @override
+  void dispose() {
+    _tituloController.dispose();
+    _descricaoController.dispose();
+    _dataInicioController.dispose();
+    _dataFimController.dispose();
+    _localNomeController.dispose();
+    _localEnderecoController.dispose();
+    _valorIngressoController.dispose();
+    super.dispose();
+  }
+
+  MediaType _mediaTypeFromFilename(String filename) {
+    final String lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return MediaType('image', 'png');
+    if (lower.endsWith('.webp')) return MediaType('image', 'webp');
+    if (lower.endsWith('.gif')) return MediaType('image', 'gif');
+    return MediaType('image', 'jpeg');
+  }
+
+  Future<void> _escolherCapa(ImageSource source) async {
+    try {
+      final XFile? picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final Uint8List bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _novaCapaBytes = bytes;
+        _novaCapaFilename = picked.name.isNotEmpty ? picked.name : _novaCapaFilename;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
+      );
+    }
+  }
+
+  void _abrirSeletorCapa() {
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library_outlined),
+                title: const Text('Galeria'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _escolherCapa(ImageSource.gallery);
+                },
+              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.photo_camera_outlined),
+                  title: const Text('Câmera'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _escolherCapa(ImageSource.camera);
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _salvar() async {
+    final String titulo = _tituloController.text.trim();
+    final String? dataInicio = _exibicaoParaIso(_dataInicioController.text);
+    final String? dataFim = _exibicaoParaIso(_dataFimController.text);
+
+    if (titulo.isEmpty || dataInicio == null || dataFim == null) {
+      setState(() => _erro = 'Preencha titulo, data de inicio e data de termino validos.');
+      return;
+    }
+
+    final String? token = SessaoUsuario.instance.token;
+    if (token == null || token.isEmpty) {
+      setState(() => _erro = 'Faca login novamente para salvar o evento.');
+      return;
+    }
+
+    setState(() {
+      _salvando = true;
+      _erro = null;
+    });
+
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/eventos/${widget.evento['id']}');
+      final http.MultipartRequest request = http.MultipartRequest('PUT', url);
+      request.headers['Authorization'] = 'Bearer $token';
+      request.fields['titulo'] = titulo;
+      request.fields['descricao'] = _descricaoController.text.trim();
+      request.fields['data_inicio'] = dataInicio;
+      request.fields['data_fim'] = dataFim;
+      request.fields['local_nome'] = _localNomeController.text.trim();
+      request.fields['local_endereco'] = _localEnderecoController.text.trim();
+      if (_valorIngressoController.text.trim().isNotEmpty) {
+        final double? valor = double.tryParse(_valorIngressoController.text.trim().replaceAll(',', '.'));
+        if (valor != null) request.fields['valor_ingresso'] = valor.toString();
+      }
+      if (_novaCapaBytes != null) {
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'foto_capa',
+            _novaCapaBytes!,
+            filename: _novaCapaFilename,
+            contentType: _mediaTypeFromFilename(_novaCapaFilename),
+          ),
+        );
+      }
+
+      final http.StreamedResponse streamed = await request.send().timeout(const Duration(seconds: 30));
+      final http.Response resp = await http.Response.fromStream(streamed);
+
+      Map<String, dynamic> respBody = <String, dynamic>{};
+      if (resp.body.isNotEmpty) {
+        respBody = jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+
+      if (resp.statusCode != 200) {
+        throw Exception(respBody['error']?.toString() ?? 'Erro ao salvar evento.');
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Evento atualizado com sucesso.')),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _erro = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) {
+        setState(() => _salvando = false);
+      }
+    }
+  }
+
+  Widget _buildCapaPicker() {
+    final String capaAtualUrl = ApiConfig.resolveMediaUrl(widget.evento['foto_capa_url']?.toString());
+
+    Widget imagem;
+    if (_novaCapaBytes != null) {
+      imagem = Image.memory(_novaCapaBytes!, fit: BoxFit.cover);
+    } else if (capaAtualUrl.isNotEmpty) {
+      imagem = Image.network(
+        capaAtualUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stack) => Container(
+          color: Colors.grey.shade200,
+          child: const Icon(Icons.event, size: 36),
+        ),
+      );
+    } else {
+      imagem = Container(
+        color: const Color(0xFFD9E5EE),
+        child: const Center(
+          child: Icon(Icons.upload_file_rounded, color: Color(0xFF0D496B), size: 28),
+        ),
+      );
+    }
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _abrirSeletorCapa,
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: const Color(0xFFB9CBD9)),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              imagem,
+              Positioned(
+                right: 8,
+                top: 8,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(Icons.edit, color: Colors.white, size: 18),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _campo(
+    String label,
+    TextEditingController controller, {
+    TextInputType keyboardType = TextInputType.text,
+    List<TextInputFormatter>? inputFormatters,
+    int? maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          isDense: true,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Editar Evento'),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildCapaPicker(),
+              const SizedBox(height: 12),
+              _campo('Titulo do Evento *', _tituloController),
+              _campo('Descricao', _descricaoController, maxLines: 3),
+              Row(
+                children: [
+                  Expanded(
+                    child: _campo(
+                      'Data de Inicio *',
+                      _dataInicioController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_DataInputFormatter()],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _campo(
+                      'Data de Termino *',
+                      _dataFimController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [_DataInputFormatter()],
+                    ),
+                  ),
+                ],
+              ),
+              _campo('Local / Cidade', _localNomeController),
+              _campo('Endereco', _localEnderecoController, maxLines: 2),
+              _campo(
+                'Valor do ingresso',
+                _valorIngressoController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]'))],
+              ),
+              if (_erro != null) ...[
+                Text(
+                  _erro!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _salvando ? null : () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          onPressed: _salvando ? null : _salvar,
+          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0D496B)),
+          child: _salvando
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                )
+              : const Text('Salvar'),
+        ),
+      ],
+    );
+  }
+}
+
+class _DataInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
+    final String trimmed = digits.length > 8 ? digits.substring(0, 8) : digits;
+
+    final StringBuffer result = StringBuffer();
+    for (int i = 0; i < trimmed.length; i++) {
+      if (i == 2 || i == 4) {
+        result.write('/');
+      }
+      result.write(trimmed[i]);
+    }
+
+    final String text = result.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
