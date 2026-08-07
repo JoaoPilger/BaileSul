@@ -146,31 +146,31 @@ export default function Configuracoes() {
           <p className={styles.subtitle}>Gerencie o perfil e as configurações da sua conta.</p>
 
           <div className={styles.grid}>
-          <div className={styles.infoCard}>
-            <strong>Conta {usuario?.tipo}</strong>
-            <div style={{ marginTop: 8, color: 'var(--muted)' }}>{usuario?.email}</div>
-            <div style={{ marginTop: 8 }}><a href="#" style={{ color: 'var(--accent)' }}>Sessão ativa</a></div>
-          </div>
+            <div className={styles.infoCard}>
+              <strong>Conta {usuario?.tipo}</strong>
+              <div style={{ marginTop: 8, color: 'var(--muted)' }}>{usuario?.email}</div>
+              <div style={{ marginTop: 8 }}><a href="#" style={{ color: 'var(--accent)' }}>Sessão ativa</a></div>
+            </div>
 
-          <div className={styles.tilesGrid}>
-            {tiles.map(({ key, icon: Icon, title, subtitle, onClick }) => (
-              <button key={key} type="button" onClick={onClick} className={styles.tileButton}>
-                <div className={styles.tileContent}>
-                  <Icon className={styles.icon} size={24} />
-                  <div className={styles.textBlock}>
-                    <div className={styles.tileTitle}>{title}</div>
-                    <div className={styles.tileSubtitle}>{subtitle}</div>
+            <div className={styles.tilesGrid}>
+              {tiles.map(({ key, icon: Icon, title, subtitle, onClick }) => (
+                <button key={key} type="button" onClick={onClick} className={styles.tileButton}>
+                  <div className={styles.tileContent}>
+                    <Icon className={styles.icon} size={24} />
+                    <div className={styles.textBlock}>
+                      <div className={styles.tileTitle}>{title}</div>
+                      <div className={styles.tileSubtitle}>{subtitle}</div>
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
-          </div>
+                </button>
+              ))}
+            </div>
 
-          <div className={styles.logoutWrap}>
-            <button onClick={async () => { await logout(); navigate('/'); }} className={`${shared.btn} ${styles.logoutBtn}`}>
-              <LogOut /> Sair da conta
-            </button>
-          </div>
+            <div className={styles.logoutWrap}>
+              <button onClick={async () => { await logout(); navigate('/'); }} className={`${shared.btn} ${styles.logoutBtn}`}>
+                <LogOut /> Sair da conta
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -181,7 +181,8 @@ export default function Configuracoes() {
         onClose={() => setSenhaModalOpen(false)}
         onSuccess={() => {
           setSenhaModalOpen(false)
-          showEmBreve('Senha alterada com sucesso.')
+          setSnackMsg('Senha alterada com sucesso!')
+          setSnackOpen(true)
         }}
       />
     </>

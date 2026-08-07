@@ -60,9 +60,9 @@
   flex: 0 0 auto;
 }
 
-.textBlock { 
-  line-height: 1.1; 
-  text-align: left; 
+.textBlock {
+  line-height: 1.1;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -76,11 +76,18 @@
   margin-top: 0;
 }
 
-.tileSubtitle { color: var(--muted); font-size: 13px; }
+.tileSubtitle {
+  color: var(--muted);
+  font-size: 13px;
+}
 
-.arrow { color: var(--muted); }
+.arrow {
+  color: var(--muted);
+}
 
-.logoutWrap { margin-top: 12px; }
+.logoutWrap {
+  margin-top: 12px;
+}
 
 .logoutBtn {
   width: auto;
@@ -136,7 +143,9 @@
   display: flex;
 }
 
-.modalClose:hover { color: var(--black); }
+.modalClose:hover {
+  color: var(--black);
+}
 
 .modalForm {
   display: flex;
@@ -156,31 +165,48 @@
   color: var(--muted);
 }
 
-.modalInput,
-.modalInputError {
-  height: 44px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  padding: 0 12px;
-  font-size: 0.92rem;
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.inputWithToggle {
+  position: relative;
+  display: flex;
+  align-items: center;
 }
 
-.modalInput:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(13, 73, 107, 0.12);
+.inputWithToggle .modalInput,
+.inputWithToggle .modalInputError {
+  width: 100%;
+  padding-right: 42px;
 }
 
-.modalInputError {
-  border-color: #a32d2d;
-  box-shadow: 0 0 0 3px rgba(163, 45, 45, 0.1);
+.toggleVisibilityBtn {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: color 0.2s, background-color 0.2s;
+}
+
+.toggleVisibilityBtn:hover {
+  color: var(--black);
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .modalFieldHint {
   font-size: 0.78rem;
   color: #a32d2d;
   margin: 0;
+}
+
+.modalFieldInfo {
+  font-size: 0.76rem;
+  color: var(--muted);
+  margin: 2px 0 0 0;
 }
 
 .modalErroGeral {

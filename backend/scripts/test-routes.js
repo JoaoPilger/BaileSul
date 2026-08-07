@@ -397,6 +397,44 @@ async function main() {
     );
   }
 
+  // ── Alterar Senha ────────────────────────────────────────────────────────
+  record(
+    'PUT /auth/senha (senha atual incorreta → 401)',
+    await req('PUT', '/auth/senha', {
+      token: state.tokens.pessoal,
+      expect: [401],
+      body: { senha_atual: 'senhaErrada123', nova_senha: 'NovaSenha123' },
+    })
+  );
+
+  record(
+    'PUT /auth/senha (nova senha sem número → 400)',
+    await req('PUT', '/auth/senha', {
+      token: state.tokens.pessoal,
+      expect: [400],
+      body: { senha_atual: senha, nova_senha: 'novasenha' },
+    })
+  );
+
+  record(
+    'PUT /auth/senha (sucesso)',
+    await req('PUT', '/auth/senha', {
+      token: state.tokens.pessoal,
+      expect: [200],
+      body: { senha_atual: senha, nova_senha: 'NovaSenha123' },
+    })
+  );
+
+  // Restaura senha original para manter ambiente limpo
+  record(
+    'PUT /auth/senha (restaurar senha original)',
+    await req('PUT', '/auth/senha', {
+      token: state.tokens.pessoal,
+      expect: [200],
+      body: { senha_atual: 'NovaSenha123', nova_senha: senha },
+    })
+  );
+
   // ── Logout ───────────────────────────────────────────────────────────────
   record(
     'POST /auth/logout',
