@@ -13,9 +13,13 @@ function CommunityCard({ item }) {
   return (
     <div className={styles['listing-card']} onClick={() => navigate(`/comunidades/${item.id}`)}>
       <div className={styles['listing-card-img-wrap']}>
-        <div className={styles['listing-card-placeholder-community']}>
-          <Users size={40} className={styles['listing-card-placeholder-icon']} />
-        </div>
+        {item.foto_perfil_url ? (
+          <img src={item.foto_perfil_url} alt={item.title} className={styles['listing-card-img']} loading="lazy" />
+        ) : (
+          <div className={styles['listing-card-placeholder-community']}>
+            <Users size={40} className={styles['listing-card-placeholder-icon']} />
+          </div>
+        )}
       </div>
 
       <div className={styles['listing-card-body']}>

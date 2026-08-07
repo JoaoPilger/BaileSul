@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { cn } from '../../utils/cn';
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import api from '../../services/api'
 import HeaderCal from '../../components/header/HeaderCal'
 import styles from './cadastro.module.css';
 import { validateImageFile } from '../../utils/criarEventoValidation'
@@ -47,6 +48,7 @@ export default function CadastroBanda() {
     termos: false,
   })
   const [imagemPreview, setImagemPreview] = useState(null)
+  const [imagemFile, setImagemFile] = useState(null)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState(false)
   const [carregando, setCarregando] = useState(false)
@@ -92,6 +94,7 @@ export default function CadastroBanda() {
       setTouched((prev) => ({ ...prev, imagem: true }))
       return
     }
+    setImagemFile(file)
     setImagemPreview(URL.createObjectURL(file))
     setErrors((prev) => ({ ...prev, imagem: '' }))
   }
@@ -130,6 +133,11 @@ export default function CadastroBanda() {
           whatsapp: form.telefone,
         },
       })
+      if (imagemFile) {
+        const fd = new FormData()
+        fd.append('arquivo', imagemFile)
+        await api.post('/bandas/me/foto-perfil', fd).catch(() => null)
+      }
       setSucesso(true)
       navigate('/', { replace: true })
     } catch (err) {
@@ -297,7 +305,7 @@ export default function CadastroBanda() {
                     <button
                       type="button"
                       className={styles['upload-remove']}
-                      onClick={(e) => { e.stopPropagation(); setImagemPreview(null) }}
+                      onClick={(e) => { e.stopPropagation(); setImagemPreview(null); setImagemFile(null) }}
                     >
                       ✕ Remover
                     </button>
