@@ -1,5 +1,16 @@
 -- ============================================================
---  BaileSul – Schema PostgreSQL  v5
+--  BaileSul – Schema PostgreSQL  v6
+--  Alterações em relação à v5:
+--    - eventos: coluna tipo_evento adicionada (categoria do
+--      evento, com CHECK restringindo aos valores suportados
+--      pela aplicação) + índice idx_eventos_tipo_evento
+--    - eventos.chk_foto_capa_url: aceita apenas URLs
+--      http(s), sem suporte a caminho local '/media/'
+--    - perfil_midias.chk_perfil_midia_url: passa a aceitar
+--      também caminhos locais '/media/'
+--    - perfis_bandas e perfis_comunidades: foto_perfil_url
+--      sem CHECK de formato (aceita qualquer valor)
+--
 --  Alterações em relação à v4:
 --    - auth_tokens: persistência e revogação de JWT
 --    - video_url adicionado em perfis_bandas
@@ -99,11 +110,6 @@ CREATE TABLE perfis_bandas (
   ),
   CONSTRAINT chk_banda_video_url CHECK (
     video_url IS NULL OR video_url ~ '^https?://'
-  ),
-  CONSTRAINT chk_banda_foto_perfil_url CHECK (
-    foto_perfil_url IS NULL
-    OR foto_perfil_url ~ '^https?://'
-    OR foto_perfil_url ~ '^/media/'
   )
 );
 
@@ -128,11 +134,6 @@ CREATE TABLE perfis_comunidades (
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_comunidade_cnpj CHECK (
     cnpj IS NULL OR cnpj ~ '^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$'
-  ),
-  CONSTRAINT chk_comunidade_foto_perfil_url CHECK (
-    foto_perfil_url IS NULL
-    OR foto_perfil_url ~ '^https?://'
-    OR foto_perfil_url ~ '^/media/'
   )
 );
 
@@ -155,7 +156,9 @@ CREATE TABLE perfil_midias (
   descricao   TEXT,
   ordem       SMALLINT            NOT NULL DEFAULT 0,
   criado_em   TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT chk_perfil_midia_url CHECK (url ~ '^https?://')
+  CONSTRAINT chk_perfil_midia_url CHECK (
+    url ~ '^https?://' OR url ~ '^/media/'
+  )
 );
 
 CREATE INDEX idx_perfil_midias_dono  ON perfil_midias (dono_tipo, dono_id);
@@ -211,6 +214,7 @@ CREATE TABLE eventos (
   foto_capa_url     VARCHAR(500),
   capacidade_maxima INT,
   status            status_evento NOT NULL DEFAULT 'agendado',
+  tipo_evento       VARCHAR(20)   NOT NULL DEFAULT 'musical_gaucha',
   criado_em       TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_datas         CHECK (data_fim >= data_inicio),
@@ -219,9 +223,17 @@ CREATE TABLE eventos (
   CONSTRAINT chk_foto_capa_url CHECK (
     foto_capa_url IS NULL
     OR foto_capa_url ~ '^https?://'
-    OR foto_capa_url ~ '^/media/'
+  ),
+  CONSTRAINT chk_eventos_tipo_evento CHECK (
+    tipo_evento IN (
+      'musical_gaucha', 'musical_bandinha', 'almoco',
+      'bingo', 'expos', 'futebol'
+    )
   )
 );
+
+COMMENT ON COLUMN eventos.capacidade_maxima IS
+  'Capacidade máxima de ingressos do evento. NULL = sem limite definido.';
 
 CREATE TRIGGER trg_eventos_atualizado_em
   BEFORE UPDATE ON eventos
@@ -230,6 +242,7 @@ CREATE TRIGGER trg_eventos_atualizado_em
 CREATE INDEX idx_eventos_datas      ON eventos (data_inicio, data_fim);
 CREATE INDEX idx_eventos_comunidade ON eventos (comunidade_id);
 CREATE INDEX idx_eventos_status     ON eventos (status);
+CREATE INDEX idx_eventos_tipo_evento ON eventos (tipo_evento);
 
 
 -- ============================================================
