@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/tipo_conta.dart';
+import '../services/vendedor_service.dart';
 import 'auth_service.dart';
 
 const String _storageKey = 'bailesul_auth';
@@ -18,11 +19,13 @@ class SessaoUsuario extends ChangeNotifier {
   int? _usuarioId;
   String? _email;
   TipoConta? _tipoConta;
+  bool _ehVendedor = false;
 
   String? get token => _token;
   int? get usuarioId => _usuarioId;
   String? get email => _email;
   TipoConta? get tipoConta => _tipoConta;
+  bool get ehVendedor => _ehVendedor;
 
   bool get autenticado => _token != null && _token!.isNotEmpty;
 
@@ -43,11 +46,13 @@ class SessaoUsuario extends ChangeNotifier {
 
       if (autenticado) {
         _tipoConta = tipo != null ? TipoContaExtension.fromApi(tipo) : null;
+        await _atualizarStatusVendedor();
       } else {
         _token = null;
         _usuarioId = null;
         _email = null;
         _tipoConta = null;
+        _ehVendedor = false;
         await prefs.remove(_storageKey);
       }
 
@@ -64,6 +69,20 @@ class SessaoUsuario extends ChangeNotifier {
     return int.tryParse('$value');
   }
 
+  Future<void> _atualizarStatusVendedor() async {
+    if (!autenticado || _tipoConta != TipoConta.pessoal) {
+      _ehVendedor = false;
+      return;
+    }
+
+    try {
+      final List<Map<String, dynamic>> comunidades = await VendedorService.minhasComunidades();
+      _ehVendedor = comunidades.isNotEmpty;
+    } catch (_) {
+      _ehVendedor = false;
+    }
+  }
+
   Future<void> login(String email, String senha) async {
     final LoginResultado resultado = await AuthService.login(
       email: email,
@@ -76,6 +95,7 @@ class SessaoUsuario extends ChangeNotifier {
     _tipoConta = resultado.tipo;
 
     await _persistirSessao();
+    await _atualizarStatusVendedor();
     notifyListeners();
   }
 
@@ -98,6 +118,7 @@ class SessaoUsuario extends ChangeNotifier {
     _tipoConta = resultado.tipo;
 
     await _persistirSessao();
+    await _atualizarStatusVendedor();
     notifyListeners();
   }
 
@@ -105,11 +126,13 @@ class SessaoUsuario extends ChangeNotifier {
   Future<void> definirTipoConta(TipoConta tipo) async {
     if (!autenticado) {
       _tipoConta = null;
+      _ehVendedor = false;
       notifyListeners();
       return;
     }
 
     _tipoConta = tipo;
+    await _atualizarStatusVendedor();
     await _persistirSessao();
     notifyListeners();
   }
@@ -138,6 +161,7 @@ class SessaoUsuario extends ChangeNotifier {
     _usuarioId = null;
     _email = null;
     _tipoConta = null;
+    _ehVendedor = false;
 
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);

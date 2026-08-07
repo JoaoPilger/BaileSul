@@ -138,6 +138,96 @@ abstract final class VendedorService {
     }
   }
 
+  /// GET /vendedores/me – lista as comunidades vinculadas ao usuário pessoal.
+  static Future<List<Map<String, dynamic>>> minhasComunidades() async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) {
+      throw VendedorException('Faça login para ver suas comunidades.');
+    }
+
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/vendedores/me');
+
+    http.Response response;
+    try {
+      response = await http.get(url, headers: _headers(token)).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw VendedorException('Não foi possível conectar ao servidor.');
+    }
+
+    if (response.statusCode != 200) {
+      throw VendedorException(_erroDoCorpo(response.body, response.statusCode));
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! List) return <Map<String, dynamic>>[];
+    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// GET /vendedores/reservas – lista as reservas do vendedor autenticado.
+  static Future<List<Map<String, dynamic>>> listarReservas() async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) {
+      throw VendedorException('Faça login para ver seus pagamentos.');
+    }
+
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/vendedores/reservas');
+
+    http.Response response;
+    try {
+      response = await http.get(url, headers: _headers(token)).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw VendedorException('Não foi possível conectar ao servidor.');
+    }
+
+    if (response.statusCode != 200) {
+      throw VendedorException(_erroDoCorpo(response.body, response.statusCode));
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! List) return <Map<String, dynamic>>[];
+    return decoded.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  /// PATCH /vendedores/reservas/:id/confirmar – confirma pagamento.
+  static Future<void> confirmarReserva(int id) async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) {
+      throw VendedorException('Faça login para confirmar o pagamento.');
+    }
+
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/vendedores/reservas/$id/confirmar');
+    http.Response response;
+    try {
+      response = await http.patch(url, headers: _headers(token)).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw VendedorException('Não foi possível conectar ao servidor.');
+    }
+
+    if (response.statusCode != 200) {
+      throw VendedorException(_erroDoCorpo(response.body, response.statusCode));
+    }
+  }
+
+  /// PATCH /vendedores/reservas/:id/rejeitar – rejeita pagamento.
+  static Future<void> rejeitarReserva(int id) async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) {
+      throw VendedorException('Faça login para rejeitar o pagamento.');
+    }
+
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/vendedores/reservas/$id/rejeitar');
+    http.Response response;
+    try {
+      response = await http.patch(url, headers: _headers(token)).timeout(const Duration(seconds: 15));
+    } catch (_) {
+      throw VendedorException('Não foi possível conectar ao servidor.');
+    }
+
+    if (response.statusCode != 200) {
+      throw VendedorException(_erroDoCorpo(response.body, response.statusCode));
+    }
+  }
+
   static String _erroDoCorpo(String body, int statusCode) {
     if (body.isNotEmpty) {
       try {

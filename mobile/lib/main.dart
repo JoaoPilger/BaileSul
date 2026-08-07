@@ -25,6 +25,7 @@ import 'paginas/vendedores.dart';
 import 'paginas/painel_banda.dart';
 import 'paginas/painel_comunidade.dart';
 import 'paginas/contratos.dart';
+import 'paginas/pagamentos.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -114,6 +115,7 @@ class MyApp extends StatelessWidget {
         '/editar-perfil-comunidade': (_) => const EditarPerfilComunidadePage(),
         '/editar-perfil-banda': (_) => const EditarPerfilBandaPage(),
         '/vendedores': (_) => const VendedoresPage(),
+        '/pagamentos': (_) => const PagamentosPage(),
       },
     );
   }

@@ -77,6 +77,15 @@ abstract final class MobileAppMenu {
       final TipoConta? tipo = sessao.tipoConta;
 
       if (tipo == TipoConta.pessoal) {
+        if (sessao.ehVendedor) {
+          itens.add(
+            MobileMenuEntry(
+              icon: Icons.wallet_outlined,
+              label: 'Pagamentos',
+              onTap: () => Navigator.pushNamed(context, '/pagamentos'),
+            ),
+          );
+        }
         itens.add(
           MobileMenuEntry(
             icon: Icons.confirmation_number_outlined,
