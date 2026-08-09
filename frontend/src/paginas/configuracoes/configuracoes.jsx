@@ -3,7 +3,7 @@ import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import shared from '../../styles/shared.module.css'
 import styles from './configuracoes.module.css'
-import { Music, Calendar, Lock, LogOut, Building2 } from 'lucide-react'
+import { Music, Lock, LogOut, Building2 } from 'lucide-react'
 import Snackbar from '../../components/ui/Snackbar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
@@ -74,13 +74,6 @@ export default function Configuracoes() {
           onClick: () => navigate('/editar-perfil'),
         },
         {
-          key: 'agenda',
-          icon: Calendar,
-          title: 'Agenda',
-          subtitle: 'Datas e compromissos',
-          onClick: () => showEmBreve('Agenda em breve.'),
-        },
-        {
           key: 'senha',
           icon: Lock,
           title: 'Alterar senha',
@@ -117,13 +110,6 @@ export default function Configuracoes() {
         title: 'Perfil da banda',
         subtitle: 'Nome artístico, estilo, foto e mídias',
         onClick: () => navigate('/editar-perfil'),
-      },
-      {
-        key: 'agenda',
-        icon: Calendar,
-        title: 'Agenda',
-        subtitle: 'Datas e compromissos',
-        onClick: () => showEmBreve('Agenda em breve.'),
       },
       {
         key: 'senha',

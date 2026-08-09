@@ -204,7 +204,6 @@ export default function PainelComunidade() {
                     type="button"
                     className={styles['pn-action-card']}
                     onClick={a.action}
-                    style={{ background: 'none', textTransform: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
                   >
                     <div className={styles['pn-action-icon']}>
                       <Icon name={a.icon} />

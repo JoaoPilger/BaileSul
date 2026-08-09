@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { fetchEventoDashboard } from '../../utils/events'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
+import EditarEventoModal from '../../components/evento/EditarEventoModal'
 import styles from './dashboard_evento.module.css'
 
 // ─────────────────────────────────────────────────────────────
@@ -507,6 +508,7 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState('')
   const [abaAtiva, setAbaAtiva] = useState('geral')
+  const [editarAberto, setEditarAberto] = useState(false)
 
   const carregar = useCallback(async () => {
     const resultado = await fetchEventoDashboard(eventoId)
@@ -612,7 +614,7 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
           <div className={styles['dash-hero-actions']}>
             <button
               className={styles['dash-btn-ghost']}
-              onClick={() => navigate(`/criar-evento`)}
+              onClick={() => setEditarAberto(true)}
             >
               <Icon size={15}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></Icon>
               Editar Evento
@@ -654,6 +656,14 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
           </div>
         </div>
       </main>
+
+      {editarAberto && (
+        <EditarEventoModal
+          evento={evento}
+          onFechar={() => setEditarAberto(false)}
+          onSalvo={carregar}
+        />
+      )}
 
       <Footer />
     </div>

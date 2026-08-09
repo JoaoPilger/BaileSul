@@ -212,6 +212,10 @@ export default function VitrineComunidade() {
       alert('Você precisa estar logado para avaliar esta comunidade!')
       return
     }
+    if (isDono) {
+      alert('Você não pode avaliar seu próprio perfil!')
+      return
+    }
     const novaLista = salvarAvaliacao(id, usuario.id, nota)
     setAvaliacoesList(novaLista)
     setMinhaNota(nota)
@@ -613,9 +617,9 @@ export default function VitrineComunidade() {
 
               <div style={{ marginTop: '20px', padding: '15px', borderTop: '1px solid var(--border)' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '8px', color: 'var(--text)' }}>
-                  {usuario ? (minhaNota > 0 ? 'Sua avaliação enviada:' : 'Avalie esta comunidade:') : 'Faça login para avaliar esta comunidade'}
+                  {isDono ? 'Você não pode avaliar seu próprio perfil' : usuario ? (minhaNota > 0 ? 'Sua avaliação enviada:' : 'Avalie esta comunidade:') : 'Faça login para avaliar esta comunidade'}
                 </span>
-                {usuario ? (
+                {isDono ? null : usuario ? (
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button

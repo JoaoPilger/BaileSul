@@ -136,7 +136,6 @@ export default function PainelBanda() {
                 type="button"
                 className={styles['pn-action-card']}
                 onClick={() => setMidiasModalOpen(true)}
-                style={{ background: 'none', textTransform: 'none', font: 'inherit', textAlign: 'left', cursor: 'pointer' }}
               >
                 <div className={styles['pn-action-icon']}>
                   <Icon name="image" />

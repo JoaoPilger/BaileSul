@@ -160,7 +160,7 @@ const buscarPorId = async (req, res) => {
 
     const bandasRes = await pool.query(
       `SELECT pb.usuario_id, pb.nome_artistico, pb.estilo_musical,
-              c.status_aceite
+              c.id AS contrato_id, c.status_aceite
        FROM contratos c
        JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
        WHERE c.evento_id = $1`,
@@ -633,6 +633,39 @@ const convidarBanda = async (req, res) => {
 };
 
 /**
+ * DELETE /api/eventos/:id/contratos/:contrato_id
+ * RF07 – Remove o convite de uma banda (somente a comunidade dona do evento).
+ * Usado ao trocar ou limpar a banda na edição do evento.
+ */
+const removerContrato = async (req, res) => {
+  const { id: evento_id, contrato_id } = req.params;
+  const comunidade_id = req.usuario.id;
+
+  const dono = await pool.query(
+    'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
+    [evento_id, comunidade_id]
+  );
+  if (dono.rows.length === 0) {
+    return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
+  }
+
+  try {
+    const result = await pool.query(
+      'DELETE FROM contratos WHERE id = $1 AND evento_id = $2 RETURNING id',
+      [contrato_id, evento_id]
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Convite não encontrado' });
+    }
+    return res.json({ message: 'Convite removido com sucesso' });
+
+  } catch (err) {
+    console.error('Erro ao remover convite:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
  * PATCH /api/eventos/contratos/:contrato_id/responder
  * RF07 – Banda responde ao convite (aceitar ou recusar).
  */
@@ -865,6 +898,7 @@ module.exports = {
   adicionarMidia,
   removerMidia,
   convidarBanda,
+  removerContrato,
   responderContrato,
   calendario,
   dashboardEvento,

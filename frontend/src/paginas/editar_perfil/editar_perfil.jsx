@@ -22,6 +22,13 @@ import {
   FileText
 } from 'lucide-react'
 
+function normalizarMedia(url) {
+  if (url && url.includes('/media/')) {
+    return url.substring(url.indexOf('/media/'))
+  }
+  return url || ''
+}
+
 export default function EditarPerfil() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
@@ -84,7 +91,7 @@ export default function EditarPerfil() {
           descricao: data.descricao || data.description || '',
           whatsapp: data.whatsapp || '',
           video_url: data.video_url || '',
-          foto_perfil_url: data.foto_perfil_url || '',
+          foto_perfil_url: normalizarMedia(data.foto_perfil_url),
         })
       } else {
         setPerfil({
@@ -96,11 +103,11 @@ export default function EditarPerfil() {
           estado: data.estado || '',
           latitude: data.latitude || '',
           longitude: data.longitude || '',
-          foto_perfil_url: data.foto_perfil_url || '',
+          foto_perfil_url: normalizarMedia(data.foto_perfil_url),
         })
       }
 
-      setMidias(data.midias || [])
+      setMidias((data.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })))
     } catch (err) {
       console.error('Erro ao carregar perfil:', err)
       showMsg('Não foi possível carregar as informações do perfil.')
@@ -135,7 +142,7 @@ export default function EditarPerfil() {
       })
 
       if (data.foto_perfil_url) {
-        setPerfil((prev) => ({ ...prev, foto_perfil_url: data.foto_perfil_url }))
+        setPerfil((prev) => ({ ...prev, foto_perfil_url: normalizarMedia(data.foto_perfil_url) }))
         showMsg('Foto de perfil atualizada com sucesso!')
       }
     } catch (err) {

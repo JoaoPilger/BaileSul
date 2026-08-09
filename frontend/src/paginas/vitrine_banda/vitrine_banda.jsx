@@ -202,6 +202,10 @@ export default function VitrineBanda() {
       alert('Você precisa estar logado para avaliar esta banda!')
       return
     }
+    if (isDono) {
+      alert('Você não pode avaliar seu próprio perfil!')
+      return
+    }
     const novaLista = salvarAvaliacao(id, usuario.id, nota)
     setAvaliacoesList(novaLista)
     setMinhaNota(nota)
@@ -612,9 +616,9 @@ export default function VitrineBanda() {
 
               <div style={{ marginTop: '20px', padding: '15px', borderTop: '1px solid var(--border)' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 600, display: 'block', marginBottom: '8px' }}>
-                  {usuario ? (minhaNota > 0 ? 'Sua avaliação enviada:' : 'Avalie esta banda:') : 'Faça login para avaliar esta banda'}
+                  {isDono ? 'Você não pode avaliar seu próprio perfil' : usuario ? (minhaNota > 0 ? 'Sua avaliação enviada:' : 'Avalie esta banda:') : 'Faça login para avaliar esta banda'}
                 </span>
-                {usuario ? (
+                {isDono ? null : usuario ? (
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button

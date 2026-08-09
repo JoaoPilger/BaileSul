@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { X, Eye, EyeOff } from 'lucide-react'
-import styles from './configuracoes.module.css'
+import styles from './AlterarSenhaModal.module.css'
 import api from '../../services/api'
 import { validatePassword, validateConfirmPassword } from '../../utils/authFormValidation'
 
@@ -77,101 +77,65 @@ export default function AlterarSenhaModal({ open, onClose, onSuccess }) {
     }
   }
 
+  const campo = (id, label, valor, setValor, chaveErro, mostrar, setMostrar, autoComplete, info) => (
+    <div className={styles.field}>
+      <label htmlFor={id}>{label}</label>
+      <div className={styles.inputWrap}>
+        <input
+          id={id}
+          type={mostrar ? 'text' : 'password'}
+          autoComplete={autoComplete}
+          value={valor}
+          onChange={(e) => { setValor(e.target.value); setErrors((p) => ({ ...p, [chaveErro]: '' })) }}
+          className={errors[chaveErro] ? `${styles.input} ${styles.inputError}` : styles.input}
+        />
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => setMostrar((v) => !v)}
+          aria-label={mostrar ? 'Ocultar senha' : 'Mostrar senha'}
+        >
+          {mostrar ? <EyeOff size={18} /> : <Eye size={18} />}
+        </button>
+      </div>
+      {info && <p className={styles.info}>{info}</p>}
+      {errors[chaveErro] && <p className={styles.hint}>{errors[chaveErro]}</p>}
+    </div>
+  )
+
   return (
-    <div className={styles.modalOverlay} role="presentation" onClick={fechar}>
+    <div className={styles.overlay} role="presentation" onClick={fechar}>
       <div
-        className={styles.modalCard}
+        className={styles.modal}
         role="dialog"
         aria-modal="true"
         aria-labelledby="alterar-senha-titulo"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={styles.modalHeader}>
-          <h2 id="alterar-senha-titulo" className={styles.modalTitle}>Alterar senha</h2>
-          <button type="button" className={styles.modalClose} onClick={fechar} aria-label="Fechar">
+        <div className={styles.header}>
+          <h2 id="alterar-senha-titulo" className={styles.title}>Alterar senha</h2>
+          <button type="button" className={styles.close} onClick={fechar} aria-label="Fechar">
             <X size={20} />
           </button>
         </div>
 
-        <form className={styles.modalForm} onSubmit={handleSubmit}>
-          <div className={styles.modalField}>
-            <label htmlFor="senha-atual">Senha atual</label>
-            <div className={styles.inputWithToggle}>
-              <input
-                id="senha-atual"
-                type={mostrarAtual ? 'text' : 'password'}
-                autoComplete="current-password"
-                value={senhaAtual}
-                onChange={(e) => { setSenhaAtual(e.target.value); setErrors((p) => ({ ...p, senhaAtual: '' })) }}
-                className={errors.senhaAtual ? styles.modalInputError : styles.modalInput}
-              />
-              <button
-                type="button"
-                className={styles.toggleVisibilityBtn}
-                onClick={() => setMostrarAtual(!mostrarAtual)}
-                aria-label={mostrarAtual ? 'Ocultar senha' : 'Mostrar senha'}
-              >
-                {mostrarAtual ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            {errors.senhaAtual && <p className={styles.modalFieldHint}>{errors.senhaAtual}</p>}
+        <form className={styles.form} onSubmit={handleSubmit}>
+          {campo('senha-atual', 'Senha atual', senhaAtual, setSenhaAtual, 'senhaAtual', mostrarAtual, setMostrarAtual, 'current-password')}
+          {campo('nova-senha', 'Nova senha', novaSenha, setNovaSenha, 'novaSenha', mostrarNova, setMostrarNova, 'new-password', 'A senha deve ter ao menos 8 caracteres, incluindo letras e números.')}
+          {campo('confirmar-senha', 'Confirmar nova senha', confirmarSenha, setConfirmarSenha, 'confirmarSenha', mostrarConfirmar, setMostrarConfirmar, 'new-password')}
+
+          {erroGeral && <p className={styles.erroGeral}>{erroGeral}</p>}
+
+          <div className={styles.actions}>
+            <button type="button" className={styles.btnCancelar} onClick={fechar} disabled={salvando}>
+              Cancelar
+            </button>
+            <button type="submit" className={styles.btnSalvar} disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
           </div>
-
-          <div className={styles.modalField}>
-            <label htmlFor="nova-senha">Nova senha</label>
-            <div className={styles.inputWithToggle}>
-              <input
-                id="nova-senha"
-                type={mostrarNova ? 'text' : 'password'}
-                autoComplete="new-password"
-                value={novaSenha}
-                onChange={(e) => { setNovaSenha(e.target.value); setErrors((p) => ({ ...p, novaSenha: '' })) }}
-                className={errors.novaSenha ? styles.modalInputError : styles.modalInput}
-              />
-              <button
-                type="button"
-                className={styles.toggleVisibilityBtn}
-                onClick={() => setMostrarNova(!mostrarNova)}
-                aria-label={mostrarNova ? 'Ocultar senha' : 'Mostrar senha'}
-              >
-                {mostrarNova ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            <p className={styles.modalFieldInfo}>A senha deve ter ao menos 8 caracteres, incluindo letras e números.</p>
-            {errors.novaSenha && <p className={styles.modalFieldHint}>{errors.novaSenha}</p>}
-          </div>
-
-          <div className={styles.modalField}>
-            <label htmlFor="confirmar-senha">Confirmar nova senha</label>
-            <div className={styles.inputWithToggle}>
-              <input
-                id="confirmar-senha"
-                type={mostrarConfirmar ? 'text' : 'password'}
-                autoComplete="new-password"
-                value={confirmarSenha}
-                onChange={(e) => { setConfirmarSenha(e.target.value); setErrors((p) => ({ ...p, confirmarSenha: '' })) }}
-                className={errors.confirmarSenha ? styles.modalInputError : styles.modalInput}
-              />
-              <button
-                type="button"
-                className={styles.toggleVisibilityBtn}
-                onClick={() => setMostrarConfirmar(!mostrarConfirmar)}
-                aria-label={mostrarConfirmar ? 'Ocultar senha' : 'Mostrar senha'}
-              >
-                {mostrarConfirmar ? <EyeOff size={18} /> : <Eye size={18} />}
-              </button>
-            </div>
-            {errors.confirmarSenha && <p className={styles.modalFieldHint}>{errors.confirmarSenha}</p>}
-          </div>
-
-          {erroGeral && <p className={styles.modalErroGeral}>{erroGeral}</p>}
-
-          <button type="submit" className={styles.modalSubmit} disabled={salvando}>
-            {salvando ? 'Salvando...' : 'Salvar'}
-          </button>
         </form>
       </div>
     </div>
   )
 }
-

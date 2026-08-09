@@ -835,10 +835,10 @@ export default function CriarEvento() {
             <div className={styles['ce-section']}>
               <div className={styles['ce-section-label']}>Vendedores</div>
 
-              <div className={styles['ce-vendor-row']}>
-                <div className={styles['ce-field']} style={{ position: 'relative' }}>
-                  <label className={styles['ce-field-label']} htmlFor="vendorName">Nome do Vendedor</label>
-                  <div className={styles['ce-input-wrap']}>
+              <div className={styles['ce-field']}>
+                <label className={styles['ce-field-label']} htmlFor="vendorName">Nome do Vendedor</label>
+                <div className={styles['ce-vendor-row']}>
+                  <div className={styles['ce-input-wrap']} style={{ flex: 1 }}>
                     <input
                       id="vendorName"
                       type="text"
@@ -852,38 +852,38 @@ export default function CriarEvento() {
                       onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVendor() } }}
                     />
                     <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                    {vendorSugestoesOpen && vendorSugestoes.length > 0 && (
+                      <ul
+                        className={styles['ce-vendor-list']}
+                        style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          zIndex: 20,
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '10px',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
+                          marginTop: '4px',
+                        }}
+                      >
+                        {vendorSugestoes.map((v) => (
+                          <li
+                            key={v.id}
+                            className={styles['ce-vendor-item']}
+                            style={{ cursor: 'pointer' }}
+                            onMouseDown={() => selecionarVendor(v)}
+                          >
+                            <span>{v.nome}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  {vendorSugestoesOpen && vendorSugestoes.length > 0 && (
-                    <ul
-                      className={styles['ce-vendor-list']}
-                      style={{
-                        position: 'absolute',
-                        top: '100%',
-                        left: 0,
-                        right: 0,
-                        zIndex: 20,
-                        background: 'var(--surface)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '10px',
-                        boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                        marginTop: '4px',
-                      }}
-                    >
-                      {vendorSugestoes.map((v) => (
-                        <li
-                          key={v.id}
-                          className={styles['ce-vendor-item']}
-                          style={{ cursor: 'pointer' }}
-                          onMouseDown={() => selecionarVendor(v)}
-                        >
-                          <span>{v.nome}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <FieldHint message={vendorError} />
+                  <button type="button" className={styles['ce-btn-add']} onClick={addVendor}>+ Adicionar</button>
                 </div>
-                <button type="button" className={styles['ce-btn-add']} onClick={addVendor}>+ Adicionar</button>
+                <FieldHint message={vendorError} />
               </div>
 
               {vendors.length > 0 && (

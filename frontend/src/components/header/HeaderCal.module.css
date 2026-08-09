@@ -21,7 +21,7 @@
 .cal-logo-link { display:flex; align-items:center; line-height:0; }
 
 .cal-logo-img {
-  height: 68px;
+  height: 48px;
   width: auto;
   max-width: 280px;
   object-fit: contain;

@@ -6,6 +6,13 @@ import shared from '../../styles/shared.module.css'
 import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 
+function normalizarMedia(url) {
+  if (url && url.includes('/media/')) {
+    return url.substring(url.indexOf('/media/'))
+  }
+  return url || ''
+}
+
 export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
   const { usuario } = useAuth()
   const [midias, setMidias] = useState([])
@@ -24,7 +31,7 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
     try {
       const endpoint = isBanda ? `/bandas/${usuario.id}` : `/comunidades/${usuario.id}`
       const { data } = await api.get(endpoint)
-      setMidias(data.midias || [])
+      setMidias((data.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })))
     } catch (err) {
       console.error('Erro ao carregar mídias:', err)
       setErro('Não foi possível carregar as mídias.')
@@ -60,7 +67,7 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
       const { data } = await api.post(endpoint, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setMidias((prev) => [...prev, data])
+      setMidias((prev) => [...prev, { ...data, url: normalizarMedia(data.url) }])
       setTitulo('')
       if (onSuccess) onSuccess()
     } catch (err) {

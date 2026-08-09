@@ -159,11 +159,18 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--surface);
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--surface);
+  color: var(--text);
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 16px 18px;
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
 }
 
