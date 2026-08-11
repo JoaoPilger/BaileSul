@@ -118,6 +118,66 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
     }
   }
 
+  EventItem _paraEventItem(Map<String, dynamic> evento) {
+    final String inicioRaw = evento['data_inicio']?.toString() ?? '';
+    final String fimRaw = evento['data_fim']?.toString() ?? '';
+    final String dateTime = _formatDateTime(inicioRaw, fimRaw);
+    final String location = [
+      evento['local_nome']?.toString(),
+      evento['cidade']?.toString(),
+      evento['estado']?.toString(),
+    ]
+        .where((value) => value != null && value.trim().isNotEmpty)
+        .join(' • ');
+    final String address = evento['local_endereco']?.toString() ?? '';
+    final String organizer = evento['comunidade_nome']?.toString() ?? evento['comunidade']?.toString() ?? '';
+    final String description = evento['descricao']?.toString() ?? '';
+    final String status = evento['status']?.toString() ?? '';
+    final String imageUrl = ApiConfig.resolveMediaUrl(evento['foto_capa_url']?.toString());
+
+    return EventItem(
+      id: int.tryParse('${evento['id'] ?? 0}') ?? 0,
+      title: evento['titulo']?.toString() ?? 'Evento',
+      genre: evento['tipo_evento']?.toString() ?? 'Evento',
+      location: location.isNotEmpty ? location : 'Local não informado',
+      dateTime: dateTime,
+      price: evento['valor_ingresso'] != null && evento['valor_ingresso'].toString().isNotEmpty
+          ? 'R\$ ${double.tryParse(evento['valor_ingresso'].toString())?.toStringAsFixed(2).replaceAll('.', ',') ?? evento['valor_ingresso'].toString()}'
+          : 'Grátis',
+      imageUrl: imageUrl.isNotEmpty
+          ? imageUrl
+          : 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=80',
+      description: description,
+      organizer: organizer,
+      address: address,
+      status: status,
+      startDateTime: inicioRaw,
+      endDateTime: fimRaw,
+    );
+  }
+
+  Future<void> _abrirDetalhesEvento(Map<String, dynamic> evento) async {
+    final int eventId = int.tryParse('${evento['id'] ?? 0}') ?? 0;
+    Navigator.pushNamed(context, '/evento-dashboard', arguments: eventId);
+  }
+
+  String _formatDateTime(String inicioRaw, String fimRaw) {
+    if (inicioRaw.isEmpty) return 'Data não informada';
+    try {
+      final DateTime inicio = DateTime.parse(inicioRaw);
+      final DateTime fim = fimRaw.isNotEmpty ? DateTime.parse(fimRaw) : inicio;
+      final String data = '${inicio.day.toString().padLeft(2, '0')}/${inicio.month.toString().padLeft(2, '0')}/${inicio.year}';
+      final String horaInicio = '${inicio.hour.toString().padLeft(2, '0')}:${inicio.minute.toString().padLeft(2, '0')}';
+      final String horaFim = fimRaw.isNotEmpty ? '${fim.hour.toString().padLeft(2, '0')}:${fim.minute.toString().padLeft(2, '0')}' : '';
+      if (horaFim.isNotEmpty && inicio.day == fim.day && inicio.month == fim.month && inicio.year == fim.year) {
+        return '$data • $horaInicio - $horaFim';
+      }
+      return fimRaw.isNotEmpty ? '$data • $horaInicio até ${fim.day.toString().padLeft(2, '0')}/${fim.month.toString().padLeft(2, '0')}/${fim.year} ${horaFim}' : '$data • $horaInicio';
+    } catch (_) {
+      return inicioRaw;
+    }
+  }
+
   Future<void> _confirmarCancelarEvento(Map<String, dynamic> evento) async {
     final bool? confirmou = await showDialog<bool>(
       context: context,
@@ -291,6 +351,7 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
                                   for (final event in listaFiltrada) ...[
                                     _EventoListCard(
                                       event: event,
+                                      onTap: () => _abrirDetalhesEvento(event),
                                       onEditar: () => _abrirEditarEvento(event),
                                       onCancelar: () => _confirmarCancelarEvento(event),
                                     ),
@@ -434,11 +495,13 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
 class _EventoListCard extends StatelessWidget {
   const _EventoListCard({
     required this.event,
+    this.onTap,
     this.onEditar,
     this.onCancelar,
   });
 
   final Map<String, dynamic> event;
+  final VoidCallback? onTap;
   final VoidCallback? onEditar;
   final VoidCallback? onCancelar;
 
@@ -501,12 +564,17 @@ class _EventoListCard extends StatelessWidget {
       builder: (context, constraints) {
         final bool isNarrow = constraints.maxWidth < 500;
 
-        return DecoratedBox(
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: BaileSulColors.cardBorder)),
-          child: isNarrow
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: DecoratedBox(
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(10), border: Border.all(color: BaileSulColors.cardBorder)),
+              child: isNarrow
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                     ClipRRect(
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(10)),
                       child: SizedBox(
@@ -588,6 +656,8 @@ class _EventoListCard extends StatelessWidget {
                     ),
                   ],
                 ),
+              ),
+            ),
         );
       },
     );

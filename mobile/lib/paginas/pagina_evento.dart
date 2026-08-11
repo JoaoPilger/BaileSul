@@ -203,11 +203,11 @@ class _EventoConteudo extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        const _InfoCard(
+        _InfoCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              const Text(
                 'Sobre o Evento',
                 style: TextStyle(
                   color: BaileSulColors.headerText,
@@ -215,11 +215,12 @@ class _EventoConteudo extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 6),
+              const SizedBox(height: 6),
               Text(
-                'Vanera e música gaúcha com o melhor grupo da região. '
-                'Traga seu par e venha dançar!',
-                style: TextStyle(
+                event.description.isNotEmpty
+                    ? event.description
+                    : 'Nenhuma descrição disponível para este evento.',
+                style: const TextStyle(
                   color: BaileSulColors.headerText,
                   fontSize: 13,
                   height: 1.45,
@@ -237,21 +238,39 @@ class _EventoConteudo extends StatelessWidget {
                 icon: Icons.calendar_month_outlined,
                 text: event.dateTime,
               ),
+              if (event.startDateTime.isNotEmpty && event.endDateTime.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _LinhaInfo(
+                  icon: Icons.access_time_outlined,
+                  text: '${event.startDateTime} → ${event.endDateTime}',
+                ),
+              ],
               const SizedBox(height: 8),
               _LinhaInfo(
                 icon: Icons.location_on_outlined,
                 text: event.location,
               ),
-              const SizedBox(height: 8),
-              const _LinhaInfo(
-                icon: Icons.groups_outlined,
-                text: 'Capacidade: 300 pessoas',
-              ),
-              const SizedBox(height: 8),
-              const _LinhaInfo(
-                icon: Icons.apartment_outlined,
-                text: 'Organização: CTG Porteira Aberta',
-              ),
+              if (event.address.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _LinhaInfo(
+                  icon: Icons.map_outlined,
+                  text: event.address,
+                ),
+              ],
+              if (event.organizer.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _LinhaInfo(
+                  icon: Icons.apartment_outlined,
+                  text: event.organizer,
+                ),
+              ],
+              if (event.status.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _LinhaInfo(
+                  icon: Icons.circle_outlined,
+                  text: 'Status: ${event.status}',
+                ),
+              ],
               const SizedBox(height: 12),
               const Divider(height: 1, color: BaileSulColors.cardBorder),
               const SizedBox(height: 10),

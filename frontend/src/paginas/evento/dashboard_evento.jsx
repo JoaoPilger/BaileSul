@@ -578,11 +578,6 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
       </div>
 
       <main className={styles['dash-main']}>
-        <button type="button" className={styles['dash-back-btn']} onClick={() => navigate(-1)}>
-          <Icon size={14}><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></Icon>
-          Voltar
-        </button>
-
         {/* ── Cabeçalho do evento ── */}
         <div className={styles['dash-header-card']}>
           <div className={styles['dash-header-info']}>

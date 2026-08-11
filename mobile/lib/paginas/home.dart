@@ -948,6 +948,12 @@ class EventItem {
     required this.dateTime,
     required this.price,
     required this.imageUrl,
+    this.description = '',
+    this.status = '',
+    this.address = '',
+    this.organizer = '',
+    this.startDateTime = '',
+    this.endDateTime = '',
   });
 
   final int id;
@@ -957,6 +963,12 @@ class EventItem {
   final String dateTime;
   final String price;
   final String imageUrl;
+  final String description;
+  final String status;
+  final String address;
+  final String organizer;
+  final String startDateTime;
+  final String endDateTime;
 }
 
 class _StyleItem {

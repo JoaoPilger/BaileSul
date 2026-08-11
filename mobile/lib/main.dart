@@ -11,6 +11,7 @@ import 'paginas/meusEventos_bandas.dart';
 import 'paginas/meusEventos_comunidade.dart';
 import 'paginas/meus_ingressos.dart';
 import 'paginas/pagina_evento.dart';
+import 'paginas/dashboard_evento_comunidade.dart';
 import 'paginas/pesquisa_padrao_bandas.dart';
 import 'paginas/pesquisa_padrao_comunidade.dart';
 import 'paginas/pesquisa_padrao_eventos.dart';
@@ -106,6 +107,10 @@ class MyApp extends StatelessWidget {
         '/meus-eventos-comunidade': (_) => const MeusEventosComunidadePage(),
         '/configuracoes': (_) => const ConfiguracoesPage(),
         '/criar-evento': (_) => const CriarEditarEventoPage(),
+        '/evento-dashboard': (context) {
+          final args = ModalRoute.of(context)!.settings.arguments;
+          return DashboardEventoPage(eventId: args! as int);
+        },
         '/evento': (context) {
           final args = ModalRoute.of(context)!.settings.arguments;
           return PaginaEvento(event: args! as EventItem);
