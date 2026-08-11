@@ -1,5 +1,10 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
@@ -16,9 +21,69 @@ class PaginaEvento extends StatefulWidget {
 
 class _PaginaEventoState extends State<PaginaEvento> {
   bool _reservado = false;
+  bool _processandoReserva = false;
+
+  Future<void> _fazerReserva({
+    required String quantidade,
+    required String formaPagamento,
+    required String nomeRetirada,
+  }) async {
+    if (!SessaoUsuario.instance.autenticado) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Faça login para reservar um ingresso.')),
+      );
+      return;
+    }
+
+    setState(() => _processandoReserva = true);
+
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/reservas/eventos/${widget.event.id}');
+      final http.Response response = await http
+          .post(
+            url,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${SessaoUsuario.instance.token}',
+            },
+            body: jsonEncode({
+              'quantidade': int.tryParse(quantidade) ?? 1,
+              'forma_pagamento': formaPagamento,
+              'nome_retirada': nomeRetirada.trim().isNotEmpty ? nomeRetirada.trim() : null,
+            }),
+          )
+          .timeout(const Duration(seconds: 20));
+
+      if (!mounted) return;
+
+      final dynamic decoded = response.body.isNotEmpty ? jsonDecode(response.body) : <String, dynamic>{};
+      final String mensagem = decoded is Map && decoded['message'] != null
+          ? decoded['message'].toString()
+          : (decoded is Map && decoded['error'] != null ? decoded['error'].toString() : 'Não foi possível concluir a reserva.');
+
+      if (response.statusCode != 201 && response.statusCode != 200) {
+        throw Exception(mensagem);
+      }
+
+      setState(() => _reservado = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensagem)),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _processandoReserva = false);
+      }
+    }
+  }
 
   void _abrirModalReserva() {
-    if (_reservado) return;
+    if (_reservado || _processandoReserva) return;
 
     showDialog<void>(
       context: context,
@@ -29,9 +94,17 @@ class _PaginaEventoState extends State<PaginaEvento> {
           elevation: 0,
           insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 32),
           child: _ModalReservaIngresso(
-            onProsseguir: () {
+            onProsseguir: ({
+              required String quantidade,
+              required String formaPagamento,
+              required String nomeRetirada,
+            }) async {
               Navigator.pop(dialogContext);
-              setState(() => _reservado = true);
+              await _fazerReserva(
+                quantidade: quantidade,
+                formaPagamento: formaPagamento,
+                nomeRetirada: nomeRetirada,
+              );
             },
           ),
         );
@@ -424,7 +497,11 @@ abstract final class _ModalReservaCores {
 class _ModalReservaIngresso extends StatefulWidget {
   const _ModalReservaIngresso({required this.onProsseguir});
 
-  final VoidCallback onProsseguir;
+  final Future<void> Function({
+    required String quantidade,
+    required String formaPagamento,
+    required String nomeRetirada,
+  }) onProsseguir;
 
   @override
   State<_ModalReservaIngresso> createState() => _ModalReservaIngressoState();
@@ -554,7 +631,15 @@ class _ModalReservaIngressoState extends State<_ModalReservaIngresso> {
                 hint: 'Digite o nome Completo',
               ),
               const SizedBox(height: 30),
-              _BotaoProsseguirModal(onPressed: widget.onProsseguir),
+              _BotaoProsseguirModal(
+                onPressed: () async {
+                  await widget.onProsseguir(
+                    quantidade: _quantidade,
+                    formaPagamento: _formaPagamento == _FormaPagamento.whatsapp ? 'whatsapp' : 'presencial',
+                    nomeRetirada: _nomeController.text,
+                  );
+                },
+              ),
             ],
           ),
         ),
@@ -704,7 +789,7 @@ class _CampoTextoComSombra extends StatelessWidget {
 class _BotaoProsseguirModal extends StatelessWidget {
   const _BotaoProsseguirModal({required this.onPressed});
 
-  final VoidCallback onPressed;
+  final Future<void> Function() onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -716,7 +801,9 @@ class _BotaoProsseguirModal extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
-          onTap: onPressed,
+          onTap: () async {
+            await onPressed();
+          },
           child: const Center(
             child: Text(
               'Prosseguir',

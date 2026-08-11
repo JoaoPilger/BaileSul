@@ -478,6 +478,7 @@ class _UpcomingEventsSection extends StatelessWidget {
 
   EventItem _paraEventItem(EventoApi evento) {
     return EventItem(
+      id: evento.id,
       title: evento.titulo,
       genre: evento.comunidadeNome,
       location: evento.localComCidadeEstado,
@@ -940,6 +941,7 @@ class _StyleTile extends StatelessWidget {
 
 class EventItem {
   const EventItem({
+    required this.id,
     required this.title,
     required this.genre,
     required this.location,
@@ -948,6 +950,7 @@ class EventItem {
     required this.imageUrl,
   });
 
+  final int id;
   final String title;
   final String genre;
   final String location;

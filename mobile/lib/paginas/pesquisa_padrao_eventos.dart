@@ -421,6 +421,7 @@ class _EventoCard extends StatelessWidget {
               context,
               '/evento',
               arguments: EventItem(
+                id: evento.id,
                 title: evento.titulo,
                 genre: evento.comunidadeNome,
                 location: evento.localComCidadeEstado,
