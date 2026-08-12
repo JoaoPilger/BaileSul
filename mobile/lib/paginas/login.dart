@@ -1,16 +1,53 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import '../config/api_config.dart';
 import '../models/tipo_conta.dart';
 import '../services/auth_service.dart';
 import '../services/sessao_usuario.dart';
 import '../navigation/app_navigator.dart';
+import '../widgets/cnpj_status_badge.dart';
 import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
+import '../utils/formatadores.dart';
 import 'home.dart';
+
+/// Consulta pública o status do CNPJ na Receita (via backend), com debounce,
+/// para dar feedback visual imediato nos formulários de cadastro.
+Future<void> _verificarCnpjRemoto({
+  required String cnpjFormatado,
+  required void Function(CnpjStatus status, String? razaoSocial) onResultado,
+}) async {
+  try {
+    final Uri url = Uri.parse(
+      '${ApiConfig.baseUrl}/cnpj/verificar?cnpj=${Uri.encodeQueryComponent(cnpjFormatado)}',
+    );
+    final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
+    if (resp.statusCode != 200) {
+      onResultado(CnpjStatus.idle, null);
+      return;
+    }
+    final Map<String, dynamic> decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    if (decoded['api_disponivel'] != true) {
+      onResultado(CnpjStatus.idle, null);
+      return;
+    }
+    final bool valido = decoded['valido'] == true;
+    onResultado(
+      valido ? CnpjStatus.valido : CnpjStatus.invalido,
+      decoded['razao_social']?.toString(),
+    );
+  } catch (_) {
+    onResultado(CnpjStatus.idle, null);
+  }
+}
 
 void _abrirMenu(BuildContext context) {
   MobileAppMenu.show(context, entries: MobileAppMenu.entries(context));
@@ -20,23 +57,6 @@ bool _senhaValida(String senha) =>
     senha.length >= 8 &&
     RegExp(r'[a-zA-Z]').hasMatch(senha) &&
     RegExp(r'\d').hasMatch(senha);
-
-String _somenteDigitos(String value) => value.replaceAll(RegExp(r'\D'), '');
-
-String _somenteCaracteresCnpj(String value) =>
-    value.replaceAll(RegExp(r'[^0-9A-Za-z]'), '').toUpperCase();
-
-String _formatarCnpj(String value) {
-  final String chars = _somenteCaracteresCnpj(value);
-  if (chars.length != 14) return value.trim().toUpperCase();
-  return '${chars.substring(0, 2)}.${chars.substring(2, 5)}.'
-      '${chars.substring(5, 8)}/${chars.substring(8, 12)}-'
-      '${chars.substring(12, 14)}';
-}
-
-bool _cnpjFormatoValido(String cnpj) => RegExp(
-  r'^[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}/[0-9A-Z]{4}-[0-9A-Z]{2}$',
-).hasMatch(cnpj.trim().toUpperCase());
 
 enum _RegistrationFieldMask { telefone, cpf, cnpj, cep }
 
@@ -427,7 +447,7 @@ class _PersonalRegistrationScreenState
 
     final String nome = _nomeController.text.trim();
     final String email = _emailController.text.trim();
-    final String cpf = _somenteDigitos(_cpfController.text);
+    final String cpf = somenteDigitos(_cpfController.text);
     final String senha = _senhaController.text;
 
     if (nome.isEmpty || email.isEmpty || cpf.isEmpty || senha.isEmpty) {
@@ -577,8 +597,22 @@ class _CommunityRegistrationScreenState
 
   bool _termosAceitos = false;
   bool _carregando = false;
+  bool _buscandoCep = false;
   MapLocation? _localizacaoSelecionada;
   String? _erro;
+  final FocusNode _cepFocusNode = FocusNode();
+  CnpjStatus _cnpjStatus = CnpjStatus.idle;
+  String? _cnpjRazaoSocial;
+  Timer? _cnpjDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _cepFocusNode.addListener(() {
+      if (!_cepFocusNode.hasFocus) _buscarCep();
+    });
+    _cnpjController.addListener(_onCnpjChanged);
+  }
 
   @override
   void dispose() {
@@ -588,11 +622,62 @@ class _CommunityRegistrationScreenState
     _cnpjController.dispose();
     _senhaController.dispose();
     _cepController.dispose();
+    _cepFocusNode.dispose();
     _cidadeController.dispose();
     _bairroController.dispose();
     _ruaController.dispose();
     _referenciaController.dispose();
+    _cnpjDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onCnpjChanged() {
+    _cnpjDebounce?.cancel();
+    final String cnpj = formatarCnpj(_cnpjController.text);
+    if (!cnpjFormatoValido(cnpj)) {
+      if (_cnpjStatus != CnpjStatus.idle) setState(() => _cnpjStatus = CnpjStatus.idle);
+      return;
+    }
+    setState(() => _cnpjStatus = CnpjStatus.checking);
+    _cnpjDebounce = Timer(const Duration(milliseconds: 600), () {
+      _verificarCnpjRemoto(
+        cnpjFormatado: cnpj,
+        onResultado: (status, razaoSocial) {
+          if (!mounted) return;
+          setState(() {
+            _cnpjStatus = status;
+            _cnpjRazaoSocial = razaoSocial;
+          });
+        },
+      );
+    });
+  }
+
+  Future<void> _buscarCep() async {
+    final String digits = somenteDigitos(_cepController.text);
+    if (digits.length != 8) return;
+
+    setState(() => _buscandoCep = true);
+    try {
+      final Uri url = Uri.parse('https://viacep.com.br/ws/$digits/json/');
+      final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
+      final dynamic decoded = jsonDecode(resp.body);
+
+      if (!mounted || decoded is! Map || decoded['erro'] == true) return;
+
+      setState(() {
+        final String cidade = decoded['localidade']?.toString() ?? '';
+        if (cidade.isNotEmpty) _cidadeController.text = cidade;
+        final String bairro = decoded['bairro']?.toString() ?? '';
+        if (bairro.isNotEmpty) _bairroController.text = bairro;
+        final String rua = decoded['logradouro']?.toString() ?? '';
+        if (rua.isNotEmpty) _ruaController.text = rua;
+      });
+    } catch (_) {
+      // Falha silenciosa: usuário pode preencher manualmente
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
   }
 
   Future<void> _cadastrar() async {
@@ -604,7 +689,7 @@ class _CommunityRegistrationScreenState
     final String nome = _nomeController.text.trim();
     final String telefone = _telefoneController.text.trim();
     final String email = _emailController.text.trim();
-    final String cnpj = _formatarCnpj(_cnpjController.text);
+    final String cnpj = formatarCnpj(_cnpjController.text);
     final String senha = _senhaController.text;
     final String cidade = _cidadeController.text.trim();
     final String bairro = _bairroController.text.trim();
@@ -623,7 +708,7 @@ class _CommunityRegistrationScreenState
       return;
     }
 
-    if (!_cnpjFormatoValido(cnpj)) {
+    if (!cnpjFormatoValido(cnpj)) {
       setState(() {
         _erro = 'CNPJ deve estar no formato AA.AAA.AAA/AAAA-DV.';
         _carregando = false;
@@ -662,7 +747,7 @@ class _CommunityRegistrationScreenState
         perfil: <String, dynamic>{
           'nome_entidade': nome,
           'cnpj': cnpj,
-          'whatsapp': _somenteDigitos(telefone),
+          'whatsapp': somenteDigitos(telefone),
           'endereco': endereco.isNotEmpty ? endereco : rua,
           'cidade': cidade.isNotEmpty ? cidade : null,
           if (_localizacaoSelecionada != null) ...<String, dynamic>{
@@ -738,6 +823,10 @@ class _CommunityRegistrationScreenState
                 ),
               ],
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: CnpjStatusBadge(status: _cnpjStatus, razaoSocial: _cnpjRazaoSocial),
+            ),
             const SizedBox(height: 12),
             _RegistrationField(
               label: 'Senha*',
@@ -761,6 +850,8 @@ class _CommunityRegistrationScreenState
                     label: 'CEP *',
                     controller: _cepController,
                     mask: _RegistrationFieldMask.cep,
+                    focusNode: _cepFocusNode,
+                    loading: _buscandoCep,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -844,7 +935,21 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
 
   bool _termosAceitos = false;
   bool _carregando = false;
+  bool _buscandoCep = false;
   String? _erro;
+  final FocusNode _cepFocusNode = FocusNode();
+  CnpjStatus _cnpjStatus = CnpjStatus.idle;
+  String? _cnpjRazaoSocial;
+  Timer? _cnpjDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _cepFocusNode.addListener(() {
+      if (!_cepFocusNode.hasFocus) _buscarCep();
+    });
+    _cnpjController.addListener(_onCnpjChanged);
+  }
 
   @override
   void dispose() {
@@ -854,11 +959,62 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
     _cnpjController.dispose();
     _senhaController.dispose();
     _cepController.dispose();
+    _cepFocusNode.dispose();
     _cidadeController.dispose();
     _bairroController.dispose();
     _ruaController.dispose();
     _referenciaController.dispose();
+    _cnpjDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onCnpjChanged() {
+    _cnpjDebounce?.cancel();
+    final String cnpj = formatarCnpj(_cnpjController.text);
+    if (!cnpjFormatoValido(cnpj)) {
+      if (_cnpjStatus != CnpjStatus.idle) setState(() => _cnpjStatus = CnpjStatus.idle);
+      return;
+    }
+    setState(() => _cnpjStatus = CnpjStatus.checking);
+    _cnpjDebounce = Timer(const Duration(milliseconds: 600), () {
+      _verificarCnpjRemoto(
+        cnpjFormatado: cnpj,
+        onResultado: (status, razaoSocial) {
+          if (!mounted) return;
+          setState(() {
+            _cnpjStatus = status;
+            _cnpjRazaoSocial = razaoSocial;
+          });
+        },
+      );
+    });
+  }
+
+  Future<void> _buscarCep() async {
+    final String digits = somenteDigitos(_cepController.text);
+    if (digits.length != 8) return;
+
+    setState(() => _buscandoCep = true);
+    try {
+      final Uri url = Uri.parse('https://viacep.com.br/ws/$digits/json/');
+      final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
+      final dynamic decoded = jsonDecode(resp.body);
+
+      if (!mounted || decoded is! Map || decoded['erro'] == true) return;
+
+      setState(() {
+        final String cidade = decoded['localidade']?.toString() ?? '';
+        if (cidade.isNotEmpty) _cidadeController.text = cidade;
+        final String bairro = decoded['bairro']?.toString() ?? '';
+        if (bairro.isNotEmpty) _bairroController.text = bairro;
+        final String rua = decoded['logradouro']?.toString() ?? '';
+        if (rua.isNotEmpty) _ruaController.text = rua;
+      });
+    } catch (_) {
+      // Falha silenciosa: usuário pode preencher manualmente
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
   }
 
   Future<void> _cadastrar() async {
@@ -870,7 +1026,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
     final String nome = _nomeController.text.trim();
     final String telefone = _telefoneController.text.trim();
     final String email = _emailController.text.trim();
-    final String cnpj = _formatarCnpj(_cnpjController.text);
+    final String cnpj = formatarCnpj(_cnpjController.text);
     final String senha = _senhaController.text;
 
     if (nome.isEmpty ||
@@ -885,7 +1041,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
       return;
     }
 
-    if (!_cnpjFormatoValido(cnpj)) {
+    if (!cnpjFormatoValido(cnpj)) {
       setState(() {
         _erro = 'CNPJ deve estar no formato AA.AAA.AAA/AAAA-DV.';
         _carregando = false;
@@ -918,7 +1074,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
         perfil: <String, dynamic>{
           'nome_artistico': nome,
           'cnpj': cnpj,
-          'whatsapp': _somenteDigitos(telefone),
+          'whatsapp': somenteDigitos(telefone),
         },
       );
 
@@ -988,6 +1144,10 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
                 ),
               ],
             ),
+            Align(
+              alignment: Alignment.centerRight,
+              child: CnpjStatusBadge(status: _cnpjStatus, razaoSocial: _cnpjRazaoSocial),
+            ),
             const SizedBox(height: 12),
             _RegistrationField(
               label: 'Senha*',
@@ -1006,6 +1166,8 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
                     label: 'CEP *',
                     controller: _cepController,
                     mask: _RegistrationFieldMask.cep,
+                    focusNode: _cepFocusNode,
+                    loading: _buscandoCep,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -1154,6 +1316,8 @@ class _RegistrationField extends StatefulWidget {
     this.keyboardType,
     this.obscureText = false,
     this.mask,
+    this.focusNode,
+    this.loading = false,
   });
 
   final String label;
@@ -1161,6 +1325,8 @@ class _RegistrationField extends StatefulWidget {
   final TextInputType? keyboardType;
   final bool obscureText;
   final _RegistrationFieldMask? mask;
+  final FocusNode? focusNode;
+  final bool loading;
 
   @override
   State<_RegistrationField> createState() => _RegistrationFieldState();
@@ -1172,13 +1338,13 @@ class _RegistrationFieldState extends State<_RegistrationField> {
   List<TextInputFormatter>? get _inputFormatters {
     switch (widget.mask) {
       case _RegistrationFieldMask.telefone:
-        return const <TextInputFormatter>[_TelefoneTextInputFormatter()];
+        return const <TextInputFormatter>[TelefoneTextInputFormatter()];
       case _RegistrationFieldMask.cpf:
-        return const <TextInputFormatter>[_CpfTextInputFormatter()];
+        return const <TextInputFormatter>[CpfTextInputFormatter()];
       case _RegistrationFieldMask.cnpj:
-        return const <TextInputFormatter>[_CnpjTextInputFormatter()];
+        return const <TextInputFormatter>[CnpjTextInputFormatter()];
       case _RegistrationFieldMask.cep:
-        return const <TextInputFormatter>[_CepTextInputFormatter()];
+        return const <TextInputFormatter>[CepTextInputFormatter()];
       case null:
         return null;
     }
@@ -1204,6 +1370,7 @@ class _RegistrationFieldState extends State<_RegistrationField> {
       height: 42,
       child: TextField(
         controller: widget.controller,
+        focusNode: widget.focusNode,
         keyboardType: _effectiveKeyboardType,
         inputFormatters: _inputFormatters,
         obscureText: _obscureText,
@@ -1257,138 +1424,18 @@ class _RegistrationFieldState extends State<_RegistrationField> {
                     setState(() => _obscureText = !_obscureText);
                   },
                 )
-              : null,
+              : (widget.loading
+                    ? const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null),
         ),
       ),
-    );
-  }
-}
-
-class _TelefoneTextInputFormatter extends TextInputFormatter {
-  const _TelefoneTextInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed = digits.length > 11
-        ? digits.substring(0, 11)
-        : digits;
-
-    final StringBuffer result = StringBuffer();
-    for (int i = 0; i < trimmed.length; i++) {
-      if (i == 0) {
-        result.write('(');
-      }
-      if (i == 2) {
-        result.write(') ');
-      }
-      if (i == 7) {
-        result.write('-');
-      }
-      result.write(trimmed[i]);
-    }
-
-    final String text = result.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
-
-class _CpfTextInputFormatter extends TextInputFormatter {
-  const _CpfTextInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed = digits.length > 11
-        ? digits.substring(0, 11)
-        : digits;
-
-    final StringBuffer result = StringBuffer();
-    for (int i = 0; i < trimmed.length; i++) {
-      if (i == 3 || i == 6) {
-        result.write('.');
-      }
-      if (i == 9) {
-        result.write('-');
-      }
-      result.write(trimmed[i]);
-    }
-
-    final String text = result.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
-
-class _CnpjTextInputFormatter extends TextInputFormatter {
-  const _CnpjTextInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final String chars = newValue.text
-        .replaceAll(RegExp(r'[^0-9A-Za-z]'), '')
-        .toUpperCase();
-    final String trimmed = chars.length > 14 ? chars.substring(0, 14) : chars;
-
-    final StringBuffer result = StringBuffer();
-    for (int i = 0; i < trimmed.length; i++) {
-      if (i == 2 || i == 5) {
-        result.write('.');
-      }
-      if (i == 8) {
-        result.write('/');
-      }
-      if (i == 12) {
-        result.write('-');
-      }
-      result.write(trimmed[i]);
-    }
-
-    final String text = result.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
-    );
-  }
-}
-
-class _CepTextInputFormatter extends TextInputFormatter {
-  const _CepTextInputFormatter();
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    final String digits = newValue.text.replaceAll(RegExp(r'\D'), '');
-    final String trimmed = digits.length > 8 ? digits.substring(0, 8) : digits;
-
-    final StringBuffer result = StringBuffer();
-    for (int i = 0; i < trimmed.length; i++) {
-      if (i == 5) {
-        result.write('-');
-      }
-      result.write(trimmed[i]);
-    }
-
-    final String text = result.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

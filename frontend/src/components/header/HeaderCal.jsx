@@ -5,7 +5,7 @@ import styles from './HeaderCal.module.css';
 
 export default function HeaderCal() {
   const { isAuthenticated } = useAuth();
-  const contaLink = isAuthenticated ? '/perfil' : '/login';
+  const contaLink = isAuthenticated ? '/configuracoes' : '/login';
   const ariaLabel = isAuthenticated ? 'Minha conta' : 'Entrar';
 
   return (

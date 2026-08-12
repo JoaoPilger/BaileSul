@@ -15,6 +15,17 @@
   --muted-inv:   rgba(255,255,255,.52);
   --border:      rgba(17,17,17,.13);
   --border-inv:  rgba(255,255,255,.11);
+  --danger:      #C24545;
+  --danger-soft: rgba(194,69,69,.1);
+  --success:     #0F6E56;
+  --success-soft: rgba(15,110,86,.1);
+  /* aliases usados por modais (EditarEventoModal, AlterarSenhaModal) */
+  --surface:     var(--white);
+  --text:        var(--black);
+  --text-muted:  var(--muted);
+  --accent-hover: #0f5a84;
+  --accent-glow:  rgba(13, 73, 107, 0.28);
+  --overlay-dark: rgba(22, 22, 26, 0.96);
   --radius-sm:   8px;
   --radius-md:   12px;
   --radius-lg:   18px;

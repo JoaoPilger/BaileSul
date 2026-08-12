@@ -1,6 +1,6 @@
 .page {
   min-height: 100vh;
-  background: #D9D9D9;
+  background: var(--bg);
   display: flex;
   flex-direction: column;
 }
@@ -17,7 +17,7 @@
 }
 
 .hero {
-  background: #fff;
+  background: var(--white);
   border-radius: 16px;
   padding: 1.75rem 2rem;
   display: flex;
@@ -30,7 +30,7 @@
 }
 
 .heroTitle {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 1.6rem;
   font-weight: 700;
   color: #111827;
@@ -38,14 +38,14 @@
 }
 
 .heroSub {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.875rem;
   color: #6b7280;
   margin: 0;
 }
 
 .totalBox {
-  background: #0D496B;
+  background: var(--accent);
   border-radius: 12px;
   padding: 1rem 1.5rem;
   display: flex;
@@ -55,7 +55,7 @@
 }
 
 .totalLabel {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -64,10 +64,10 @@
 }
 
 .totalValue {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 1.45rem;
   font-weight: 700;
-  color: #fff;
+  color: var(--white);
 }
 
 .abas {
@@ -91,29 +91,29 @@
 }
 
 .aba:hover {
-  border-color: #0D496B;
+  border-color: var(--accent);
 }
 
 .abaAtiva {
-  background: #fff;
-  border-color: #0D496B;
+  background: var(--white);
+  border-color: var(--accent);
 }
 
 .abaLabel {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.78rem;
   color: #6b7280;
 }
 
 .abaCount {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 1.6rem;
   font-weight: 700;
   color: #111827;
 }
 
 .abaAtiva .abaCount {
-  color: #0D496B;
+  color: var(--accent);
 }
 
 .buscaWrap {
@@ -136,8 +136,8 @@
   padding: 0.85rem 1rem 0.85rem 2.75rem;
   border-radius: 12px;
   border: 2px solid #e5e7eb;
-  background: #fff;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  background: var(--white);
+  font-family: var(--font-body);
   font-size: 0.9rem;
   color: #111827;
   outline: none;
@@ -145,7 +145,7 @@
 }
 
 .buscaInput:focus {
-  border-color: #0D496B;
+  border-color: var(--accent);
 }
 
 .buscaInput::placeholder {
@@ -159,17 +159,17 @@
 }
 
 .vazio {
-  background: #fff;
+  background: var(--white);
   border-radius: 12px;
   padding: 2.5rem;
   text-align: center;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   color: #9ca3af;
 }
 
 .card {
-  background: #fff;
+  background: var(--white);
   border-radius: 12px;
   padding: 1rem 1.25rem;
   display: flex;
@@ -194,7 +194,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  color: #0D496B;
+  color: var(--accent);
 }
 
 .info {
@@ -206,7 +206,7 @@
 }
 
 .nome {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 600;
   color: #111827;
@@ -216,7 +216,7 @@
 }
 
 .email {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.75rem;
   color: #9ca3af;
   white-space: nowrap;
@@ -233,10 +233,10 @@
 }
 
 .eventoNome {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.85rem;
   font-weight: 600;
-  color: #0D496B;
+  color: var(--accent);
 }
 
 .valorCol {
@@ -248,20 +248,20 @@
 }
 
 .fieldLabel {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   color: #9ca3af;
 }
 
 .valorTotal {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.95rem;
   font-weight: 700;
   color: #16a34a;
 }
 
 .valorParcelas {
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.7rem;
   color: #9ca3af;
 }
@@ -281,8 +281,8 @@
   border-radius: 8px;
   border: none;
   background: #16a34a;
-  color: #fff;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  color: var(--white);
+  font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -302,7 +302,7 @@
   border: 2px solid #ef4444;
   background: transparent;
   color: #ef4444;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
@@ -311,7 +311,7 @@
 
 .btnRejeitar:hover {
   background: #ef4444;
-  color: #fff;
+  color: var(--white);
 }
 
 .badgeConfirmado {
@@ -319,7 +319,7 @@
   border-radius: 20px;
   background: #dcfce7;
   color: #16a34a;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
 }
@@ -329,7 +329,7 @@
   border-radius: 20px;
   background: #fee2e2;
   color: #ef4444;
-  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: 0.75rem;
   font-weight: 600;
 }

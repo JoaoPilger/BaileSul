@@ -1,6 +1,9 @@
 const router = require('express').Router();
-const { listar, buscarPorId, listarMeusEventos, atualizarPerfil, atualizarFotoPerfil, adicionarMidia, removerMidia } = require('../controllers/comunidade.controller');
-const { autenticar, autorizar } = require('../middlewares/auth.middleware');
+const {
+  listar, buscarPorId, listarMeusEventos, atualizarPerfil, atualizarFotoPerfil,
+  adicionarMidia, removerMidia, seguir, deixarDeSeguir, avaliar,
+} = require('../controllers/comunidade.controller');
+const { autenticar, autorizar, autenticarOpcional } = require('../middlewares/auth.middleware');
 const { uploadMidiaPerfil, uploadErrorHandler } = require('../middlewares/upload');
 
 // RF12, RF20 – Rotas autenticadas da comunidade (DEVEM vir antes de /:id)
@@ -16,6 +19,11 @@ router.delete('/me/midias/:midia_id', autenticar, autorizar('comunidade'), remov
 
 // RF15 – Listagem e perfil público
 router.get('/', listar);
-router.get('/:id', buscarPorId);
+router.get('/:id', autenticarOpcional, buscarPorId);
+
+// Seguir / avaliar (qualquer usuário autenticado, exceto a própria comunidade)
+router.post('/:id/seguir', autenticar, seguir);
+router.delete('/:id/seguir', autenticar, deixarDeSeguir);
+router.put('/:id/avaliar', autenticar, avaliar);
 
 module.exports = router;

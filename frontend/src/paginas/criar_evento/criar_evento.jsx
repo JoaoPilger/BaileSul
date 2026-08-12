@@ -96,7 +96,6 @@ export default function CriarEvento() {
   const footerLinks = [
     { to: '/eventos',      label: 'Eventos' },
     { to: '/calendario',   label: 'Calendário' },
-    { to: '/mapa',         label: 'Mapa' },
     { to: '/meus-eventos', label: 'Meus Eventos' },
     { to: '/criar-evento', label: 'Criar Evento' },
     { to: contaLink,       label: 'Perfil' },
@@ -476,42 +475,6 @@ export default function CriarEvento() {
         }
       }
 
-      let imageUrl = databaseEvent.foto_capa_url || imagemPreview || fallbackImage;
-      if (imageUrl && imageUrl.includes('/media/')) {
-        const idx = imageUrl.indexOf('/media/');
-        imageUrl = imageUrl.substring(idx);
-      }
-
-      const newEvent = {
-        id:         databaseEvent.id || Date.now(),
-        title:      normalizedForm.title,
-        band:       normalizedForm.band,
-        tipoEvento: tipoEventoFinal,
-        date:       normalizedForm.dateStart || new Date().toISOString().slice(0, 10),
-        date_end:   normalizedForm.dateEnd,
-        time_start: normalizedForm.timeStart,
-        time_end:   normalizedForm.timeEnd,
-        image:      imageUrl,
-        price:      normalizedForm.price
-          ? (/^(grátis|gratis)$/i.test(normalizedForm.price.trim())
-              ? 'Grátis'
-              : `R$ ${normalizedForm.price.replace(/^R\$\s*/i, '').trim()}`)
-          : 'Grátis',
-        city:       normalizedForm.city,
-        cep:        normalizedForm.cep,
-        bairro:     normalizedForm.bairro,
-        rua:        normalizedForm.rua,
-        referencia: normalizedForm.referencia,
-        vendors,
-        latitude:   databaseEvent.latitude,
-        longitude:  databaseEvent.longitude,
-        created_at: new Date().toISOString(),
-      }
-
-      const raw  = localStorage.getItem('bailesul_events')
-      const list = raw ? JSON.parse(raw) : []
-      list.unshift(newEvent)
-      localStorage.setItem('bailesul_events', JSON.stringify(list))
       navigate('/')
     } catch (err) {
       console.error('Erro ao salvar evento:', err)

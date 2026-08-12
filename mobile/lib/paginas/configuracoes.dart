@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/dialogo_alterar_senha.dart';
+import '../widgets/dialogo_editar_perfil_pessoal.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
 const String _acaoAlterarSenha = 'alterar-senha';
+const String _acaoEditarPerfilPessoal = 'editar-perfil-pessoal';
 
 class ConfiguracoesPage extends StatelessWidget {
   const ConfiguracoesPage({super.key});
@@ -38,7 +40,8 @@ class ConfiguracoesPage extends StatelessWidget {
           _ConfiguracaoItem(
             icon: Icons.person_outline,
             titulo: 'Editar perfil',
-            subtitulo: 'Nome, telefone e foto',
+            subtitulo: 'Nome, cidade e estado',
+            acao: _acaoEditarPerfilPessoal,
           ),
           _ConfiguracaoItem(
             icon: Icons.lock_outline,
@@ -74,11 +77,6 @@ class ConfiguracoesPage extends StatelessWidget {
             titulo: 'Perfil da comunidade',
             subtitulo: 'Nome, endereço e descrição',
             rota: '/perfil-comunidade',
-          ),
-          _ConfiguracaoItem(
-            icon: Icons.location_on_outlined,
-            titulo: 'Localização',
-            subtitulo: 'Endereço e mapa do espaço',
           ),
           _ConfiguracaoItem(
             icon: Icons.lock_outline,
@@ -322,6 +320,8 @@ class _ConfiguracaoTile extends StatelessWidget {
         onTap: () {
           if (item.acao == _acaoAlterarSenha) {
             mostrarDialogoAlterarSenha(context);
+          } else if (item.acao == _acaoEditarPerfilPessoal) {
+            mostrarDialogoEditarPerfilPessoal(context);
           } else if (item.rota != null) {
             Navigator.pushNamed(context, item.rota!);
           } else {

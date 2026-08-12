@@ -35,6 +35,7 @@ CREATE TYPE status_contrato AS ENUM ('pendente', 'aceito', 'recusado');
 CREATE TYPE status_pagamento AS ENUM ('pendente', 'confirmado', 'cancelado', 'rejeitado');
 CREATE TYPE tipo_midia      AS ENUM ('imagem', 'video');
 CREATE TYPE dono_midia      AS ENUM ('banda', 'comunidade');
+CREATE TYPE dono_perfil     AS ENUM ('banda', 'comunidade');
 
 
 -- ============================================================
@@ -163,6 +164,40 @@ CREATE TABLE perfil_midias (
 
 CREATE INDEX idx_perfil_midias_dono  ON perfil_midias (dono_tipo, dono_id);
 CREATE INDEX idx_perfil_midias_ordem ON perfil_midias (dono_tipo, dono_id, ordem);
+
+
+-- ============================================================
+--  Seguidores e avaliações de perfil (bandas e comunidades)
+-- ============================================================
+
+CREATE TABLE perfil_seguidores (
+  id          BIGSERIAL PRIMARY KEY,
+  usuario_id  BIGINT      NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  dono_tipo   dono_perfil NOT NULL,
+  dono_id     BIGINT      NOT NULL,
+  criado_em   TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (usuario_id, dono_tipo, dono_id)
+);
+
+CREATE INDEX idx_perfil_seguidores_dono ON perfil_seguidores (dono_tipo, dono_id);
+
+CREATE TABLE perfil_avaliacoes (
+  id            BIGSERIAL PRIMARY KEY,
+  usuario_id    BIGINT      NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  dono_tipo     dono_perfil NOT NULL,
+  dono_id       BIGINT      NOT NULL,
+  nota          SMALLINT    NOT NULL,
+  criado_em     TIMESTAMPTZ DEFAULT NOW(),
+  atualizado_em TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (usuario_id, dono_tipo, dono_id),
+  CONSTRAINT chk_perfil_avaliacao_nota CHECK (nota BETWEEN 1 AND 5)
+);
+
+CREATE INDEX idx_perfil_avaliacoes_dono ON perfil_avaliacoes (dono_tipo, dono_id);
+
+CREATE TRIGGER trg_perfil_avaliacoes_atualizado_em
+  BEFORE UPDATE ON perfil_avaliacoes
+  FOR EACH ROW EXECUTE FUNCTION fn_set_atualizado_em();
 
 
 -- ============================================================
@@ -370,3 +405,23 @@ CREATE TABLE logs_status_pagamentos (
 
 CREATE INDEX idx_logs_contrato_id ON logs_status_contratos (contrato_id);
 CREATE INDEX idx_logs_reserva_id  ON logs_status_pagamentos (reserva_id);
+
+
+-- ============================================================
+--  Notificações
+-- ============================================================
+
+CREATE TABLE notificacoes (
+  id          BIGSERIAL PRIMARY KEY,
+  usuario_id  BIGINT NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+  tipo        VARCHAR(40)  NOT NULL,
+  titulo      VARCHAR(150) NOT NULL,
+  mensagem    VARCHAR(500),
+  lida        BOOLEAN NOT NULL DEFAULT FALSE,
+  payload     JSONB,
+  criado_em   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_notificacoes_usuario ON notificacoes (usuario_id, criado_em DESC);
+CREATE INDEX idx_notificacoes_usuario_nao_lidas ON notificacoes (usuario_id)
+  WHERE lida = FALSE;

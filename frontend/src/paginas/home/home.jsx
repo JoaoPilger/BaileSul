@@ -9,8 +9,8 @@ import shared from '../../styles/shared.module.css';
 import styles from './home.module.css';
 
 const STYLES = [
-  { value: 'gaucha',    label: 'Gaúcha' , desc: 'Chamamé e ginga' },
-  { value: 'vanera',    label: 'Vanera' , desc: 'Ritmo do sul' },
+  { value: 'gaucha', label: 'Gaúcha', desc: 'Chamamé e ginga', emoji: '🪗' },
+  { value: 'vanera',  label: 'Vanera', desc: 'Ritmo do sul',    emoji: '💃' },
 ];
 
 function HeroSection() {

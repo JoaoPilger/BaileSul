@@ -7,7 +7,7 @@ import 'leaflet/dist/leaflet.css'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { loadEventById } from '../../utils/events'
-import { useAuth } from '../../contexts/AuthContext'
+import api from '../../services/api'
 import styles from './evento.module.css';
 
 // Corrige o caminho dos ícones padrão do Leaflet, que quebram com bundlers
@@ -106,7 +106,6 @@ function getDescription(evento) {
 export default function EventoPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { token } = useAuth()
   const [evento, setEvento] = useState(null)
   const [mapCenter, setMapCenter] = useState(DEFAULT_CENTER)
   const [mapZoom, setMapZoom] = useState(DEFAULT_ZOOM)
@@ -260,25 +259,11 @@ export default function EventoPage() {
     setReservaLoading(true)
 
     try {
-      const res = await fetch(`/api/reservas/eventos/${id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          quantidade: Number(quantidade),
-          forma_pagamento: pagamento,
-          nome_retirada: nomeRetirada.trim(),
-        }),
+      const { data } = await api.post(`/reservas/eventos/${id}`, {
+        quantidade: Number(quantidade),
+        forma_pagamento: pagamento,
+        nome_retirada: nomeRetirada.trim(),
       })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setReservaErro(data.error || 'Erro ao criar reserva.')
-        return
-      }
 
       // Sucesso: abre o WhatsApp do vendedor apenas se o pagamento for via WhatsApp
       if (pagamento === 'whatsapp' && data.vendedor?.whatsapp_link) {
@@ -286,8 +271,8 @@ export default function EventoPage() {
       }
 
       closeModal()
-    } catch {
-      setReservaErro('Erro de conexão. Tente novamente.')
+    } catch (err) {
+      setReservaErro(err.response?.data?.error || 'Erro de conexão. Tente novamente.')
     } finally {
       setReservaLoading(false)
     }

@@ -7,6 +7,8 @@ import styles from './editar_perfil.module.css'
 import Snackbar from '../../components/ui/Snackbar'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
+import { formatPhone, validatePhone, validateName } from '../../utils/authFormValidation'
+import { formatCep } from '../../utils/inputMasks'
 import {
   Camera,
   Image as ImageIcon,
@@ -21,6 +23,11 @@ import {
   Phone,
   FileText
 } from 'lucide-react'
+
+function FieldHint({ message }) {
+  if (!message) return null
+  return <p className={styles.errorHint}>{message}</p>
+}
 
 function normalizarMedia(url) {
   if (url && url.includes('/media/')) {
@@ -52,6 +59,7 @@ export default function EditarPerfil() {
     descricao: '',
     whatsapp: '',
     video_url: '',
+    cep: '',
     endereco: '',
     cidade: '',
     estado: '',
@@ -63,6 +71,8 @@ export default function EditarPerfil() {
   // Lista de mídias da galeria
   const [midias, setMidias] = useState([])
   const [tituloNovaMidia, setTituloNovaMidia] = useState('')
+  const [errors, setErrors] = useState({})
+  const [cepCarregando, setCepCarregando] = useState(false)
 
   const isBanda = usuario?.tipo === 'banda'
   const isComunidade = usuario?.tipo === 'comunidade'
@@ -98,6 +108,7 @@ export default function EditarPerfil() {
           nome: data.nome_entidade || data.nome || '',
           descricao: data.descricao || data.description || '',
           whatsapp: data.whatsapp || '',
+          cep: '',
           endereco: data.endereco || '',
           cidade: data.cidade || '',
           estado: data.estado || '',
@@ -123,7 +134,46 @@ export default function EditarPerfil() {
   // Tratar alteração dos campos de texto
   const handleChange = (e) => {
     const { name, value } = e.target
-    setPerfil((prev) => ({ ...prev, [name]: value }))
+    let next = value
+    if (name === 'whatsapp') next = formatPhone(value)
+    if (name === 'cep') next = formatCep(value)
+    if (name === 'estado') next = value.toUpperCase().slice(0, 2)
+    setPerfil((prev) => ({ ...prev, [name]: next }))
+    setErrors((prev) => ({ ...prev, [name]: '' }))
+  }
+
+  // Busca automática de endereço a partir do CEP (ViaCEP)
+  const buscarCep = async () => {
+    const cepDigits = perfil.cep.replace(/\D/g, '')
+    if (cepDigits.length !== 8) return
+
+    setCepCarregando(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${cepDigits}/json/`)
+      const data = await res.json().catch(() => null)
+      if (data && !data.erro) {
+        const ruaBairro = [data.logradouro, data.bairro].filter(Boolean).join(', ')
+        setPerfil((prev) => ({
+          ...prev,
+          cidade: data.localidade || prev.cidade,
+          estado: data.uf || prev.estado,
+          endereco: ruaBairro || prev.endereco,
+        }))
+      }
+    } catch {
+      // Falha silenciosa: usuário pode preencher manualmente
+    } finally {
+      setCepCarregando(false)
+    }
+  }
+
+  // Validação imediata ao sair do campo
+  const handleBlur = (e) => {
+    const { name, value } = e.target
+    let msg = ''
+    if (name === 'nome') msg = validateName(value, isBanda ? 'o nome artístico' : 'o nome da entidade', true, 2)
+    if (name === 'whatsapp' && value.trim()) msg = validatePhone(value, false)
+    setErrors((prev) => ({ ...prev, [name]: msg }))
   }
 
   // Enviar alteração de foto de perfil
@@ -201,6 +251,13 @@ export default function EditarPerfil() {
   // Salvar formulário principal do perfil
   const handleSubmit = async (e) => {
     e.preventDefault()
+    const nomeErro = validateName(perfil.nome, isBanda ? 'o nome artístico' : 'o nome da entidade', true, 2)
+    const whatsappErro = perfil.whatsapp.trim() ? validatePhone(perfil.whatsapp, false) : ''
+    if (nomeErro || whatsappErro) {
+      setErrors({ nome: nomeErro, whatsapp: whatsappErro })
+      return
+    }
+
     setSalvando(true)
 
     try {
@@ -336,10 +393,12 @@ export default function EditarPerfil() {
                       name="nome"
                       value={perfil.nome}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder={isBanda ? 'Ex: Banda Sul Som' : 'Ex: CTG Lanceiros do Sul'}
-                      className={styles.input}
+                      className={errors.nome ? `${styles.input} ${styles.inputError}` : styles.input}
                       required
                     />
+                    <FieldHint message={errors.nome} />
                   </div>
 
                   {/* Estilo Musical (Banda) */}
@@ -365,15 +424,33 @@ export default function EditarPerfil() {
                       name="whatsapp"
                       value={perfil.whatsapp}
                       onChange={handleChange}
-                      placeholder="Ex: 5551999999999 (apenas números)"
-                      className={styles.input}
+                      onBlur={handleBlur}
+                      placeholder="(48) 9 0000-0000"
+                      className={errors.whatsapp ? `${styles.input} ${styles.inputError}` : styles.input}
                     />
                     <span className={styles.hint}>Utilizado para direcionar mensagens dos clientes/contratantes.</span>
+                    <FieldHint message={errors.whatsapp} />
                   </div>
 
                   {/* Endereço, Cidade e Estado (Comunidade) */}
                   {isComunidade && (
                     <>
+                      <div className={styles.fieldGroup}>
+                        <label className={styles.label}>CEP</label>
+                        <input
+                          type="text"
+                          name="cep"
+                          value={perfil.cep}
+                          onChange={handleChange}
+                          onBlur={buscarCep}
+                          placeholder="00000-000"
+                          className={styles.input}
+                        />
+                        <span className={styles.hint}>
+                          {cepCarregando ? 'Buscando endereço...' : 'Preenche cidade e estado automaticamente.'}
+                        </span>
+                      </div>
+
                       <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
                         <label className={styles.label}>Endereço Completo</label>
                         <input

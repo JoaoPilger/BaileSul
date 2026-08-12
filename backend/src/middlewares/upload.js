@@ -119,17 +119,6 @@ const uploadMidiaEvento = multer({
 }).single('arquivo');
 
 /**
- * Upload de vídeo de vitrine da banda.
- * Campo multipart: "video"
- * Salva em: src/media/perfis/bandas/
- */
-const uploadVideoBanda = multer({
-  storage: criarStorage(() => path.join(MEDIA_ROOT, 'perfis', 'bandas')),
-  fileFilter: filtroMime(MIME_VIDEOS),
-  limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB
-}).single('video');
-
-/**
  * Upload de mídia de perfil (banda ou comunidade).
  * Campo multipart: "arquivo"
  * A subpasta é determinada pelo parâmetro de rota :dono_tipo
@@ -204,7 +193,6 @@ const uploadErrorHandler = (err, req, res, next) => {
 module.exports = {
   uploadCapaEvento,
   uploadMidiaEvento,
-  uploadVideoBanda,
   uploadMidiaPerfil,
   caminhoParaUrl,
   uploadErrorHandler,

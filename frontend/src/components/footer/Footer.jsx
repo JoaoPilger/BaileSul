@@ -9,7 +9,7 @@ import styles from './Footer.module.css';
 export default function Footer() {
   const { usuario } = useAuth();
   const { links, podeCriarEvento } = getNavConfig(usuario?.tipo);
-  const contaLink = usuario ? '/perfil' : '/login';
+  const contaLink = usuario ? '/configuracoes' : '/login';
 
   const navItems = [
     { to: '/eventos', label: 'Eventos' },

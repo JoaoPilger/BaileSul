@@ -14,6 +14,8 @@ import {
   validateCadastroBandaField,
   validateCadastroBandaForm,
 } from '../../utils/authFormValidation'
+import { useCnpjVerificacao } from '../../hooks/useCnpjVerificacao'
+import CnpjStatusBadge from '../../components/ui/CnpjStatusBadge'
 
 const ESTILOS = [
   'Forró', 'Axé', 'Samba', 'Pagode', 'Baile Gaúcho', 'MPB',
@@ -57,6 +59,7 @@ export default function CadastroBanda() {
 
   const passo = form.nomeBanda && form.email ? (form.estilo ? 3 : 2) : 1
   const showError = (field) => touched[field] && errors[field]
+  const { status: cnpjStatus, razaoSocial: cnpjRazaoSocial } = useCnpjVerificacao(form.cnpj)
 
   const updateField = (name, value) => {
     setForm((prev) => {
@@ -217,6 +220,7 @@ export default function CadastroBanda() {
                     <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></svg>
                   </div>
                   <FieldHint message={showError('cnpj')} />
+                  {!showError('cnpj') && <CnpjStatusBadge status={cnpjStatus} razaoSocial={cnpjRazaoSocial} />}
                 </div>
               </div>
 

@@ -65,5 +65,10 @@ function mapBandaDetail(row) {
       estado: e.estado,
     })),
     midias: (row.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })),
+    seguidores: row.seguidores || 0,
+    media_avaliacao: row.media_avaliacao || 0,
+    total_avaliacoes: row.total_avaliacoes || 0,
+    seguindo: row.seguindo || false,
+    minha_avaliacao: row.minha_avaliacao || 0,
   }
 }

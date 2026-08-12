@@ -137,6 +137,17 @@
   color: var(--muted);
 }
 
+.errorHint {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--danger);
+  margin: 0;
+}
+
+.inputError {
+  border-color: var(--danger) !important;
+}
+
 .mediaSection {
   margin-top: 1rem;
 }

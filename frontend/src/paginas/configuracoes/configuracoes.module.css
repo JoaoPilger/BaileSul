@@ -93,9 +93,9 @@
   width: auto;
   justify-content: center;
   gap: 8px;
-  border: 1px solid #d9534f;
-  color: #d9534f;
-  background: #fff;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  background: var(--white);
   padding: 10px 24px;
 }
 

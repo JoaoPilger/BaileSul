@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { criarNotificacao } = require('../services/notificacao.service');
 
 const QUANTIDADE_MAX = 10; // limite por reserva
 const RESERVAS_MAX_POR_USUARIO_EVENTO = 1; // um usuário, uma reserva por evento
@@ -165,4 +166,68 @@ const minhasReservas = async (req, res) => {
   }
 };
 
-module.exports = { criar, minhasReservas };
+/**
+ * PATCH /api/reservas/:reserva_id/cancelar
+ * Cancelamento pelo próprio comprador, somente enquanto a reserva
+ * ainda está pendente de confirmação do vendedor.
+ */
+const cancelar = async (req, res) => {
+  const { reserva_id } = req.params;
+  const comprador_id = req.usuario.id;
+
+  try {
+    const reservaRes = await pool.query(
+      `SELECT r.id, r.status_pagamento, r.comprador_id,
+              v.usuario_id AS vendedor_usuario_id,
+              e.titulo AS evento_titulo, e.id AS evento_id
+       FROM reservas r
+       LEFT JOIN vendedores v ON v.id = r.vendedor_id
+       JOIN eventos e ON e.id = r.evento_id
+       WHERE r.id = $1`,
+      [reserva_id]
+    );
+
+    if (reservaRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Reserva não encontrada' });
+    }
+
+    const reserva = reservaRes.rows[0];
+
+    if (reserva.comprador_id !== comprador_id) {
+      return res.status(403).json({ error: 'Você não é o dono desta reserva' });
+    }
+
+    if (reserva.status_pagamento !== 'pendente') {
+      return res.status(409).json({ error: 'Só é possível cancelar reservas pendentes' });
+    }
+
+    await pool.query(
+      `UPDATE reservas SET status_pagamento = 'cancelado' WHERE id = $1`,
+      [reserva_id]
+    );
+
+    await pool.query(
+      `INSERT INTO logs_status_pagamentos (reserva_id, status_anterior, status_novo, usuario_id)
+       VALUES ($1, 'pendente', 'cancelado', $2)`,
+      [reserva_id, comprador_id]
+    );
+
+    if (reserva.vendedor_usuario_id) {
+      criarNotificacao({
+        usuario_id: reserva.vendedor_usuario_id,
+        tipo: 'reserva_cancelada',
+        titulo: 'Reserva cancelada',
+        mensagem: `Uma reserva para "${reserva.evento_titulo}" foi cancelada pelo comprador.`,
+        payload: { evento_id: reserva.evento_id, reserva_id: Number(reserva_id) },
+      });
+    }
+
+    return res.json({ message: 'Reserva cancelada com sucesso' });
+
+  } catch (err) {
+    console.error('Erro ao cancelar reserva:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { criar, minhasReservas, cancelar };

@@ -105,14 +105,139 @@ const buscarPorId = async (req, res) => {
       [id]
     );
 
+    const statsRes = await pool.query(
+      `SELECT
+         (SELECT COUNT(*)::int FROM perfil_seguidores WHERE dono_tipo = 'banda' AND dono_id = $1) AS seguidores,
+         (SELECT ROUND(AVG(nota)::numeric, 1)::float FROM perfil_avaliacoes WHERE dono_tipo = 'banda' AND dono_id = $1) AS media_avaliacao,
+         (SELECT COUNT(*)::int FROM perfil_avaliacoes WHERE dono_tipo = 'banda' AND dono_id = $1) AS total_avaliacoes`,
+      [id]
+    );
+
+    let seguindo = false;
+    let minha_avaliacao = null;
+    if (req.usuario) {
+      const pessoalRes = await pool.query(
+        `SELECT
+           EXISTS(SELECT 1 FROM perfil_seguidores WHERE usuario_id = $1 AND dono_tipo = 'banda' AND dono_id = $2) AS seguindo,
+           (SELECT nota FROM perfil_avaliacoes WHERE usuario_id = $1 AND dono_tipo = 'banda' AND dono_id = $2) AS nota`,
+        [req.usuario.id, id]
+      );
+      seguindo = pessoalRes.rows[0].seguindo;
+      minha_avaliacao = pessoalRes.rows[0].nota;
+    }
+
     return res.json({
       ...bandaRes.rows[0],
       eventos: eventosRes.rows,
       midias: midiasRes.rows,
+      seguidores: statsRes.rows[0].seguidores,
+      media_avaliacao: statsRes.rows[0].media_avaliacao,
+      total_avaliacoes: statsRes.rows[0].total_avaliacoes,
+      seguindo,
+      minha_avaliacao,
     });
 
   } catch (err) {
     console.error('Erro ao buscar banda:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * POST /api/bandas/:id/seguir
+ */
+const seguir = async (req, res) => {
+  const { id } = req.params;
+  const usuario_id = req.usuario.id;
+
+  if (Number(id) === usuario_id) {
+    return res.status(400).json({ error: 'Você não pode seguir seu próprio perfil' });
+  }
+
+  try {
+    const bandaRes = await pool.query('SELECT usuario_id FROM perfis_bandas WHERE usuario_id = $1', [id]);
+    if (bandaRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Banda não encontrada' });
+    }
+
+    await pool.query(
+      `INSERT INTO perfil_seguidores (usuario_id, dono_tipo, dono_id)
+       VALUES ($1, 'banda', $2)
+       ON CONFLICT (usuario_id, dono_tipo, dono_id) DO NOTHING`,
+      [usuario_id, id]
+    );
+    return res.status(201).json({ seguindo: true });
+
+  } catch (err) {
+    console.error('Erro ao seguir banda:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * DELETE /api/bandas/:id/seguir
+ */
+const deixarDeSeguir = async (req, res) => {
+  const { id } = req.params;
+  const usuario_id = req.usuario.id;
+
+  try {
+    await pool.query(
+      `DELETE FROM perfil_seguidores WHERE usuario_id = $1 AND dono_tipo = 'banda' AND dono_id = $2`,
+      [usuario_id, id]
+    );
+    return res.json({ seguindo: false });
+
+  } catch (err) {
+    console.error('Erro ao deixar de seguir banda:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * PUT /api/bandas/:id/avaliar
+ * Cria ou atualiza a nota (1 a 5) do usuário autenticado para a banda.
+ */
+const avaliar = async (req, res) => {
+  const { id } = req.params;
+  const usuario_id = req.usuario.id;
+  const nota = parseInt(req.body.nota, 10);
+
+  if (Number(id) === usuario_id) {
+    return res.status(400).json({ error: 'Você não pode avaliar seu próprio perfil' });
+  }
+
+  if (isNaN(nota) || nota < 1 || nota > 5) {
+    return res.status(400).json({ error: 'Nota deve ser um número inteiro entre 1 e 5' });
+  }
+
+  try {
+    const bandaRes = await pool.query('SELECT usuario_id FROM perfis_bandas WHERE usuario_id = $1', [id]);
+    if (bandaRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Banda não encontrada' });
+    }
+
+    await pool.query(
+      `INSERT INTO perfil_avaliacoes (usuario_id, dono_tipo, dono_id, nota)
+       VALUES ($1, 'banda', $2, $3)
+       ON CONFLICT (usuario_id, dono_tipo, dono_id) DO UPDATE SET nota = EXCLUDED.nota`,
+      [usuario_id, id, nota]
+    );
+
+    const mediaRes = await pool.query(
+      `SELECT ROUND(AVG(nota)::numeric, 1)::float AS media, COUNT(*)::int AS total
+       FROM perfil_avaliacoes WHERE dono_tipo = 'banda' AND dono_id = $1`,
+      [id]
+    );
+
+    return res.json({
+      minha_avaliacao: nota,
+      media_avaliacao: mediaRes.rows[0].media,
+      total_avaliacoes: mediaRes.rows[0].total,
+    });
+
+  } catch (err) {
+    console.error('Erro ao avaliar banda:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
 };
@@ -310,4 +435,7 @@ const removerMidia = async (req, res) => {
   }
 };
 
-module.exports = { listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes, adicionarMidia, removerMidia };
+module.exports = {
+  listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes,
+  adicionarMidia, removerMidia, seguir, deixarDeSeguir, avaliar,
+};

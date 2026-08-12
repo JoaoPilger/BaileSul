@@ -9,6 +9,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 import AlterarSenhaModal from './AlterarSenhaModal'
+import EditarPerfilPessoalModal from './EditarPerfilPessoalModal'
 
 export default function Configuracoes() {
   const { usuario, logout } = useAuth()
@@ -18,6 +19,7 @@ export default function Configuracoes() {
   const [comunidadesVinculadas, setComunidadesVinculadas] = useState([])
   const [, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
   const [senhaModalOpen, setSenhaModalOpen] = useState(false)
+  const [perfilPessoalModalOpen, setPerfilPessoalModalOpen] = useState(false)
 
   useEffect(() => {
     if (usuario?.tipo !== 'pessoal') return
@@ -45,7 +47,7 @@ export default function Configuracoes() {
           icon: Music,
           title: 'Perfil',
           subtitle: 'Nome, email e senha',
-          onClick: () => showEmBreve('Perfil pessoal em breve.'),
+          onClick: () => setPerfilPessoalModalOpen(true),
         },
         {
           key: 'comunidades-vinculadas',
@@ -90,7 +92,7 @@ export default function Configuracoes() {
           icon: Music,
           title: 'Perfil',
           subtitle: 'Nome, email e senha',
-          onClick: () => showEmBreve('Perfil pessoal em breve.'),
+          onClick: () => setPerfilPessoalModalOpen(true),
         },
         {
           key: 'senha',
@@ -168,6 +170,15 @@ export default function Configuracoes() {
         onSuccess={() => {
           setSenhaModalOpen(false)
           setSnackMsg('Senha alterada com sucesso!')
+          setSnackOpen(true)
+        }}
+      />
+      <EditarPerfilPessoalModal
+        open={perfilPessoalModalOpen}
+        onClose={() => setPerfilPessoalModalOpen(false)}
+        onSuccess={() => {
+          setPerfilPessoalModalOpen(false)
+          setSnackMsg('Perfil atualizado com sucesso!')
           setSnackOpen(true)
         }}
       />

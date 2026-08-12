@@ -2,12 +2,14 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
+import '../utils/formatadores.dart';
 import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_footer.dart';
@@ -33,6 +35,7 @@ class _EditarPerfilComunidadePageState
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _descricaoController = TextEditingController();
   final TextEditingController _whatsappController = TextEditingController();
+  final TextEditingController _cepController = TextEditingController();
   final TextEditingController _enderecoController = TextEditingController();
   final TextEditingController _cidadeController = TextEditingController();
   final TextEditingController _estadoController = TextEditingController();
@@ -41,6 +44,7 @@ class _EditarPerfilComunidadePageState
   bool _salvando = false;
   bool _enviandoFoto = false;
   bool _enviandoFotoPerfil = false;
+  bool _buscandoCep = false;
   int? _removendoMidiaId;
   String? _erroCarregar;
   String? _erroSalvar;
@@ -49,6 +53,7 @@ class _EditarPerfilComunidadePageState
   MapLocation? _localizacaoSelecionada;
   bool _localizacaoAlterada = false;
   List<Map<String, dynamic>> _midias = [];
+  final FocusNode _cepFocusNode = FocusNode();
 
   int? get _comunidadeId => SessaoUsuario.instance.usuarioId;
 
@@ -56,6 +61,9 @@ class _EditarPerfilComunidadePageState
   void initState() {
     super.initState();
     _carregarPerfil();
+    _cepFocusNode.addListener(() {
+      if (!_cepFocusNode.hasFocus) _buscarCep();
+    });
   }
 
   @override
@@ -63,10 +71,45 @@ class _EditarPerfilComunidadePageState
     _nomeController.dispose();
     _descricaoController.dispose();
     _whatsappController.dispose();
+    _cepController.dispose();
+    _cepFocusNode.dispose();
     _enderecoController.dispose();
     _cidadeController.dispose();
     _estadoController.dispose();
     super.dispose();
+  }
+
+  Future<void> _buscarCep() async {
+    final String digits = somenteDigitos(_cepController.text);
+    if (digits.length != 8) return;
+
+    setState(() => _buscandoCep = true);
+    try {
+      final Uri url = Uri.parse('https://viacep.com.br/ws/$digits/json/');
+      final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
+      final dynamic decoded = jsonDecode(resp.body);
+
+      if (!mounted || decoded is! Map || decoded['erro'] == true) return;
+
+      setState(() {
+        final String logradouro = decoded['logradouro']?.toString() ?? '';
+        final String bairro = decoded['bairro']?.toString() ?? '';
+        final String enderecoViaCep = [
+          logradouro,
+          bairro,
+        ].where((e) => e.isNotEmpty).join(', ');
+
+        if (enderecoViaCep.isNotEmpty) _enderecoController.text = enderecoViaCep;
+        final String cidade = decoded['localidade']?.toString() ?? '';
+        if (cidade.isNotEmpty) _cidadeController.text = cidade;
+        final String uf = decoded['uf']?.toString() ?? '';
+        if (uf.isNotEmpty) _estadoController.text = uf;
+      });
+    } catch (_) {
+      // Falha silenciosa: usuário pode preencher manualmente
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
   }
 
   Future<void> _carregarPerfil() async {
@@ -600,6 +643,29 @@ class _EditarPerfilComunidadePageState
 
               const _SectionTitle('Localização'),
               const SizedBox(height: 12),
+              _CampoTexto(
+                label: 'CEP',
+                controller: _cepController,
+                focusNode: _cepFocusNode,
+                keyboardType: TextInputType.number,
+                inputFormatters: const [CepTextInputFormatter()],
+                suffixIcon: _buscandoCep
+                    ? const Padding(
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Preenche endereço, cidade e estado automaticamente.',
+                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
+              ),
+              const SizedBox(height: 12),
               _CampoTexto(label: 'Endereço', controller: _enderecoController),
               const SizedBox(height: 12),
               Row(
@@ -728,6 +794,9 @@ class _CampoTexto extends StatelessWidget {
     this.maxLines = 1,
     this.maxLength,
     this.validator,
+    this.focusNode,
+    this.inputFormatters,
+    this.suffixIcon,
   });
 
   final String label;
@@ -736,20 +805,26 @@ class _CampoTexto extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
   final String? Function(String?)? validator;
+  final FocusNode? focusNode;
+  final List<TextInputFormatter>? inputFormatters;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
       keyboardType: keyboardType,
       maxLines: maxLines,
       maxLength: maxLength,
       validator: validator,
+      inputFormatters: inputFormatters,
       style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
         counterText: maxLength != null ? '' : null,
+        suffixIcon: suffixIcon,
         filled: true,
         fillColor: const Color(0xFFF4F6F8),
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),

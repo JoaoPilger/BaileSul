@@ -87,6 +87,8 @@ const bandaRoutes      = require('./routes/banda.routes');
 const comunidadeRoutes = require('./routes/comunidade.routes');
 const vendedorRoutes   = require('./routes/vendedor.routes');
 const reservaRoutes    = require('./routes/reserva.routes');
+const cnpjRoutes       = require('./routes/cnpj.routes');
+const notificacaoRoutes = require('./routes/notificacao.routes');
 
 app.use(limiterGeral);
 app.use('/api/auth', limiterAuth);
@@ -99,6 +101,8 @@ app.use('/api/bandas',      bandaRoutes);
 app.use('/api/comunidades', comunidadeRoutes);
 app.use('/api/vendedores',  vendedorRoutes);
 app.use('/api/reservas',    reservaRoutes);
+app.use('/api/cnpj',        cnpjRoutes);
+app.use('/api/notificacoes', notificacaoRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', projeto: 'BaileSul' });

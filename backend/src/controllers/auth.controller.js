@@ -365,4 +365,61 @@ const alterarSenha = async (req, res) => {
   }
 };
 
-module.exports = { register, login, logout, alterarSenha };
+/**
+ * GET /api/auth/me/perfil
+ * Retorna os dados do perfil pessoal do usuário autenticado.
+ */
+const buscarPerfilPessoal = async (req, res) => {
+  const usuario_id = req.usuario.id;
+
+  try {
+    const { rows } = await pool.query(
+      'SELECT nome, cidade, estado FROM perfis_pessoais WHERE usuario_id = $1',
+      [usuario_id]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Perfil não encontrado' });
+    }
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('Erro ao buscar perfil pessoal:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+/**
+ * PUT /api/auth/me/perfil
+ * Atualiza os dados do perfil pessoal do usuário autenticado.
+ */
+const atualizarPerfilPessoal = async (req, res) => {
+  const usuario_id = req.usuario.id;
+  const { nome, cidade, estado } = req.body;
+
+  if (!nome || nome.trim().length === 0) {
+    return res.status(400).json({ error: 'Campo obrigatório: nome' });
+  }
+
+  try {
+    const { rowCount } = await pool.query(
+      `UPDATE perfis_pessoais SET
+         nome   = $1,
+         cidade = $2,
+         estado = $3
+       WHERE usuario_id = $4`,
+      [nome.trim(), cidade || null, estado || null, usuario_id]
+    );
+
+    if (rowCount === 0) {
+      return res.status(404).json({ error: 'Perfil não encontrado' });
+    }
+
+    return res.json({ message: 'Perfil atualizado com sucesso' });
+  } catch (err) {
+    console.error('Erro ao atualizar perfil pessoal:', err.message);
+    return res.status(500).json({ error: 'Erro interno do servidor' });
+  }
+};
+
+module.exports = { register, login, logout, alterarSenha, buscarPerfilPessoal, atualizarPerfilPessoal };

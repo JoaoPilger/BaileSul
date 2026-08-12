@@ -2,6 +2,7 @@ const pool = require('../config/database');
 const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
 const { caminhoParaUrl } = require('../middlewares/upload');
 const { geocodificarEndereco } = require('../services/external.service');
+const { criarNotificacao } = require('../services/notificacao.service');
 
 // Tipos de evento aceitos (coluna eventos.tipo_evento)
 const TIPOS_EVENTO = ['musical_gaucha', 'musical_bandinha', 'almoco', 'bingo', 'expos', 'futebol'];
@@ -527,7 +528,7 @@ const adicionarMidia = async (req, res) => {
     return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
   }
 
-  const url = caminhoParaUrl(req.file.path);
+  const url = caminhoParaUrl(req.file.path, req);
   const tipo = req.file.mimetype.startsWith('video/') ? 'video' : 'imagem';
   const titulo = req.body.titulo || null;
   const descricao = req.body.descricao || null;
@@ -543,6 +544,9 @@ const adicionarMidia = async (req, res) => {
     return res.status(201).json({ message: 'Mídia adicionada', midia: rows[0] });
 
   } catch (err) {
+    if (err.code === '23514') {
+      return res.status(400).json({ error: 'URL da mídia inválida.' });
+    }
     console.error('Erro ao adicionar mídia do evento:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
   }
@@ -598,7 +602,7 @@ const convidarBanda = async (req, res) => {
   }
 
   const dono = await pool.query(
-    'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
+    'SELECT id, titulo FROM eventos WHERE id = $1 AND comunidade_id = $2',
     [evento_id, comunidade_id]
   );
   if (dono.rows.length === 0) {
@@ -621,6 +625,15 @@ const convidarBanda = async (req, res) => {
        RETURNING id, status_aceite`,
       [evento_id, banda_id]
     );
+
+    criarNotificacao({
+      usuario_id: banda_id,
+      tipo: 'contrato_recebido',
+      titulo: 'Novo convite de evento',
+      mensagem: `Você recebeu um convite para tocar em "${dono.rows[0].titulo}".`,
+      payload: { evento_id: Number(evento_id), contrato_id: rows[0].id },
+    });
+
     return res.status(201).json({ message: 'Convite enviado à banda', contrato: rows[0] });
 
   } catch (err) {
@@ -682,14 +695,21 @@ const responderContrato = async (req, res) => {
 
   try {
     const contratoRes = await pool.query(
-      'SELECT id, status_aceite FROM contratos WHERE id = $1 AND banda_id = $2',
+      `SELECT c.id, c.status_aceite, c.evento_id, e.titulo AS evento_titulo,
+              e.comunidade_id, pb.nome_artistico AS banda_nome
+       FROM contratos c
+       JOIN eventos e ON e.id = c.evento_id
+       JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
+       WHERE c.id = $1 AND c.banda_id = $2`,
       [contrato_id, banda_id]
     );
     if (contratoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Contrato não encontrado ou sem permissão' });
     }
 
-    if (contratoRes.rows[0].status_aceite !== 'pendente') {
+    const contrato = contratoRes.rows[0];
+
+    if (contrato.status_aceite !== 'pendente') {
       return res.status(409).json({ error: 'Contrato já respondido' });
     }
 
@@ -707,6 +727,14 @@ const responderContrato = async (req, res) => {
        VALUES ($1, 'pendente', $2, $3)`,
       [contrato_id, resposta, banda_id]
     );
+
+    criarNotificacao({
+      usuario_id: contrato.comunidade_id,
+      tipo: resposta === 'aceito' ? 'contrato_confirmado' : 'contrato_recusado',
+      titulo: resposta === 'aceito' ? 'Banda confirmou presença' : 'Banda recusou o convite',
+      mensagem: `${contrato.banda_nome} ${resposta === 'aceito' ? 'aceitou' : 'recusou'} o convite para "${contrato.evento_titulo}".`,
+      payload: { evento_id: contrato.evento_id, contrato_id: Number(contrato_id) },
+    });
 
     return res.json({ message: `Contrato ${resposta} com sucesso` });
 

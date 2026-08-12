@@ -1,4 +1,5 @@
-﻿import 'dart:convert';
+﻿import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
@@ -45,11 +46,38 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
   String _capaFilename = 'capa.jpg';
   bool _salvando = false;
   String? _erroSalvar;
+  bool _buscandoCep = false;
+  final FocusNode _cepFocusNode = FocusNode();
+
+  final FocusNode _bandaFocusNode = FocusNode();
+  Timer? _bandaDebounce;
+  List<Map<String, dynamic>> _bandaSugestoes = [];
+  bool _bandaBuscando = false;
+  bool _bandaSugestoesOpen = false;
+  int? _bandaId;
+
+  @override
+  void initState() {
+    super.initState();
+    _cepFocusNode.addListener(() {
+      if (!_cepFocusNode.hasFocus) _buscarCep();
+    });
+    _bandaController.addListener(_onBandaChanged);
+    _bandaFocusNode.addListener(() {
+      if (!_bandaFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 150), () {
+          if (mounted) setState(() => _bandaSugestoesOpen = false);
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
     _tituloController.dispose();
     _bandaController.dispose();
+    _bandaFocusNode.dispose();
+    _bandaDebounce?.cancel();
     _estiloController.dispose();
     _dataInicioController.dispose();
     _dataFimController.dispose();
@@ -57,11 +85,101 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     _horaFimController.dispose();
     _vendedorController.dispose();
     _cepController.dispose();
+    _cepFocusNode.dispose();
     _cidadeController.dispose();
     _bairroController.dispose();
     _ruaController.dispose();
     _referenciaController.dispose();
     super.dispose();
+  }
+
+  void _onBandaChanged() {
+    if (_bandaId != null && _bandaController.text.trim().isEmpty) {
+      setState(() => _bandaId = null);
+    }
+    if (_bandaId != null) {
+      setState(() => _bandaSugestoesOpen = false);
+      return;
+    }
+
+    _bandaDebounce?.cancel();
+    final String termo = _bandaController.text.trim();
+    if (termo.length < 2) {
+      setState(() {
+        _bandaSugestoes = [];
+        _bandaSugestoesOpen = false;
+      });
+      return;
+    }
+    _bandaDebounce = Timer(const Duration(milliseconds: 300), () => _buscarBandas(termo));
+  }
+
+  Future<void> _buscarBandas(String termo) async {
+    final String? token = SessaoUsuario.instance.token;
+    if (token == null || token.isEmpty) return;
+
+    setState(() => _bandaBuscando = true);
+    try {
+      final Uri url = Uri.parse(
+        '${ApiConfig.baseUrl}/bandas/sugestoes',
+      ).replace(queryParameters: {'nome': termo});
+      final http.Response resp = await http
+          .get(url, headers: {'Authorization': 'Bearer $token'})
+          .timeout(const Duration(seconds: 10));
+
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final List<dynamic> decoded = jsonDecode(resp.body) as List<dynamic>;
+        setState(() {
+          _bandaSugestoes = decoded
+              .map((e) => Map<String, dynamic>.from(e as Map))
+              .toList();
+          _bandaSugestoesOpen = _bandaSugestoes.isNotEmpty;
+        });
+      }
+    } catch (_) {
+      // Falha silenciosa: usuário pode digitar o nome livremente
+    } finally {
+      if (mounted) setState(() => _bandaBuscando = false);
+    }
+  }
+
+  void _selecionarBanda(Map<String, dynamic> banda) {
+    setState(() {
+      _bandaId = banda['usuario_id'] is int
+          ? banda['usuario_id'] as int
+          : int.tryParse('${banda['usuario_id']}');
+      _bandaController.text = banda['nome_artistico']?.toString() ?? '';
+      _bandaSugestoesOpen = false;
+      _bandaSugestoes = [];
+    });
+  }
+
+  Future<void> _buscarCep() async {
+    final String digits = _cepController.text.replaceAll(RegExp(r'\D'), '');
+    if (digits.length != 8) return;
+
+    setState(() => _buscandoCep = true);
+    try {
+      final Uri url = Uri.parse('https://viacep.com.br/ws/$digits/json/');
+      final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
+      final dynamic decoded = jsonDecode(resp.body);
+
+      if (!mounted || decoded is! Map || decoded['erro'] == true) return;
+
+      setState(() {
+        final String cidade = decoded['localidade']?.toString() ?? '';
+        if (cidade.isNotEmpty) _cidadeController.text = cidade;
+        final String bairro = decoded['bairro']?.toString() ?? '';
+        if (bairro.isNotEmpty) _bairroController.text = bairro;
+        final String rua = decoded['logradouro']?.toString() ?? '';
+        if (rua.isNotEmpty) _ruaController.text = rua;
+      });
+    } catch (_) {
+      // Falha silenciosa: usuário pode preencher manualmente
+    } finally {
+      if (mounted) setState(() => _buscandoCep = false);
+    }
   }
 
   String? _formatarDataParaApi(String value) {
@@ -191,9 +309,35 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
         throw Exception(body['error']?.toString() ?? 'Erro ao salvar evento.');
       }
 
+      final dynamic eventoCriado = body['evento'];
+      final int? eventoId = eventoCriado is Map ? eventoCriado['id'] as int? : null;
+      String mensagemSucesso = 'Evento salvo com sucesso.';
+
+      if (_bandaId != null && eventoId != null) {
+        try {
+          final http.Response contratoResp = await http
+              .post(
+                Uri.parse('${ApiConfig.baseUrl}/eventos/$eventoId/contratos'),
+                headers: {
+                  'Authorization': 'Bearer $token',
+                  'Content-Type': 'application/json',
+                },
+                body: jsonEncode({'banda_id': _bandaId}),
+              )
+              .timeout(const Duration(seconds: 15));
+          if (contratoResp.statusCode < 200 || contratoResp.statusCode >= 300) {
+            mensagemSucesso =
+                'Evento criado, mas não foi possível convidar a banda selecionada.';
+          }
+        } catch (_) {
+          mensagemSucesso =
+              'Evento criado, mas não foi possível convidar a banda selecionada.';
+        }
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Evento salvo com sucesso.')),
+        SnackBar(content: Text(mensagemSucesso)),
       );
       Navigator.pop(context);
     } catch (e) {
@@ -307,11 +451,33 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                             ),
                             const SizedBox(height: 12),
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  child: _FormField(
-                                    label: 'Banda/Artista *',
-                                    controller: _bandaController,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      _FormField(
+                                        label: 'Banda/Artista *',
+                                        controller: _bandaController,
+                                        focusNode: _bandaFocusNode,
+                                        suffixIcon: _bandaBuscando
+                                            ? const Padding(
+                                                padding: EdgeInsets.all(6),
+                                                child: SizedBox(
+                                                  width: 12,
+                                                  height: 12,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      if (_bandaSugestoesOpen && _bandaSugestoes.isNotEmpty)
+                                        _BandaSugestoesList(
+                                          sugestoes: _bandaSugestoes,
+                                          onSelecionar: _selecionarBanda,
+                                        ),
+                                    ],
                                   ),
                                 ),
                                 SizedBox(width: 12),
@@ -427,11 +593,22 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                                   child: _FormField(
                                     label: 'CEP *',
                                     controller: _cepController,
+                                    focusNode: _cepFocusNode,
                                     keyboardType: TextInputType.number,
                                     maxLength: 8,
                                     inputFormatters: [
                                       FilteringTextInputFormatter.digitsOnly,
                                     ],
+                                    suffixIcon: _buscandoCep
+                                        ? const Padding(
+                                            padding: EdgeInsets.all(6),
+                                            child: SizedBox(
+                                              width: 12,
+                                              height: 12,
+                                              child: CircularProgressIndicator(strokeWidth: 2),
+                                            ),
+                                          )
+                                        : null,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -565,6 +742,56 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+class _BandaSugestoesList extends StatelessWidget {
+  const _BandaSugestoesList({required this.sugestoes, required this.onSelecionar});
+
+  final List<Map<String, dynamic>> sugestoes;
+  final void Function(Map<String, dynamic> banda) onSelecionar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      constraints: const BoxConstraints(maxHeight: 180),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: BaileSulColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2)),
+        ],
+      ),
+      child: ListView.builder(
+        shrinkWrap: true,
+        padding: EdgeInsets.zero,
+        itemCount: sugestoes.length,
+        itemBuilder: (context, index) {
+          final Map<String, dynamic> banda = sugestoes[index];
+          final String nome = banda['nome_artistico']?.toString() ?? '';
+          final String estilo = banda['estilo_musical']?.toString() ?? '';
+          return InkWell(
+            onTap: () => onSelecionar(banda),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(nome, style: const TextStyle(color: Colors.black, fontSize: 13)),
+                  if (estilo.isNotEmpty)
+                    Text(
+                      estilo,
+                      style: const TextStyle(color: Colors.black54, fontSize: 11),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _FormField extends StatelessWidget {
   const _FormField({
     required this.label,
@@ -572,6 +799,8 @@ class _FormField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.inputFormatters,
     this.maxLength,
+    this.focusNode,
+    this.suffixIcon,
   });
 
   final String label;
@@ -579,6 +808,8 @@ class _FormField extends StatelessWidget {
   final TextInputType keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
+  final FocusNode? focusNode;
+  final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -586,6 +817,7 @@ class _FormField extends StatelessWidget {
       height: 30,
       child: TextFormField(
         controller: controller,
+        focusNode: focusNode,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
         maxLength: maxLength,
@@ -599,6 +831,7 @@ class _FormField extends StatelessWidget {
           floatingLabelBehavior: FloatingLabelBehavior.never,
           filled: true,
           fillColor: BaileSulColors.inputFill,
+          suffixIcon: suffixIcon,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 10,
             vertical: 6,

@@ -1,12 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { formatPhone as maskPhoneInput } from '../../utils/authFormValidation'
+import { cn } from '../../utils/cn'
 import api from '../../services/api'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
-import './vendedores.css'
+import Snackbar from '../../components/ui/Snackbar'
+import styles from './vendedores.module.css'
 
-function formatPhone(value) {
+function formatPhoneDisplay(value) {
   const digits = String(value || '').replace(/\D/g, '')
   if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`
   if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`
@@ -33,6 +36,8 @@ export default function Vendedores() {
   const [error, setError] = useState('')
   const [busca, setBusca] = useState('')
   const [selecionadoId, setSelecionadoId] = useState(null)
+  const [removendoId, setRemovendoId] = useState(null)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
   // Modal
   const [modalAberto, setModalAberto] = useState(false)
@@ -45,6 +50,8 @@ export default function Vendedores() {
   const [sugestao, setSugestao] = useState(null)       // { id, nome, email } | null
   const [sugestaoStatus, setSugestaoStatus] = useState('idle') // 'idle' | 'loading' | 'found' | 'not_found'
   const debounceRef = useRef(null)
+
+  const notificar = (message) => setSnackbar({ open: true, message })
 
   // Route Guard
   useEffect(() => {
@@ -67,25 +74,21 @@ export default function Vendedores() {
 
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
-      api.get('/vendedores')
-        .then((res) => { setVendedores(res.data); setError('') })
-        .catch((err) => {
-          console.error('Erro ao buscar vendedores:', err)
-          setError('Não foi possível carregar a lista de vendedores. Recarregue a página ou tente novamente.')
-        })
-        .finally(() => setLoading(false))
+      fetchVendedores()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, usuario])
 
-  const removerVendedor = async (id, nome) => {
-    if (!window.confirm(`Tem certeza que deseja remover o vendedor "${nome}"?`)) return
+  const removerVendedor = async (id) => {
     try {
       await api.delete(`/vendedores/${id}`)
       setVendedores((prev) => prev.filter((v) => v.id !== id))
       if (selecionadoId === id) setSelecionadoId(null)
     } catch (err) {
       console.error('Erro ao remover vendedor:', err)
-      alert(err.response?.data?.error || 'Erro ao remover o vendedor. Tente novamente.')
+      notificar(err.response?.data?.error || 'Erro ao remover o vendedor. Tente novamente.')
+    } finally {
+      setRemovendoId(null)
     }
   }
 
@@ -179,89 +182,110 @@ export default function Vendedores() {
   if (!isAuthenticated || usuario?.tipo !== 'comunidade') return null
 
   return (
-    <div className="lv-shell">
+    <div className={styles['lv-shell']}>
       <Header />
 
-      <main className="lv-main">
-        <div className="lv-card">
+      <main className={styles['lv-main']}>
+        <div className={styles['lv-card']}>
 
-          <div className="lv-card-header">
+          <div className={styles['lv-card-header']}>
             <svg viewBox="0 0 24 24">
               <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
             </svg>
-            <h1 className="lv-card-title">Vendedores</h1>
+            <h1 className={styles['lv-card-title']}>Vendedores</h1>
           </div>
 
-          <div className="lv-toolbar">
-            <div className="lv-search-wrap">
+          <div className={styles['lv-toolbar']}>
+            <div className={styles['lv-search-wrap']}>
               <svg viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="8" />
                 <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
               <input
                 type="text"
-                className="lv-search-input"
+                className={styles['lv-search-input']}
                 placeholder="pesquisar por nome ou email"
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
             </div>
-            <button type="button" className="lv-btn-add" onClick={() => setModalAberto(true)}>
+            <button type="button" className={styles['lv-btn-add']} onClick={() => setModalAberto(true)}>
               + Adicionar
             </button>
           </div>
 
-          {error && <div className="lv-error-alert">{error}</div>}
+          {error && <div className={styles['lv-error-alert']}>{error}</div>}
 
-          <div className="lv-list-frame">
+          <div className={styles['lv-list-frame']}>
             {loading ? (
-              <div className="lv-loading">
-                <div className="lv-spinner"></div>
+              <div className={styles['lv-loading']}>
+                <div className={styles['lv-spinner']}></div>
                 <span>Carregando vendedores...</span>
               </div>
             ) : vendedoresFiltrados.length > 0 ? (
-              <ul className="lv-list">
+              <ul className={styles['lv-list']}>
                 {vendedoresFiltrados.map((v) => (
                   <li
                     key={v.id}
-                    className={`lv-row${selecionadoId === v.id ? ' lv-row--active' : ''}`}
+                    className={cn(styles['lv-row'], selecionadoId === v.id && styles['lv-row--active'])}
                     onClick={() => setSelecionadoId(v.id)}
                   >
-                    <div className="lv-row-avatar">
+                    <div className={styles['lv-row-avatar']}>
                       <svg viewBox="0 0 24 24">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
                     </div>
-                    <span className="lv-row-field">
+                    <span className={styles['lv-row-field']}>
                       {v.nome}
                     </span>
-                    <span className="lv-row-field lv-row-field--muted" title={v.usuario_email || (v.usuario_id ? 'Conta vinculada' : 'Sem conta cadastrada')}>
+                    <span className={cn(styles['lv-row-field'], styles['lv-row-field--muted'])} title={v.usuario_email || (v.usuario_id ? 'Conta vinculada' : 'Sem conta cadastrada')}>
                       {v.usuario_email || (v.usuario_id ? 'Conta vinculada' : 'Sem conta')}
                     </span>
-                    <span className="lv-row-field lv-row-field--muted">{formatPhone(v.whatsapp)}</span>
-                    <span className="lv-row-vendas">
+                    <span className={cn(styles['lv-row-field'], styles['lv-row-field--muted'])}>{formatPhoneDisplay(v.whatsapp)}</span>
+                    <span className={styles['lv-row-vendas']}>
                       Vendas Totais:<strong>R$ {formatCurrency(v.vendas_totais)}</strong>
                     </span>
-                    <button
-                      type="button"
-                      className="lv-btn-delete"
-                      aria-label={`Remover ${v.nome}`}
-                      onClick={(e) => { e.stopPropagation(); removerVendedor(v.id, v.nome) }}
-                    >
-                      <svg viewBox="0 0 24 24">
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                        <path d="M10 11v6" /><path d="M14 11v6" />
-                        <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
-                      </svg>
-                    </button>
+                    {removendoId === v.id ? (
+                      <div className={styles['lv-btn-confirm']} onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className={styles['lv-btn-confirm-yes']}
+                          title="Confirmar remoção"
+                          onClick={() => removerVendedor(v.id)}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          className={styles['lv-btn-confirm-no']}
+                          title="Cancelar"
+                          onClick={() => setRemovendoId(null)}
+                        >
+                          ✗
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className={styles['lv-btn-delete']}
+                        aria-label={`Remover ${v.nome}`}
+                        onClick={(e) => { e.stopPropagation(); setRemovendoId(v.id) }}
+                      >
+                        <svg viewBox="0 0 24 24">
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                          <path d="M10 11v6" /><path d="M14 11v6" />
+                          <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+                        </svg>
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="lv-empty">
+              <div className={styles['lv-empty']}>
                 <svg viewBox="0 0 24 24">
                   <circle cx="11" cy="11" r="8" />
                   <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -271,8 +295,8 @@ export default function Vendedores() {
             )}
           </div>
 
-          <div className="lv-footer-info">
-            <span className="lv-count">
+          <div className={styles['lv-footer-info']}>
+            <span className={styles['lv-count']}>
               <strong>{vendedoresFiltrados.length}</strong> de <strong>{vendedores.length}</strong> vendedores
             </span>
           </div>
@@ -284,18 +308,18 @@ export default function Vendedores() {
 
       {/* Modal */}
       {modalAberto && (
-        <div className="lv-modal-overlay" onClick={fecharModal}>
-          <div className="lv-modal-card" onClick={(e) => e.stopPropagation()}>
-            <div className="lv-modal-header">
+        <div className={styles['lv-modal-overlay']} onClick={fecharModal}>
+          <div className={styles['lv-modal-card']} onClick={(e) => e.stopPropagation()}>
+            <div className={styles['lv-modal-header']}>
               <h2>Novo Vendedor</h2>
-              <button type="button" className="lv-modal-close" onClick={fecharModal}>✕</button>
+              <button type="button" className={styles['lv-modal-close']} onClick={fecharModal}>✕</button>
             </div>
 
-            <form className="lv-modal-form" onSubmit={handleAdicionar}>
-              {modalError && <div className="lv-modal-alert">{modalError}</div>}
+            <form className={styles['lv-modal-form']} onSubmit={handleAdicionar}>
+              {modalError && <div className={styles['lv-modal-alert']}>{modalError}</div>}
 
               {/* Input de Email com busca de sugestão */}
-              <div className="lv-modal-field">
+              <div className={styles['lv-modal-field']}>
                 <label htmlFor="modalEmail">E-mail do usuário *</label>
                 <input
                   id="modalEmail"
@@ -314,54 +338,54 @@ export default function Vendedores() {
 
                 {/* Feedback inline do status da busca */}
                 {sugestaoStatus === 'loading' && (
-                  <span className="lv-field-hint" style={{ color: 'var(--text-muted)' }}>
-                    <span className="lv-spinner-sm" style={{ display: 'inline-block', verticalAlign: 'middle', marginRight: 6 }} />
+                  <span className={styles['lv-field-hint']}>
+                    <span className={styles['lv-spinner-sm']} style={{ marginRight: 6 }} />
                     Buscando usuário...
                   </span>
                 )}
                 {sugestaoStatus === 'not_found' && (
-                  <span className="lv-field-hint lv-field-hint--error">
+                  <span className={cn(styles['lv-field-hint'], styles['lv-field-hint--error'])}>
                     Nenhum usuário pessoal encontrado com esse e-mail.
                   </span>
                 )}
 
                 {/* Card do usuário encontrado */}
                 {sugestaoStatus === 'found' && sugestao && (
-                  <div className="lv-usuario-card">
-                    <div className="lv-usuario-card-avatar">
+                  <div className={styles['lv-usuario-card']}>
+                    <div className={styles['lv-usuario-card-avatar']}>
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                         <circle cx="12" cy="7" r="4" />
                       </svg>
                     </div>
-                    <div className="lv-usuario-card-info">
-                      <span className="lv-usuario-card-nome">{sugestao.nome}</span>
-                      <span className="lv-usuario-card-email">{sugestao.email}</span>
+                    <div className={styles['lv-usuario-card-info']}>
+                      <span className={styles['lv-usuario-card-nome']}>{sugestao.nome}</span>
+                      <span className={styles['lv-usuario-card-email']}>{sugestao.email}</span>
                     </div>
-                    <span className="lv-usuario-card-badge">Encontrado ✓</span>
+                    <span className={styles['lv-usuario-card-badge']}>Encontrado ✓</span>
                   </div>
                 )}
               </div>
 
               {/* WhatsApp */}
-              <div className="lv-modal-field">
+              <div className={styles['lv-modal-field']}>
                 <label htmlFor="modalWhatsapp">WhatsApp (com DDD) *</label>
                 <input
                   id="modalWhatsapp"
                   type="tel"
-                  placeholder="Ex: 47999999999"
+                  placeholder="Ex: (47) 99999-9999"
                   value={modalWhatsapp}
-                  onChange={(e) => setModalWhatsapp(e.target.value)}
+                  onChange={(e) => setModalWhatsapp(maskPhoneInput(e.target.value))}
                   disabled={modalLoading}
                   autoComplete="off"
                   required
                 />
               </div>
 
-              <div className="lv-modal-actions">
+              <div className={styles['lv-modal-actions']}>
                 <button
                   type="button"
-                  className="lv-modal-btn-cancel"
+                  className={styles['lv-modal-btn-cancel']}
                   onClick={fecharModal}
                   disabled={modalLoading}
                 >
@@ -369,7 +393,7 @@ export default function Vendedores() {
                 </button>
                 <button
                   type="submit"
-                  className="lv-modal-btn-submit"
+                  className={styles['lv-modal-btn-submit']}
                   disabled={modalLoading}
                 >
                   {modalLoading ? 'Adicionando...' : 'Adicionar Vendedor'}
@@ -379,6 +403,12 @@ export default function Vendedores() {
           </div>
         </div>
       )}
+
+      <Snackbar
+        open={snackbar.open}
+        message={snackbar.message}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      />
     </div>
   )
 }

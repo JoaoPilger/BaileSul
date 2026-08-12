@@ -13,16 +13,14 @@ import Evento from './paginas/evento/evento.jsx'
 import EventoDashboard from './paginas/evento/dashboard_evento.jsx'
 import Bandas from './paginas/bandas/bandas.jsx'
 import Comunidades from './paginas/comunidades/comunidades.jsx'
-import VitrineComunidade from './paginas/vitrine_comunidade/vitrine_comunidade.jsx'
-import VitrineBanda from './paginas/vitrine_banda/vitrine_banda.jsx'
+import VitrinePerfil from './paginas/vitrine/VitrinePerfil.jsx'
 import Vendedores from './paginas/vendedores/vendedores.jsx'
 import Configuracoes from './paginas/configuracoes/configuracoes.jsx'
 import Pagamentos from './paginas/pagamentos/pagamentos.jsx'
 import MeusIngressosPage from './paginas/meus_ingressos/meusIngressos.jsx'
-import MeusEventosComunidade from './paginas/meus_eventos_comunidade/meus_eventos_comunidade.jsx'
+import MeusEventos from './paginas/meus_eventos/MeusEventos.jsx'
 import Painel from './paginas/painel/painel.jsx'
 import ContratosPage from './paginas/contratos/contratos.jsx'
-import MeusEventosBanda from './paginas/meus_eventos_banda/meus_eventos_banda.jsx'
 
 import EditarPerfil from './paginas/editar_perfil/editar_perfil.jsx'
 
@@ -57,15 +55,15 @@ function App() {
           <Route path="/eventos/:id/dashboard" element={<EventoDashboard />} />
           <Route path="/bandas" element={<Bandas />} />
           <Route path="/comunidades" element={<Comunidades />} />
-          <Route path="/comunidades/:id" element={<VitrineComunidade />} />
-          <Route path="/bandas/:id" element={<VitrineBanda />} />
+          <Route path="/comunidades/:id" element={<VitrinePerfil tipo="comunidade" />} />
+          <Route path="/bandas/:id" element={<VitrinePerfil tipo="banda" />} />
           <Route path="/vendedores" element={<Vendedores />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/editar-perfil" element={<EditarPerfil />} />
           <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="/meus-ingressos" element={<MeusIngressosPage />} />
-          <Route path="/meus-eventos" element={<MeusEventosComunidade />} />
-          <Route path="/meus-eventos/banda" element={<MeusEventosBanda />} />
+          <Route path="/meus-eventos" element={<MeusEventos tipo="comunidade" />} />
+          <Route path="/meus-eventos/banda" element={<MeusEventos tipo="banda" />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

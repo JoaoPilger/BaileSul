@@ -2,10 +2,12 @@ require('dotenv').config();
 const app = require('./src/app');
 const pool = require('./src/config/database');
 const { iniciarLimpezaPeriodica } = require('./src/services/token.service');
+const { iniciarChecagemPeriodica } = require('./src/jobs/notificacao.job');
 
 const PORT = process.env.PORT || 3000;
 
 const tokenCleanupInterval = iniciarLimpezaPeriodica();
+const notificacaoJobInterval = iniciarChecagemPeriodica();
 
 const server = app.listen(PORT, () => {
   console.log(`🚀 BaileSul API rodando na porta ${PORT}`);
@@ -15,6 +17,7 @@ const server = app.listen(PORT, () => {
 const shutdown = async (signal) => {
   console.log(`\n${signal} recebido. Encerrando servidor...`);
   clearInterval(tokenCleanupInterval);
+  clearInterval(notificacaoJobInterval);
   server.close(async () => {
     await pool.end();
     console.log('✅ Pool de banco encerrado. Até logo!');

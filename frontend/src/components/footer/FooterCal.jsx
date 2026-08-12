@@ -4,12 +4,11 @@ import styles from './FooterCal.module.css';
 
 export default function FooterCal() {
   const { isAuthenticated } = useAuth();
-  const contaLink = isAuthenticated ? '/perfil' : '/login';
+  const contaLink = isAuthenticated ? '/configuracoes' : '/login';
 
   const footerLinks = [
     { to: '/eventos', label: 'Eventos' },
     { to: '/calendario', label: 'Calendário' },
-    { to: '/mapa', label: 'Mapa' },
     { to: '/meus-eventos', label: 'Meus Eventos' },
     { to: '/criar-evento', label: 'Criar Evento' },
     { to: contaLink, label: 'Perfil' },

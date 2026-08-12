@@ -286,6 +286,48 @@
   color: var(--accent);
 }
 
+.mi-card-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.mi-card-cancel {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 16px;
+  border: 1px solid rgba(194, 69, 69, 0.35);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  white-space: nowrap;
+}
+
+.mi-card-cancel:hover:not(:disabled) {
+  background: var(--danger);
+  color: #fff;
+}
+
+.mi-card-cancel:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.mi-card-confirm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   :root { --nav-h: 56px; }
   .mi-body { padding: calc(var(--nav-h) + 20px) 16px 0; }

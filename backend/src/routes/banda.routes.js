@@ -1,6 +1,9 @@
 const router = require('express').Router();
-const { listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes, adicionarMidia, removerMidia } = require('../controllers/banda.controller');
-const { autenticar, autorizar } = require('../middlewares/auth.middleware');
+const {
+  listar, buscarPorId, agenda, atualizarPerfil, atualizarFotoPerfil, buscarSugestoes,
+  adicionarMidia, removerMidia, seguir, deixarDeSeguir, avaliar,
+} = require('../controllers/banda.controller');
+const { autenticar, autorizar, autenticarOpcional } = require('../middlewares/auth.middleware');
 const { uploadMidiaPerfil, uploadErrorHandler } = require('../middlewares/upload');
 
 // RF18 – Agenda da banda (DEVE vir antes de /:id)
@@ -21,6 +24,11 @@ router.get('/sugestoes', autenticar, autorizar('comunidade'), buscarSugestoes);
 
 // RF10, RF15 – Listagem e perfil público
 router.get('/', listar);
-router.get('/:id', buscarPorId);
+router.get('/:id', autenticarOpcional, buscarPorId);
+
+// Seguir / avaliar (qualquer usuário autenticado, exceto a própria banda)
+router.post('/:id/seguir', autenticar, seguir);
+router.delete('/:id/seguir', autenticar, deixarDeSeguir);
+router.put('/:id/avaliar', autenticar, avaliar);
 
 module.exports = router;

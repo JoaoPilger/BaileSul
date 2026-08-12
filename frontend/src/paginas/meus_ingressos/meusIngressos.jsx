@@ -6,6 +6,7 @@ import Footer from '../../components/footer/Footer'
 import { useAuth } from '../../contexts/AuthContext'
 import { cn } from '../../utils/cn'
 import api from '../../services/api'
+import Snackbar from '../../components/ui/Snackbar'
 import styles from './meusIngressos.module.css'
 
 const DEFAULT_IMAGE =
@@ -44,9 +45,11 @@ function useDebouncedValue(value, delay = 300) {
   return debounced
 }
 
-function IngressoCard({ reserva, onVerDetalhes }) {
+function IngressoCard({ reserva, onVerDetalhes, onCancelar, cancelando }) {
   const isConfirmado = reserva.status_pagamento === 'confirmado'
+  const isPendente = reserva.status_pagamento === 'pendente'
   const cidade = [reserva.cidade, reserva.estado].filter(Boolean).join(', ')
+  const [confirmando, setConfirmando] = useState(false)
 
   return (
     <div className={styles['mi-card']}>
@@ -89,13 +92,47 @@ function IngressoCard({ reserva, onVerDetalhes }) {
           )}
         </div>
       </div>
-      <button
-        type="button"
-        className={styles['mi-card-action']}
-        onClick={() => onVerDetalhes(reserva.evento_id)}
-      >
-        Ver detalhes
-      </button>
+      <div className={styles['mi-card-actions']}>
+        <button
+          type="button"
+          className={styles['mi-card-action']}
+          onClick={() => onVerDetalhes(reserva.evento_id)}
+        >
+          Ver detalhes
+        </button>
+
+        {isPendente && !confirmando && (
+          <button
+            type="button"
+            className={styles['mi-card-cancel']}
+            onClick={() => setConfirmando(true)}
+          >
+            Cancelar reserva
+          </button>
+        )}
+
+        {isPendente && confirmando && (
+          <div className={styles['mi-card-confirm']}>
+            <span>Cancelar esta reserva?</span>
+            <button
+              type="button"
+              className={styles['mi-card-cancel']}
+              disabled={cancelando}
+              onClick={() => onCancelar(reserva.id)}
+            >
+              {cancelando ? 'Cancelando...' : 'Sim, cancelar'}
+            </button>
+            <button
+              type="button"
+              className={styles['mi-card-action']}
+              disabled={cancelando}
+              onClick={() => setConfirmando(false)}
+            >
+              Voltar
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -112,6 +149,9 @@ export default function MeusIngressosPage() {
   const [tipoFiltro, setTipoFiltro] = useState('')
   const [busca, setBusca] = useState('')
   const buscaDebounced = useDebouncedValue(busca, 300)
+
+  const [cancelandoId, setCancelandoId] = useState(null)
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -167,6 +207,22 @@ export default function MeusIngressosPage() {
   const mostrarReservados = statusFiltro === 'todos' || statusFiltro === 'pendente'
 
   const handleVerDetalhes = (eventoId) => navigate(`/eventos/${eventoId}`)
+
+  const handleCancelar = async (reservaId) => {
+    setCancelandoId(reservaId)
+    try {
+      await api.patch(`/reservas/${reservaId}/cancelar`)
+      setReservas((prev) => prev.filter((r) => r.id !== reservaId))
+      setSnackbar({ open: true, message: 'Reserva cancelada com sucesso.' })
+    } catch (err) {
+      setSnackbar({
+        open: true,
+        message: err.response?.data?.error || 'Não foi possível cancelar a reserva.',
+      })
+    } finally {
+      setCancelandoId(null)
+    }
+  }
 
   return (
     <>
@@ -243,7 +299,13 @@ export default function MeusIngressosPage() {
                   {comprados.length > 0 ? (
                     <div className={styles['mi-cards']}>
                       {comprados.map((r) => (
-                        <IngressoCard key={r.id} reserva={r} onVerDetalhes={handleVerDetalhes} />
+                        <IngressoCard
+                          key={r.id}
+                          reserva={r}
+                          onVerDetalhes={handleVerDetalhes}
+                          onCancelar={handleCancelar}
+                          cancelando={cancelandoId === r.id}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -258,7 +320,13 @@ export default function MeusIngressosPage() {
                   {reservados.length > 0 ? (
                     <div className={styles['mi-cards']}>
                       {reservados.map((r) => (
-                        <IngressoCard key={r.id} reserva={r} onVerDetalhes={handleVerDetalhes} />
+                        <IngressoCard
+                          key={r.id}
+                          reserva={r}
+                          onVerDetalhes={handleVerDetalhes}
+                          onCancelar={handleCancelar}
+                          cancelando={cancelandoId === r.id}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -271,6 +339,11 @@ export default function MeusIngressosPage() {
         </div>
       </main>
       <Footer />
+      <Snackbar
+        open={snackbar.open}
+        message={snackbar.message}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      />
     </>
   )
 }

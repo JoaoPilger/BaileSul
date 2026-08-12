@@ -21,8 +21,8 @@ export default function Snackbar({ message, open, onClose }) {
     }}>
       <div style={{
         margin: '12px',
-        background: 'rgba(22,22,26,0.96)',
-        color: '#fff',
+        background: 'var(--overlay-dark)',
+        color: 'var(--white)',
         padding: '14px 18px',
         borderRadius: 6,
         maxWidth: '100%',

@@ -1,10 +1,10 @@
 const router = require('express').Router();
 const {
   listar, buscarPorId, criar, atualizar, cancelar, calendario, responderContrato, convidarBanda,
-  removerContrato, dashboardEvento,
+  removerContrato, dashboardEvento, adicionarDia, removerDia, adicionarMidia, removerMidia,
 } = require('../controllers/evento.controller');
 const { autenticar, autorizar, autenticarOpcional } = require('../middlewares/auth.middleware');
-const { uploadCapaEvento, uploadErrorHandler } = require('../middlewares/upload');
+const { uploadCapaEvento, uploadMidiaEvento, uploadErrorHandler } = require('../middlewares/upload');
 
 // RF06 – Calendário compartilhado (DEVE vir antes de /:id)
 router.get('/calendario', autenticar, autorizar('comunidade'), calendario);
@@ -22,6 +22,14 @@ router.get('/:id', autenticarOpcional, buscarPorId);
 router.post('/',      autenticar, autorizar('comunidade'), uploadCapaEvento, criar);
 router.put('/:id',    autenticar, autorizar('comunidade'), uploadCapaEvento, atualizar);
 router.delete('/:id', autenticar, autorizar('comunidade'), cancelar);
+
+// RF06 – Dias do evento (somente comunidade dona)
+router.post('/:id/dias',              autenticar, autorizar('comunidade'), adicionarDia);
+router.delete('/:id/dias/:dia_id',    autenticar, autorizar('comunidade'), removerDia);
+
+// RF12 – Mídias do evento (somente comunidade dona)
+router.post('/:id/midias',            autenticar, autorizar('comunidade'), uploadMidiaEvento, adicionarMidia);
+router.delete('/:id/midias/:midia_id', autenticar, autorizar('comunidade'), removerMidia);
 
 router.use(uploadErrorHandler);
 
