@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '../../utils/cn';
 import { useParams, useNavigate } from 'react-router-dom'
+import { X } from 'lucide-react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -493,77 +494,97 @@ export default function EventoPage() {
       </main>
 
       {modalOpen && (
-        <div className={styles['ev-modal']} onClick={closeModal}>
-          <div className={styles['ev-modal-card']} onClick={(e) => e.stopPropagation()}>
-            <button type="button" className={styles['ev-modal-close']} onClick={closeModal} aria-label="Fechar">
-              &times;
-            </button>
-
-            <h2 className={styles['ev-modal-title']}>Reserve seu Ingresso</h2>
-
-            <div className={styles['ev-modal-field']}>
-              <label className={styles['ev-modal-label']} htmlFor="ev-quantidade">Quantidade:</label>
-              <select
-                id="ev-quantidade"
-                className={styles['ev-modal-select']}
-                value={quantidade}
-                onChange={(e) => setQuantidade(e.target.value)}
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
+        <div className={styles['ev-modal']} onClick={closeModal} role="presentation">
+          <div
+            className={styles['ev-modal-card']}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ev-modal-titulo"
+          >
+            <div className={styles['ev-modal-header']}>
+              <h2 id="ev-modal-titulo" className={styles['ev-modal-title']}>Reserve seu ingresso</h2>
+              <button type="button" className={styles['ev-modal-close']} onClick={closeModal} aria-label="Fechar">
+                <X size={20} />
+              </button>
             </div>
 
-            <div className={styles['ev-modal-field']}>
-              <span className={styles['ev-modal-label']}>Forma de pagamento:</span>
-              <div className={styles['ev-modal-radios']}>
-                <label className={styles['ev-modal-radio']}>
-                  <input
-                    type="radio"
-                    name="pagamento"
-                    value="presencial"
-                    checked={pagamento === 'presencial'}
-                    onChange={(e) => setPagamento(e.target.value)}
-                  />
-                  Presencial
-                </label>
-                <label className={styles['ev-modal-radio']}>
-                  <input
-                    type="radio"
-                    name="pagamento"
-                    value="whatsapp"
-                    checked={pagamento === 'whatsapp'}
-                    onChange={(e) => setPagamento(e.target.value)}
-                  />
-                  Via WhatsApp
-                </label>
+            <div className={styles['ev-modal-body']}>
+              <div className={styles['ev-modal-field']}>
+                <label className={styles['ev-modal-label']} htmlFor="ev-quantidade">Quantidade</label>
+                <select
+                  id="ev-quantidade"
+                  className={styles['ev-modal-select']}
+                  value={quantidade}
+                  onChange={(e) => setQuantidade(e.target.value)}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                    <option key={n} value={n}>{n}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles['ev-modal-field']}>
+                <span className={styles['ev-modal-label']}>Forma de pagamento</span>
+                <div className={styles['ev-modal-radios']}>
+                  <label className={styles['ev-modal-radio']}>
+                    <input
+                      type="radio"
+                      name="pagamento"
+                      value="presencial"
+                      checked={pagamento === 'presencial'}
+                      onChange={(e) => setPagamento(e.target.value)}
+                    />
+                    Presencial
+                  </label>
+                  <label className={styles['ev-modal-radio']}>
+                    <input
+                      type="radio"
+                      name="pagamento"
+                      value="whatsapp"
+                      checked={pagamento === 'whatsapp'}
+                      onChange={(e) => setPagamento(e.target.value)}
+                    />
+                    Via WhatsApp
+                  </label>
+                </div>
+              </div>
+
+              <div className={styles['ev-modal-field']}>
+                <label className={styles['ev-modal-label']} htmlFor="ev-nome">Nome para retirada</label>
+                <input
+                  id="ev-nome"
+                  type="text"
+                  className={styles['ev-modal-input']}
+                  placeholder="Digite o nome completo"
+                  value={nomeRetirada}
+                  onChange={(e) => setNomeRetirada(e.target.value)}
+                />
+              </div>
+
+              {reservaErro && (
+                <p className={styles['ev-modal-error']}>{reservaErro}</p>
+              )}
+
+              <div className={styles['ev-modal-actions']}>
+                <button
+                  type="button"
+                  className={styles['ev-modal-cancel']}
+                  onClick={closeModal}
+                  disabled={reservaLoading}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className={styles['ev-modal-submit']}
+                  onClick={handleReservar}
+                  disabled={reservaLoading}
+                >
+                  {reservaLoading ? 'Aguarde...' : 'Prosseguir'}
+                </button>
               </div>
             </div>
-
-            <div className={styles['ev-modal-field']}>
-              <label className={styles['ev-modal-label']} htmlFor="ev-nome">Nome para retirada:</label>
-              <input
-                id="ev-nome"
-                type="text"
-                className={styles['ev-modal-input']}
-                placeholder="Digite o nome Completo"
-                value={nomeRetirada}
-                onChange={(e) => setNomeRetirada(e.target.value)}
-              />
-            </div>
-
-            {reservaErro && (
-              <p className={styles['ev-modal-error']}>{reservaErro}</p>
-            )}
-            <button
-              type="button"
-              className={styles['ev-modal-submit']}
-              onClick={handleReservar}
-              disabled={reservaLoading}
-            >
-              {reservaLoading ? 'Aguarde...' : 'Prosseguir'}
-            </button>
           </div>
         </div>
       )}

@@ -18,95 +18,132 @@
 
 .ev-modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+  inset: 0;
+  z-index: 1000;
+  background: rgba(13, 15, 22, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  padding: 20px;
+  animation: evOverlayIn 0.2s ease both;
+}
+
+@keyframes evOverlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .ev-modal-card {
-  position: relative;
-  background: var(--bg);
-  border-radius: 18px;
-  padding: 40px 36px 36px;
-  width: 90%;
+  background: var(--surface);
+  border-radius: 16px;
+  width: 100%;
   max-width: 460px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: evModalIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes evModalIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.ev-modal-header {
   display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-.ev-modal-close {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  background: none;
-  border: none;
-  font-size: 1.6rem;
-  color: var(--text-muted);
-  cursor: pointer;
-  line-height: 1;
-  padding: 4px;
-}
-
-.ev-modal-close:hover {
-  color: var(--text);
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
 }
 
 .ev-modal-title {
   font-family: var(--font-head);
-  font-size: 1.7rem;
-  font-weight: 700;
+  font-size: 1.3rem;
+  font-weight: 800;
   color: var(--text);
-  text-align: center;
+}
+
+.ev-modal-close {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.ev-modal-close:hover {
+  background: rgba(17, 17, 17, 0.06);
+  color: var(--text);
+}
+
+.ev-modal-body {
+  padding: 22px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .ev-modal-field {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  gap: 6px;
 }
 
 .ev-modal-label {
   font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.8rem;
+  font-weight: 700;
   color: var(--text);
 }
 
-.ev-modal-select {
-  width: 200px;
+.ev-modal-select,
+.ev-modal-input {
+  width: 100%;
   height: 42px;
-  padding: 0 14px;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #b8bfc4;
+  background: var(--surface);
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.ev-modal-select {
   cursor: pointer;
   appearance: auto;
 }
 
+.ev-modal-select:focus,
+.ev-modal-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.ev-modal-input::placeholder {
+  color: var(--text-muted);
+}
+
 .ev-modal-radios {
   display: flex;
-  gap: 32px;
-  justify-content: center;
+  gap: 20px;
 }
 
 .ev-modal-radio {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   color: var(--text);
   cursor: pointer;
 }
@@ -118,90 +155,67 @@
   cursor: pointer;
 }
 
-.ev-modal-input {
-  width: 80%;
-  max-width: 340px;
-  height: 44px;
-  padding: 0 16px;
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  background: #b8bfc4;
+.ev-modal-error {
+  background: rgba(194, 69, 69, 0.1);
+  color: #b91c1c;
+  border: 1px solid rgba(194, 69, 69, 0.25);
+  border-radius: 8px;
+  padding: 10px 12px;
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
 }
 
-.ev-modal-input::placeholder {
-  color: var(--text-muted);
+.ev-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.ev-modal-cancel,
+.ev-modal-submit {
+  height: 40px;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.ev-modal-cancel {
+  background: rgba(13, 73, 107, 0.08);
+  color: var(--accent);
+}
+
+.ev-modal-cancel:hover {
+  background: rgba(13, 73, 107, 0.15);
+  color: var(--accent-hover);
 }
 
 .ev-modal-submit {
-  align-self: center;
-  height: 48px;
-  padding: 0 48px;
   background: var(--accent);
-  border: none;
-  border-radius: 10px;
   color: #fff;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
 }
 
 .ev-modal-submit:hover {
   background: var(--accent-hover);
-  box-shadow: 0 6px 20px var(--accent-glow);
+  box-shadow: 0 4px 14px var(--accent-glow);
   transform: translateY(-1px);
 }
 
-.ev-modal-submit:active {
-  transform: translateY(0);
-}
-
-.ev-modal-error,
-.ev-modal-success {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 12px 16px;
-  border-radius: 14px;
-  font-family: var(--font-body);
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.ev-modal-error {
-  background: rgba(255, 87, 87, 0.12);
-  color: #b91c1c;
-  border: 1px solid rgba(185, 28, 28, 0.16);
-}
-
-.ev-modal-success {
-  background: rgba(30, 136, 229, 0.12);
-  color: #0f4c81;
-  border: 1px solid rgba(30, 136, 229, 0.2);
-  display: grid;
-  gap: 10px;
-}
-
-.ev-modal-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 10px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: background 0.2s, transform 0.15s;
-}
-
-.ev-modal-link:hover {
-  background: var(--accent-hover);
-  transform: translateY(-1px);
+.ev-modal-actions button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .ev-page {
