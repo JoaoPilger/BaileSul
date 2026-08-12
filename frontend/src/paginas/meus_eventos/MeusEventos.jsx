@@ -68,6 +68,7 @@ function mapDataLocal(ev, fallbackCidadeEstado) {
     ? ev.local_endereco.split(';')
     : []
   const city = localParts[3] || ev.local_nome || fallbackCidadeEstado
+  const cidade = ((localParts[3] || ev.local_nome || String(fallbackCidadeEstado).split(',')[0]) || '').trim()
 
   const dataInicioDate = new Date(ev.data_inicio + 'T00:00:00')
   const hoje = new Date()
@@ -79,7 +80,7 @@ function mapDataLocal(ev, fallbackCidadeEstado) {
     image = image.substring(image.indexOf('/media/'))
   }
 
-  return { formattedDate, city, diasFaltando: diasFaltando > 0 ? diasFaltando : 0, image }
+  return { formattedDate, city, cidade, diasFaltando: diasFaltando > 0 ? diasFaltando : 0, image }
 }
 
 export default function MeusEventos({ tipo }) {
@@ -154,9 +155,20 @@ export default function MeusEventos({ tipo }) {
     }
   }
 
+  const handleFinalizar = async (id) => {
+    try {
+      await api.put(`/eventos/${id}`, { status: 'finalizado' })
+      setEventos((prev) => prev.map((e) => (e.id === id ? { ...e, status: 'finalizado' } : e)))
+      notificar('Evento finalizado.')
+    } catch (err) {
+      console.error(err)
+      notificar(err.response?.data?.error || 'Erro ao finalizar evento')
+    }
+  }
+
   const mappedEvents = eventos.map((ev) => {
     if (tipo === 'banda') {
-      const { formattedDate, city, diasFaltando, image } = mapDataLocal(ev, `${ev.cidade || 'Concórdia'}, ${ev.estado || 'SC'}`)
+      const { formattedDate, city, cidade, diasFaltando, image } = mapDataLocal(ev, `${ev.cidade || 'Concórdia'}, ${ev.estado || 'SC'}`)
       return {
         id: ev.id,
         contrato_id: ev.contrato_id,
@@ -164,6 +176,7 @@ export default function MeusEventos({ tipo }) {
         subtitulo: `Contratado por: ${ev.comunidade || 'Organização'}`,
         data: formattedDate,
         local: city,
+        cidade,
         confirmados: Number(ev.confirmados) || 0,
         status: ev.status_evento,
         status_aceite: ev.status_aceite,
@@ -176,12 +189,19 @@ export default function MeusEventos({ tipo }) {
 
     const bandMatch = ev.descricao ? ev.descricao.match(/Banda\/Artista:\s*(.*)/i) : null
     const subtitulo = bandMatch ? bandMatch[1].trim() : 'Organização'
-    const { formattedDate, city, diasFaltando, image } = mapDataLocal(ev, 'Concórdia, SC')
+    const { formattedDate, city, cidade, diasFaltando, image } = mapDataLocal(ev, 'Concórdia, SC')
 
     let valorFormatado = 'Grátis'
     if (ev.valor_ingresso != null && ev.valor_ingresso !== '' && Number(ev.valor_ingresso) > 0) {
       valorFormatado = `R$ ${Number(ev.valor_ingresso).toFixed(2).replace('.', ',')}`
     }
+
+    const hojeRef = new Date()
+    hojeRef.setHours(0, 0, 0, 0)
+    const fimStr = (ev.data_fim || ev.data_inicio || '').split('T')[0]
+    const dataFimEvento = fimStr ? new Date(`${fimStr}T00:00:00`) : null
+    const eventoEncerrado = dataFimEvento ? dataFimEvento < hojeRef : false
+    const statusEfetivo = ev.status === 'agendado' && eventoEncerrado ? 'finalizado' : ev.status
 
     return {
       id: ev.id,
@@ -189,9 +209,10 @@ export default function MeusEventos({ tipo }) {
       subtitulo,
       data: formattedDate,
       local: city,
+      cidade,
       valor: valorFormatado,
       confirmados: Number(ev.confirmados) || 0,
-      status: ev.status,
+      status: statusEfetivo,
       diasFaltando,
       dataRealizacao: formattedDate,
       dataCancelamento: formattedDate,
@@ -215,7 +236,7 @@ export default function MeusEventos({ tipo }) {
     { key: 'cancelados', label: tipo === 'banda' ? 'Cancelados/Recusados' : 'Cancelados', sublabel: tipo === 'banda' ? 'Eventos cancelados/recusados' : 'Eventos cancelados', value: cancelados, tone: 'red', icon: 'x' },
   ]
 
-  const cidadesDisponiveis = Array.from(new Set(mappedEvents.map((e) => e.local).filter(Boolean)))
+  const cidadesDisponiveis = Array.from(new Set(mappedEvents.map((e) => e.cidade).filter(Boolean)))
 
   const eventosFiltrados = mappedEvents.filter((ev) => {
     let matchAba = true
@@ -230,7 +251,7 @@ export default function MeusEventos({ tipo }) {
 
     const matchBusca = ev.titulo.toLowerCase().includes(busca.toLowerCase())
     const matchPeriodo = periodo === 'todos' || (ev.diasFaltando <= parseInt(periodo, 10) && ev.diasFaltando >= 0)
-    const matchCidade = cidade === 'todas' || ev.local.toLowerCase().includes(cidade.toLowerCase())
+    const matchCidade = cidade === 'todas' || (ev.cidade || '').toLowerCase() === cidade.toLowerCase()
     return matchAba && matchBusca && matchPeriodo && matchCidade
   })
 
@@ -358,31 +379,33 @@ export default function MeusEventos({ tipo }) {
             ))}
           </div>
 
-          <div className={styles['mx-view-toggle']}>
-            <button className={cn(styles['mx-view-btn'], viewMode === 'calendario' && styles.active)} onClick={() => setViewMode('calendario')}>
-              <svg viewBox="0 0 24 24">
-                <rect x="3" y="4" width="18" height="18" rx="2" />
-                <line x1="16" y1="2" x2="16" y2="6" />
-                <line x1="8" y1="2" x2="8" y2="6" />
-                <line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Calendário
-            </button>
-            <button className={cn(styles['mx-view-btn'], viewMode === 'lista' && styles.active)} onClick={() => setViewMode('lista')}>
-              <svg viewBox="0 0 24 24">
-                <line x1="8" y1="6" x2="21" y2="6" />
-                <line x1="8" y1="12" x2="21" y2="12" />
-                <line x1="8" y1="18" x2="21" y2="18" />
-                <line x1="3" y1="6" x2="3.01" y2="6" />
-                <line x1="3" y1="12" x2="3.01" y2="12" />
-                <line x1="3" y1="18" x2="3.01" y2="18" />
-              </svg>
-              Lista
-            </button>
-          </div>
+          {tipo === 'banda' && (
+            <div className={styles['mx-view-toggle']}>
+              <button className={cn(styles['mx-view-btn'], viewMode === 'calendario' && styles.active)} onClick={() => setViewMode('calendario')}>
+                <svg viewBox="0 0 24 24">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                Calendário
+              </button>
+              <button className={cn(styles['mx-view-btn'], viewMode === 'lista' && styles.active)} onClick={() => setViewMode('lista')}>
+                <svg viewBox="0 0 24 24">
+                  <line x1="8" y1="6" x2="21" y2="6" />
+                  <line x1="8" y1="12" x2="21" y2="12" />
+                  <line x1="8" y1="18" x2="21" y2="18" />
+                  <line x1="3" y1="6" x2="3.01" y2="6" />
+                  <line x1="3" y1="12" x2="3.01" y2="12" />
+                  <line x1="3" y1="18" x2="3.01" y2="18" />
+                </svg>
+                Lista
+              </button>
+            </div>
+          )}
         </div>
 
-        {viewMode === 'calendario' ? (
+        {tipo === 'banda' && viewMode === 'calendario' ? (
           <div className={styles['mx-events-list']}>
             <div className={styles['mx-empty']}>Use a aba Calendário principal para visualizar em formato calendário.</div>
           </div>
@@ -478,6 +501,12 @@ export default function MeusEventos({ tipo }) {
                     <>
                       <button onClick={() => setEventoEditando({ id: ev.id })} className={styles['mx-btn-solid']}>
                         Editar
+                      </button>
+                      <button
+                        onClick={() => handleFinalizar(ev.id)}
+                        className={cn(styles['mx-btn-solid'], styles['mx-btn-solid--success'])}
+                      >
+                        Finalizar Evento
                       </button>
                       <button
                         onClick={() => handleCancelar(ev.id)}

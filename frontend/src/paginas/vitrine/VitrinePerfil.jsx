@@ -126,6 +126,77 @@ function EventStatusBadge({ status }) {
   return <span className={cn(styles['vp-event-badge'], styles[s.cls])}>{s.label}</span>
 }
 
+function EventoItem({ ev }) {
+  return (
+    <Link to={`/eventos/${ev.id}`} className={styles['vp-event-item']}>
+      {ev.image ? (
+        <img src={ev.image} alt={ev.nome} className={styles['vp-event-thumb']} />
+      ) : (
+        <div className={styles['vp-event-thumb-placeholder']}>
+          <svg viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </div>
+      )}
+
+      <div className={styles['vp-event-info']}>
+        <div className={styles['vp-event-name']}>{ev.nome}</div>
+        <div className={styles['vp-event-meta']}>
+          <div className={styles['vp-event-meta-row']}>
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="18" rx="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            {ev.data}
+            {ev.hora && ` · ${ev.hora}`}
+          </div>
+          {ev.local && (
+            <div className={styles['vp-event-meta-row']}>
+              <svg viewBox="0 0 24 24">
+                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              {ev.local}
+            </div>
+          )}
+          {ev.comunidade && (
+            <div className={styles['vp-event-meta-row']}>
+              <svg viewBox="0 0 24 24">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+              </svg>
+              {ev.comunidade}
+            </div>
+          )}
+          {ev.preco && (
+            <div className={styles['vp-event-meta-row']}>
+              <svg viewBox="0 0 24 24">
+                <line x1="12" y1="1" x2="12" y2="23" />
+                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+              </svg>
+              {ev.preco}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={styles['vp-event-status-area']}>
+        <div className={styles['vp-event-arrow']}>
+          <svg viewBox="0 0 24 24">
+            <line x1="5" y1="12" x2="19" y2="12" />
+            <polyline points="12 5 19 12 12 19" />
+          </svg>
+        </div>
+        <EventStatusBadge status={ev.status} />
+      </div>
+    </Link>
+  )
+}
+
 export default function VitrinePerfil({ tipo }) {
   const cfg = CONFIG[tipo]
   const { id } = useParams()
@@ -490,13 +561,13 @@ export default function VitrinePerfil({ tipo }) {
 
             <div className={cn(styles['vp-card'], styles['vp-tabs-card'])}>
               <div className={styles['vp-tabs']}>
-                {['sobre', 'eventos', 'galeria', 'avaliacoes'].map((aba) => (
+                {['sobre', 'eventos'].map((aba) => (
                   <button
                     key={aba}
                     className={cn(styles['vp-tab'], abaAtiva === aba && styles.active)}
                     onClick={() => setAbaAtiva(aba)}
                   >
-                    {aba === 'avaliacoes' ? 'Avaliações' : aba.charAt(0).toUpperCase() + aba.slice(1)}
+                    {aba.charAt(0).toUpperCase() + aba.slice(1)}
                   </button>
                 ))}
               </div>
@@ -596,13 +667,13 @@ export default function VitrinePerfil({ tipo }) {
                 )}
 
                 {abaAtiva === 'eventos' && (
-                  <div className={styles['vp-tab-placeholder']}>Ver eventos na coluna ao lado</div>
-                )}
-                {abaAtiva === 'galeria' && (
-                  <div className={styles['vp-tab-placeholder']}>Ver galeria na coluna ao lado</div>
-                )}
-                {abaAtiva === 'avaliacoes' && (
-                  <div className={styles['vp-tab-placeholder']}>Ver avaliações abaixo</div>
+                  <div className={styles['vp-events-list']}>
+                    {eventos.length === 0 ? (
+                      <div className={styles['vp-events-empty']}>Nenhum evento agendado</div>
+                    ) : (
+                      eventos.map((ev) => <EventoItem key={ev.id} ev={ev} />)
+                    )}
+                  </div>
                 )}
               </div>
             </div>
@@ -819,74 +890,7 @@ export default function VitrinePerfil({ tipo }) {
                 {eventos.length === 0 ? (
                   <div className={styles['vp-events-empty']}>Nenhum evento agendado</div>
                 ) : (
-                  eventos.map((ev) => (
-                    <Link to={`/eventos/${ev.id}`} key={ev.id} className={styles['vp-event-item']}>
-                      {ev.image ? (
-                        <img src={ev.image} alt={ev.nome} className={styles['vp-event-thumb']} />
-                      ) : (
-                        <div className={styles['vp-event-thumb-placeholder']}>
-                          <svg viewBox="0 0 24 24">
-                            <rect x="3" y="3" width="18" height="18" rx="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                          </svg>
-                        </div>
-                      )}
-
-                      <div className={styles['vp-event-info']}>
-                        <div className={styles['vp-event-name']}>{ev.nome}</div>
-                        <div className={styles['vp-event-meta']}>
-                          <div className={styles['vp-event-meta-row']}>
-                            <svg viewBox="0 0 24 24">
-                              <rect x="3" y="4" width="18" height="18" rx="2" />
-                              <line x1="16" y1="2" x2="16" y2="6" />
-                              <line x1="8" y1="2" x2="8" y2="6" />
-                              <line x1="3" y1="10" x2="21" y2="10" />
-                            </svg>
-                            {ev.data}
-                            {ev.hora && ` · ${ev.hora}`}
-                          </div>
-                          {ev.local && (
-                            <div className={styles['vp-event-meta-row']}>
-                              <svg viewBox="0 0 24 24">
-                                <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                                <circle cx="12" cy="10" r="3" />
-                              </svg>
-                              {ev.local}
-                            </div>
-                          )}
-                          {ev.comunidade && (
-                            <div className={styles['vp-event-meta-row']}>
-                              <svg viewBox="0 0 24 24">
-                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                <circle cx="9" cy="7" r="4" />
-                              </svg>
-                              {ev.comunidade}
-                            </div>
-                          )}
-                          {ev.preco && (
-                            <div className={styles['vp-event-meta-row']}>
-                              <svg viewBox="0 0 24 24">
-                                <line x1="12" y1="1" x2="12" y2="23" />
-                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                              </svg>
-                              {ev.preco}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className={styles['vp-event-status-area']}>
-                        <div className={styles['vp-event-arrow']}>
-                          <svg viewBox="0 0 24 24">
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                            <polyline points="12 5 19 12 12 19" />
-                          </svg>
-                        </div>
-                        <EventStatusBadge status={ev.status} />
-                      </div>
-                    </Link>
-                  ))
+                  eventos.map((ev) => <EventoItem key={ev.id} ev={ev} />)
                 )}
               </div>
             </div>

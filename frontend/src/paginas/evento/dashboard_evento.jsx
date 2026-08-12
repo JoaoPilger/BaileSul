@@ -415,40 +415,6 @@ function AbaBandas({ bandas }) {
 // ─────────────────────────────────────────────────────────────
 //  Aba: Dias
 // ─────────────────────────────────────────────────────────────
-function AbaDias({ dias }) {
-  return (
-    <div className={styles['dash-tab-content']}>
-      {(!dias || dias.length === 0) ? (
-        <div className={styles['dash-empty']}>Nenhum dia cadastrado para este evento.</div>
-      ) : (
-        <div className={styles['dash-table-wrap']}>
-          <table className={styles['dash-table']}>
-            <thead>
-              <tr>
-                <th>Data</th>
-                <th>Encerra em</th>
-                <th>Início</th>
-                <th>Fim</th>
-                <th>Observação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dias.map(d => (
-                <tr key={d.id}>
-                  <td>{formatDate(d.data)}</td>
-                  <td>{formatDate(d.data_fim_dia)}</td>
-                  <td>{d.hora_inicio?.slice(0, 5) || '—'}</td>
-                  <td>{d.hora_fim?.slice(0, 5) || '—'}</td>
-                  <td className={styles['dash-td-obs']}>{d.observacao || '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─────────────────────────────────────────────────────────────
 //  Aba: Histórico
@@ -494,7 +460,6 @@ const TABS = [
   { key: 'reservas',   label: 'Reservas' },
   { key: 'vendedores', label: 'Vendedores' },
   { key: 'bandas',     label: 'Bandas' },
-  { key: 'dias',       label: 'Dias' },
   { key: 'historico',  label: 'Histórico' },
 ]
 
@@ -561,7 +526,7 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
     )
   }
 
-  const { evento, metricas, reservas, vendedores, bandas, dias, historico_pagamentos, crescimento } = dados
+  const { evento, metricas, reservas, vendedores, bandas, historico_pagamentos, crescimento } = dados
 
   const imageSrc = evento.foto_capa_url || DEFAULT_IMAGE
   const imageFinal = imageSrc.includes('/media/')
@@ -646,7 +611,6 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
             {abaAtiva === 'reservas'   && <AbaReservas reservas={reservas} />}
             {abaAtiva === 'vendedores' && <AbaVendedores vendedores={vendedores} onGerenciar={() => navigate('/vendedores')} />}
             {abaAtiva === 'bandas'     && <AbaBandas bandas={bandas} />}
-            {abaAtiva === 'dias'       && <AbaDias dias={dias} />}
             {abaAtiva === 'historico'  && <AbaHistorico historico={historico_pagamentos} />}
           </div>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
+import { loadBandById } from '../../utils/bands'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import styles from './painel.module.css'
@@ -37,6 +38,16 @@ export default function PainelBanda() {
   const [carregando, setCarregando] = useState(true)
   const [processandoId, setProcessandoId] = useState(null)
   const [midiasModalOpen, setMidiasModalOpen] = useState(false)
+  const [nomeExibicao, setNomeExibicao] = useState('')
+
+  useEffect(() => {
+    if (!usuario?.id) return
+    let ativo = true
+    loadBandById(usuario.id)
+      .then((d) => { if (ativo && d?.title) setNomeExibicao(d.title) })
+      .catch(() => {})
+    return () => { ativo = false }
+  }, [usuario?.id])
 
   useEffect(() => {
     api.get('/bandas/me/agenda')
@@ -95,7 +106,7 @@ export default function PainelBanda() {
         <div className={styles['pn-page-header']}>
           <h1 className={styles['pn-title']}>Painel da Banda</h1>
           <p className={styles['pn-subtitle']}>
-            Bem-vindo{usuario?.email ? `, ${usuario.email}` : ''}. Seus contratos e agenda em um só lugar.
+            Bem-vindo{nomeExibicao ? `, ${nomeExibicao}` : ''}. Seus contratos e agenda em um só lugar.
           </p>
         </div>
 

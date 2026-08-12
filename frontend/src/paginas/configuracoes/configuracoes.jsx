@@ -10,6 +10,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
 import AlterarSenhaModal from './AlterarSenhaModal'
 import EditarPerfilPessoalModal from './EditarPerfilPessoalModal'
+import ComunidadesVinculadasModal from './ComunidadesVinculadasModal'
 
 export default function Configuracoes() {
   const { usuario, logout } = useAuth()
@@ -20,6 +21,7 @@ export default function Configuracoes() {
   const [, setCarregandoVendedor] = useState(usuario?.tipo === 'pessoal')
   const [senhaModalOpen, setSenhaModalOpen] = useState(false)
   const [perfilPessoalModalOpen, setPerfilPessoalModalOpen] = useState(false)
+  const [comunidadesModalOpen, setComunidadesModalOpen] = useState(false)
 
   useEffect(() => {
     if (usuario?.tipo !== 'pessoal') return
@@ -33,8 +35,6 @@ export default function Configuracoes() {
 
     return () => { ativo = false }
   }, [usuario?.tipo])
-
-  const showEmBreve = (msg) => { setSnackMsg(msg); setSnackOpen(true) }
 
   const isVendedor = usuario?.tipo === 'pessoal' && comunidadesVinculadas.length > 0
 
@@ -54,7 +54,7 @@ export default function Configuracoes() {
           icon: Building2,
           title: 'Comunidades vinculadas',
           subtitle: 'CTGs que você representa como vendedor',
-          onClick: () => showEmBreve('Comunidades vinculadas em breve.'),
+          onClick: () => setComunidadesModalOpen(true),
         },
         {
           key: 'senha',
@@ -181,6 +181,11 @@ export default function Configuracoes() {
           setSnackMsg('Perfil atualizado com sucesso!')
           setSnackOpen(true)
         }}
+      />
+      <ComunidadesVinculadasModal
+        open={comunidadesModalOpen}
+        onClose={() => setComunidadesModalOpen(false)}
+        comunidades={comunidadesVinculadas}
       />
     </>
   )

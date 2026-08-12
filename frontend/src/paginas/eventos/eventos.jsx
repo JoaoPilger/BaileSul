@@ -39,8 +39,8 @@ function ListingCard({ event }) {
 export default function Eventos() {
   const [events, setEvents] = useState([])
   const [query, setQuery] = useState('')
-  const [dateFilter, setDateFilter] = useState('')
-  const [timeFilter, setTimeFilter] = useState('')
+  const [cidadeFiltro, setCidadeFiltro] = useState('')
+  const [estiloFiltro, setEstiloFiltro] = useState('')
   const [sortBy, setSortBy] = useState('recent')
 
   useEffect(() => {
@@ -48,6 +48,16 @@ export default function Eventos() {
       setEvents(data)
     })
   }, [])
+
+  const cidades = useMemo(
+    () => Array.from(new Set(events.map((e) => e.city).filter(Boolean))).sort(),
+    [events],
+  )
+
+  const estilos = useMemo(
+    () => Array.from(new Set(events.map((e) => e.style).filter(Boolean))).sort(),
+    [events],
+  )
 
   const displayed = useMemo(() => {
     let filtered = events.slice()
@@ -57,15 +67,12 @@ export default function Eventos() {
       filtered = filtered.filter((e) => e.title.toLowerCase().includes(lower))
     }
 
-    if (dateFilter) {
-      filtered = filtered.filter((e) => {
-        const eventDate = new Date(e.date).toISOString().split('T')[0]
-        return eventDate === dateFilter
-      })
+    if (cidadeFiltro) {
+      filtered = filtered.filter((e) => e.city === cidadeFiltro)
     }
 
-    if (timeFilter) {
-      filtered = filtered.filter((e) => (e.time || '00:00').startsWith(timeFilter))
+    if (estiloFiltro) {
+      filtered = filtered.filter((e) => e.style === estiloFiltro)
     }
 
     if (sortBy === 'recent') {
@@ -75,7 +82,7 @@ export default function Eventos() {
     }
 
     return filtered
-  }, [query, dateFilter, timeFilter, sortBy, events])
+  }, [query, cidadeFiltro, estiloFiltro, sortBy, events])
 
   return (
     <>
@@ -108,19 +115,19 @@ export default function Eventos() {
                 />
 
                 <div className={styles['listing-filters-group']}>
-                  <input
-                    type="date"
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    className={styles['listing-select']}
-                  />
+                  <select value={cidadeFiltro} onChange={(e) => setCidadeFiltro(e.target.value)} className={styles['listing-select']}>
+                    <option value="">Todas as cidades</option>
+                    {cidades.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
 
-                  <input
-                    type="time"
-                    value={timeFilter}
-                    onChange={(e) => setTimeFilter(e.target.value)}
-                    className={styles['listing-select']}
-                  />
+                  <select value={estiloFiltro} onChange={(e) => setEstiloFiltro(e.target.value)} className={styles['listing-select']}>
+                    <option value="">Todos os estilos</option>
+                    {estilos.map((s) => (
+                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                    ))}
+                  </select>
 
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={styles['listing-select']}>
                     <option value="recent">Mais recente</option>

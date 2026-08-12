@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
+import { loadCommunityById } from '../../utils/communities'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import styles from './painel.module.css'
@@ -57,6 +58,16 @@ export default function PainelComunidade() {
   const [vendedoresAtivos, setVendedoresAtivos] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [midiasModalOpen, setMidiasModalOpen] = useState(false)
+  const [nomeExibicao, setNomeExibicao] = useState('')
+
+  useEffect(() => {
+    if (!usuario?.id) return
+    let ativo = true
+    loadCommunityById(usuario.id)
+      .then((d) => { if (ativo && d?.title) setNomeExibicao(d.title) })
+      .catch(() => {})
+    return () => { ativo = false }
+  }, [usuario?.id])
 
   // ── calendário ──────────────────────────────────────────────
   const hoje = new Date()
@@ -163,7 +174,7 @@ export default function PainelComunidade() {
         <div className={styles['pn-page-header']}>
           <h1 className={styles['pn-title']}>Painel da Comunidade</h1>
           <p className={styles['pn-subtitle']}>
-            Bem-vindo{usuario?.email ? `, ${usuario.email}` : ''}. Aqui está um resumo do que está rolando.
+            Bem-vindo{nomeExibicao ? `, ${nomeExibicao}` : ''}. Aqui está um resumo do que está rolando.
           </p>
         </div>
 
