@@ -74,9 +74,9 @@ export default function Vendedores() {
 
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === 'comunidade') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- carrega a lista ao entrar na tela autenticado como comunidade
       fetchVendedores()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, usuario])
 
   const removerVendedor = async (id) => {

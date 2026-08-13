@@ -43,6 +43,31 @@ function FieldHint({ message }) {
   return <p className={styles['ce-field-error']} role="alert">{message}</p>
 }
 
+/** Converte "YYYY-MM-DD" para "DD/MM/AAAA" só para exibição. */
+function formatDateBR(dateStr) {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
+/** Soma `n` dias a uma data "YYYY-MM-DD", devolvendo no mesmo formato (sem risco de fuso horário). */
+function addDays(dateStr, n) {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(y, m - 1, d + n)
+  const yyyy = dt.getFullYear()
+  const mm = String(dt.getMonth() + 1).padStart(2, '0')
+  const dd = String(dt.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+/** Descreve o intervalo válido de dias extras ("o dia X" quando só há um, "entre X e Y" caso contrário). */
+function descreverRangeDias(minStr, maxStr) {
+  if (!minStr || !maxStr) return ''
+  if (minStr === maxStr) return `o dia ${formatDateBR(minStr)}`
+  return `entre ${formatDateBR(minStr)} e ${formatDateBR(maxStr)}`
+}
+
 export default function CriarEvento() {
   const { isAuthenticated, token } = useAuth()
   const navigate = useNavigate()
@@ -88,6 +113,10 @@ export default function CriarEvento() {
   const [vendedoresComunidade, setVendedoresComunidade] = useState([])
   const [vendorSugestoes, setVendorSugestoes]           = useState([])
   const [vendorSugestoesOpen, setVendorSugestoesOpen]   = useState(false)
+
+  const [diasExtras, setDiasExtras] = useState([])
+  const [novoDiaExtra, setNovoDiaExtra] = useState({ data: '', hora_inicio: '', hora_fim: '', observacao: '' })
+  const [diaExtraErro, setDiaExtraErro] = useState('')
 
   const MAP_DEFAULT = 'https://www.openstreetmap.org/export/embed.html?bbox=-53.0,-29.5,-48.0,-26.0&layer=mapnik'
   const [mapSrc, setMapSrc]       = useState(MAP_DEFAULT)
@@ -143,6 +172,12 @@ export default function CriarEvento() {
       return updated
     })
     setFormAlert('')
+
+    if (name === 'dateStart' || name === 'dateEnd') {
+      const nextDateStart = name === 'dateStart' ? next : form.dateStart
+      const nextDateEnd = name === 'dateEnd' ? next : form.dateEnd
+      setDiasExtras((dias) => dias.filter((d) => d.data > nextDateStart && d.data <= nextDateEnd))
+    }
   }
 
   const handleBlur = (e) => {
@@ -384,6 +419,31 @@ export default function CriarEvento() {
     setVendorSugestoes([])
   }
 
+  const handleNovoDiaExtraCampo = (campo, valor) => {
+    setNovoDiaExtra((prev) => ({ ...prev, [campo]: valor }))
+    if (diaExtraErro) setDiaExtraErro('')
+  }
+
+  const addDiaExtra = () => {
+    if (!novoDiaExtra.data || !novoDiaExtra.hora_inicio || !novoDiaExtra.hora_fim) {
+      setDiaExtraErro('Informe data, horário de início e horário de término.')
+      return
+    }
+    if (novoDiaExtra.data === form.dateStart || diasExtras.some((d) => d.data === novoDiaExtra.data)) {
+      setDiaExtraErro('Já existe um dia cadastrado nessa data.')
+      return
+    }
+    if (novoDiaExtra.data <= form.dateStart || novoDiaExtra.data > form.dateEnd) {
+      setDiaExtraErro(`A data deve ser ${descreverRangeDias(addDays(form.dateStart, 1), form.dateEnd)}.`)
+      return
+    }
+    setDiasExtras((s) => [...s, { ...novoDiaExtra, id: Date.now() }])
+    setNovoDiaExtra({ data: '', hora_inicio: '', hora_fim: '', observacao: '' })
+    setDiaExtraErro('')
+  }
+
+  const removeDiaExtra = (id) => setDiasExtras((s) => s.filter((d) => d.id !== id))
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitAttempted(true)
@@ -465,6 +525,47 @@ export default function CriarEvento() {
       })
 
       const databaseEvent = response.data.evento || {}
+
+      if (databaseEvent.id && normalizedForm.timeStart && normalizedForm.timeEnd) {
+        try {
+          await api.post(
+            `/eventos/${databaseEvent.id}/dias`,
+            {
+              data: normalizedForm.dateStart,
+              hora_inicio: normalizedForm.timeStart,
+              hora_fim: normalizedForm.timeEnd,
+            },
+            { headers: { Authorization: `Bearer ${token}` } },
+          )
+        } catch (diaErr) {
+          // Evento já foi criado; o horário só não ficou registrado como "dia" do evento
+          console.error('Erro ao registrar dia do evento:', diaErr)
+        }
+      }
+
+      if (databaseEvent.id && diasExtras.length > 0) {
+        let falhas = 0
+        for (const dia of diasExtras) {
+          try {
+            await api.post(
+              `/eventos/${databaseEvent.id}/dias`,
+              {
+                data: dia.data,
+                hora_inicio: dia.hora_inicio,
+                hora_fim: dia.hora_fim,
+                observacao: dia.observacao.trim() || undefined,
+              },
+              { headers: { Authorization: `Bearer ${token}` } },
+            )
+          } catch (diaExtraErrSubmit) {
+            console.error('Erro ao registrar dia adicional do evento:', diaExtraErrSubmit)
+            falhas += 1
+          }
+        }
+        if (falhas > 0) {
+          setFormAlert(`Evento criado, mas ${falhas} dia(s) adicional(is) não puderam ser salvos. Adicione-os depois em "Editar evento".`)
+        }
+      }
 
       if (bandaId && databaseEvent.id) {
         try {
@@ -772,6 +873,71 @@ export default function CriarEvento() {
                   <FieldHint message={showError('timeEnd')} />
                 </div>
               </div>
+
+              {form.dateEnd && form.dateEnd !== form.dateStart && (
+              <div className={styles['ce-field']}>
+                <label className={styles['ce-field-label']}>Dias adicionais (para eventos com mais de uma data)</label>
+                <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  A data e horário acima já registram o 1º dia. A nova data deve ser {descreverRangeDias(addDays(form.dateStart, 1), form.dateEnd)}.
+                </span>
+
+                {diasExtras.length > 0 && (
+                  <ul className={styles['ce-vendor-list']}>
+                    {diasExtras.map((dia) => (
+                      <li key={dia.id} className={styles['ce-vendor-item']}>
+                        <span>
+                          {formatDateBR(dia.data)} · {dia.hora_inicio} – {dia.hora_fim}
+                          {dia.observacao && ` (${dia.observacao})`}
+                        </span>
+                        <button type="button" className={styles['ce-btn-remove']} onClick={() => removeDiaExtra(dia.id)}>
+                          Remover
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className={styles['ce-vendor-row']} style={{ flexWrap: 'wrap' }}>
+                  <input
+                    type="date"
+                    className={styles['ce-input']}
+                    style={{ flex: '1 1 140px' }}
+                    aria-label="Data do dia adicional"
+                    min={addDays(form.dateStart, 1)}
+                    max={form.dateEnd}
+                    value={novoDiaExtra.data}
+                    onChange={(e) => handleNovoDiaExtraCampo('data', e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    className={styles['ce-input']}
+                    style={{ flex: '1 1 110px' }}
+                    aria-label="Horário de início do dia adicional"
+                    value={novoDiaExtra.hora_inicio}
+                    onChange={(e) => handleNovoDiaExtraCampo('hora_inicio', e.target.value)}
+                  />
+                  <input
+                    type="time"
+                    className={styles['ce-input']}
+                    style={{ flex: '1 1 110px' }}
+                    aria-label="Horário de término do dia adicional"
+                    value={novoDiaExtra.hora_fim}
+                    onChange={(e) => handleNovoDiaExtraCampo('hora_fim', e.target.value)}
+                  />
+                  <button type="button" className={styles['ce-btn-add']} onClick={addDiaExtra}>+ Adicionar</button>
+                </div>
+                <input
+                  type="text"
+                  className={cn(styles['ce-input'], styles['no-icon'])}
+                  style={{ marginTop: '8px' }}
+                  placeholder="Observação (opcional)"
+                  value={novoDiaExtra.observacao}
+                  onChange={(e) => handleNovoDiaExtraCampo('observacao', e.target.value)}
+                  maxLength={255}
+                />
+                <FieldHint message={diaExtraErro} />
+              </div>
+              )}
             </div>
 
             <div className={styles['ce-section']}>

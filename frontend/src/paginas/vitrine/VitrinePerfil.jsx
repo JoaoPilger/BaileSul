@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { Upload } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import { loadBandById } from '../../utils/bands'
 import { loadCommunityById } from '../../utils/communities'
@@ -81,6 +82,13 @@ const CONFIG = {
       whatsapp: data.whatsapp || '',
     }),
   },
+}
+
+function normalizarMedia(url) {
+  if (url && url.includes('/media/')) {
+    return url.substring(url.indexOf('/media/'))
+  }
+  return url || ''
 }
 
 function formatDate(isoStr) {
@@ -215,6 +223,8 @@ export default function VitrinePerfil({ tipo }) {
   const [modoEdicao, setModoEdicao] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [salvandoPerfil, setSalvandoPerfil] = useState(false)
+  const [enviandoFoto, setEnviandoFoto] = useState(false)
+  const fotoInputRef = useRef(null)
 
   const [novaMidiaArquivo, setNovaMidiaArquivo] = useState(null)
   const [novaMidiaPreview, setNovaMidiaPreview] = useState('')
@@ -247,6 +257,7 @@ export default function VitrinePerfil({ tipo }) {
   }, [id, tipo])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carrega o perfil ao montar/trocar de entidade
     carregarPerfil()
   }, [carregarPerfil])
 
@@ -319,6 +330,31 @@ export default function VitrinePerfil({ tipo }) {
 
   function handleEditFieldChange(name, value) {
     setEditForm((f) => ({ ...f, [name]: value }))
+  }
+
+  async function handleFotoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const formData = new FormData()
+    formData.append('arquivo', file)
+
+    try {
+      setEnviandoFoto(true)
+      const { data } = await api.post(`/${cfg.apiBase}/me/foto-perfil`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      if (data.foto_perfil_url) {
+        setPerfil((p) => ({ ...p, foto_perfil_url: normalizarMedia(data.foto_perfil_url) }))
+        notificar('Foto de perfil atualizada com sucesso!')
+      }
+    } catch (err) {
+      console.error('Erro ao enviar foto de perfil:', err)
+      notificar(err.response?.data?.error || 'Erro ao enviar foto de perfil.')
+    } finally {
+      setEnviandoFoto(false)
+      if (fotoInputRef.current) fotoInputRef.current.value = ''
+    }
   }
 
   async function handleSalvarPerfil() {
@@ -478,6 +514,27 @@ export default function VitrinePerfil({ tipo }) {
                       (editForm.nome || nome).slice(0, 3)
                     )}
                   </div>
+                  {isDono && modoEdicao && (
+                    <>
+                      <input
+                        type="file"
+                        ref={fotoInputRef}
+                        onChange={handleFotoChange}
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                      />
+                      <button
+                        type="button"
+                        className={styles['vp-avatar-upload-btn']}
+                        onClick={() => fotoInputRef.current?.click()}
+                        disabled={enviandoFoto}
+                        aria-label="Alterar foto de perfil"
+                        title="Alterar foto de perfil"
+                      >
+                        <Upload size={14} />
+                      </button>
+                    </>
+                  )}
                 </div>
                 <span className={styles['vp-seguidores-badge']}>
                   {stats.seguidores} Seguidores

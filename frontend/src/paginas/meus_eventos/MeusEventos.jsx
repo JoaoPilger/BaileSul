@@ -128,6 +128,7 @@ export default function MeusEventos({ tipo }) {
 
   useEffect(() => {
     if (isAuthenticated && usuario?.tipo === tipo) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- carrega a lista ao entrar na tela ou trocar de tipo
       carregarEventos()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

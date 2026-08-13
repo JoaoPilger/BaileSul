@@ -370,12 +370,29 @@ export default function EventoPage() {
                   </ul>
                 </div>
               )}
+
+              {evento.midias?.length > 0 && (
+                <div className={styles['ev-gallery']}>
+                  <div className={styles['ev-about-title']}>Galeria</div>
+                  <div className={styles['ev-gallery-grid']}>
+                    {evento.midias.map((midia) => (
+                      <div key={midia.id} className={styles['ev-gallery-item']}>
+                        {midia.tipo === 'video' ? (
+                          <video src={midia.url} controls />
+                        ) : (
+                          <img src={midia.url} alt={midia.titulo || evento.title} loading="lazy" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <aside className={styles['ev-right']}>
               <section className={styles['ev-info-card']} aria-label="Informações do evento">
                 <div className={styles['ev-info-list']}>
-                  {(evento.date) && (
+                  {evento.dias?.length > 1 ? (
                     <div className={styles['ev-info-item']}>
                       <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
@@ -386,31 +403,56 @@ export default function EventoPage() {
                         </svg>
                       </div>
                       <div className={styles['ev-info-text']}>
-                        <span className={styles['ev-info-label']}>Data</span>
-                        <span className={styles['ev-info-value']}>
-                          {formatDate(evento.date)}
-                        </span>
+                        <span className={styles['ev-info-label']}>Datas</span>
+                        {evento.dias.map((dia) => (
+                          <span key={dia.id} className={styles['ev-info-value']}>
+                            {formatDate(dia.data)}
+                            {dia.hora_inicio && ` · ${dia.hora_inicio.slice(0, 5)}`}
+                            {dia.hora_fim && ` – ${dia.hora_fim.slice(0, 5)}`}
+                          </span>
+                        ))}
                       </div>
                     </div>
-                  )}
+                  ) : (
+                    <>
+                      {(evento.date) && (
+                        <div className={styles['ev-info-item']}>
+                          <div className={styles['ev-info-icon']} aria-hidden>
+                            <svg viewBox="0 0 24 24">
+                              <rect x="3" y="4" width="18" height="18" rx="2" />
+                              <line x1="16" y1="2" x2="16" y2="6" />
+                              <line x1="8" y1="2" x2="8" y2="6" />
+                              <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                          </div>
+                          <div className={styles['ev-info-text']}>
+                            <span className={styles['ev-info-label']}>Data</span>
+                            <span className={styles['ev-info-value']}>
+                              {formatDate(evento.date)}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
-                  {(evento.time_start || evento.timeStart) && (
-                    <div className={styles['ev-info-item']}>
-                      <div className={styles['ev-info-icon']} aria-hidden>
-                        <svg viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
-                      </div>
-                      <div className={styles['ev-info-text']}>
-                        <span className={styles['ev-info-label']}>Horário</span>
-                        <span className={styles['ev-info-value']}>
-                          {evento.time_start || evento.timeStart}
-                          {(evento.time_end || evento.timeEnd) &&
-                            ` – ${evento.time_end || evento.timeEnd}`}
-                        </span>
-                      </div>
-                    </div>
+                      {(evento.time_start || evento.timeStart) && (
+                        <div className={styles['ev-info-item']}>
+                          <div className={styles['ev-info-icon']} aria-hidden>
+                            <svg viewBox="0 0 24 24">
+                              <circle cx="12" cy="12" r="10" />
+                              <polyline points="12 6 12 12 16 14" />
+                            </svg>
+                          </div>
+                          <div className={styles['ev-info-text']}>
+                            <span className={styles['ev-info-label']}>Horário</span>
+                            <span className={styles['ev-info-value']}>
+                              {evento.time_start || evento.timeStart}
+                              {(evento.time_end || evento.timeEnd) &&
+                                ` – ${evento.time_end || evento.timeEnd}`}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {localDisplay && (

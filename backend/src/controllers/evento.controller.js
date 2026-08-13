@@ -11,6 +11,18 @@ const TIPOS_EVENTO = ['musical_gaucha', 'musical_bandinha', 'almoco', 'bingo', '
 //  Helpers internos
 // ─────────────────────────────────────────────────────────────
 
+/** Normaliza um valor DATE vindo do pg (Date object ou string) para "YYYY-MM-DD". */
+const toDateStr = (valor) => {
+  if (valor instanceof Date) return valor.toISOString().slice(0, 10);
+  return String(valor).slice(0, 10);
+};
+
+/** Converte "YYYY-MM-DD" para "DD/MM/AAAA", usado só em mensagens de erro. */
+const formatDateBR = (dateStr) => {
+  const [y, m, d] = dateStr.split('-');
+  return `${d}/${m}/${y}`;
+};
+
 /**
  * Extrai a URL da foto de capa da requisição.
  *
@@ -445,13 +457,24 @@ const adicionarDia = async (req, res) => {
     return res.status(400).json({ error: 'Campos obrigatórios: data, hora_inicio, hora_fim' });
   }
 
-  // Verifica ownership
+  // Verifica ownership e busca o período do evento para validar a data do dia
   const dono = await pool.query(
-    'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
+    'SELECT id, data_inicio, data_fim FROM eventos WHERE id = $1 AND comunidade_id = $2',
     [evento_id, comunidade_id]
   );
   if (dono.rows.length === 0) {
     return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
+  }
+
+  const dataInicioStr = toDateStr(dono.rows[0].data_inicio);
+  const dataFimStr = toDateStr(dono.rows[0].data_fim);
+  if (data < dataInicioStr || data > dataFimStr) {
+    const descricaoRange = dataInicioStr === dataFimStr
+      ? `o dia ${formatDateBR(dataInicioStr)}`
+      : `entre ${formatDateBR(dataInicioStr)} e ${formatDateBR(dataFimStr)}`;
+    return res.status(400).json({
+      error: `A data do dia deve ser ${descricaoRange} (o período do evento).`,
+    });
   }
 
   try {

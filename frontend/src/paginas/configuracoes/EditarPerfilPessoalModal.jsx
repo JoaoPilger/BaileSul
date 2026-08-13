@@ -17,6 +17,7 @@ export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
     if (!open) return
 
     let ativo = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- inicia o carregamento ao abrir o modal
     setCarregando(true)
     setErroGeral('')
 

@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useEffect, useState, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import shared from '../../styles/shared.module.css'
@@ -15,13 +15,9 @@ import {
   Trash2,
   Save,
   ArrowLeft,
-  Video,
   Upload,
   Building2,
   Music,
-  MapPin,
-  Phone,
-  FileText
 } from 'lucide-react'
 
 function FieldHint({ message }) {
@@ -38,8 +34,7 @@ function normalizarMedia(url) {
 
 export default function EditarPerfil() {
   const { usuario } = useAuth()
-  const navigate = useNavigate()
-  
+
   const [carregando, setCarregando] = useState(true)
   const [salvando, setSalvando] = useState(false)
   const [enviandoFoto, setEnviandoFoto] = useState(false)
@@ -128,6 +123,7 @@ export default function EditarPerfil() {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- carrega o perfil ao montar/trocar de usuário
     carregarPerfil()
   }, [usuario?.id, usuario?.tipo])
 
@@ -221,7 +217,7 @@ export default function EditarPerfil() {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
 
-      setMidias((prev) => [...prev, data])
+      setMidias((prev) => [...prev, { ...data, url: normalizarMedia(data.url) }])
       setTituloNovaMidia('')
       showMsg('Mídia adicionada com sucesso!')
     } catch (err) {

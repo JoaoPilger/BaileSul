@@ -1,9 +1,25 @@
 import { useState, useEffect, useRef } from 'react'
+import { Image as ImageIcon } from 'lucide-react'
 import { cn } from '../../utils/cn'
 import api from '../../services/api'
+import GerenciadorMidiasEventoModal from './GerenciadorMidiasEventoModal'
 import styles from './EditarEventoModal.module.css'
 
 const soData = (valor) => (valor ? String(valor).split('T')[0] : '')
+
+/** Converte "YYYY-MM-DD" para "DD/MM/AAAA" só para exibição. */
+function formatDateBR(dateStr) {
+  if (!dateStr) return ''
+  const [y, m, d] = dateStr.split('-')
+  return `${d}/${m}/${y}`
+}
+
+/** Descreve o intervalo válido de dias ("o dia X" quando só há um, "entre X e Y" caso contrário). */
+function descreverRangeDias(minStr, maxStr) {
+  if (!minStr || !maxStr) return ''
+  if (minStr === maxStr) return `o dia ${formatDateBR(minStr)}`
+  return `entre ${formatDateBR(minStr)} e ${formatDateBR(maxStr)}`
+}
 
 function normalizarMedia(url) {
   if (url && url.includes('/media/')) {
@@ -34,6 +50,12 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
   const [contratoAtualId, setContratoAtualId] = useState(null)
   const [bandaSugestoes, setBandaSugestoes] = useState([])
   const [bandaSugestoesOpen, setBandaSugestoesOpen] = useState(false)
+  const [midiasModalOpen, setMidiasModalOpen] = useState(false)
+
+  const [dias, setDias] = useState([])
+  const [novoDia, setNovoDia] = useState({ data: '', hora_inicio: '', hora_fim: '', observacao: '' })
+  const [diaErro, setDiaErro] = useState('')
+  const [salvandoDia, setSalvandoDia] = useState(false)
 
   const fileRef = useRef(null)
 
@@ -57,6 +79,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
         })
         setTipoEvento(data.tipo_evento || '')
         setImagemPreview(normalizarMedia(data.foto_capa_url))
+        setDias(Array.isArray(data.dias) ? data.dias : [])
         const banda = Array.isArray(data.bandas) ? data.bandas[0] : null
         if (banda) {
           setBandaTexto(banda.nome_artistico || '')
@@ -115,6 +138,51 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
     setBandaTexto(banda.nome_artistico)
     setBandaSugestoesOpen(false)
     setBandaSugestoes([])
+  }
+
+  const handleNovoDiaCampo = (campo, valor) => {
+    setNovoDia((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  const handleAdicionarDia = async () => {
+    setDiaErro('')
+
+    if (!novoDia.data || !novoDia.hora_inicio || !novoDia.hora_fim) {
+      setDiaErro('Informe data, horário de início e horário de término.')
+      return
+    }
+    if (novoDia.data < form.data_inicio || novoDia.data > form.data_fim) {
+      setDiaErro(`A data deve ser ${descreverRangeDias(form.data_inicio, form.data_fim)} (o período do evento).`)
+      return
+    }
+
+    setSalvandoDia(true)
+    try {
+      const { data } = await api.post(`/eventos/${evento.id}/dias`, {
+        data: novoDia.data,
+        hora_inicio: novoDia.hora_inicio,
+        hora_fim: novoDia.hora_fim,
+        observacao: novoDia.observacao.trim() || undefined,
+      })
+      setDias((prev) => [...prev, { ...novoDia, id: data.dia.id }].sort((a, b) => a.data.localeCompare(b.data)))
+      setNovoDia({ data: '', hora_inicio: '', hora_fim: '', observacao: '' })
+    } catch (err) {
+      console.error(err)
+      setDiaErro(err.response?.data?.error || 'Não foi possível adicionar o dia.')
+    } finally {
+      setSalvandoDia(false)
+    }
+  }
+
+  const handleRemoverDia = async (diaId) => {
+    setDiaErro('')
+    try {
+      await api.delete(`/eventos/${evento.id}/dias/${diaId}`)
+      setDias((prev) => prev.filter((d) => d.id !== diaId))
+    } catch (err) {
+      console.error(err)
+      setDiaErro(err.response?.data?.error || 'Não foi possível remover o dia.')
+    }
   }
 
   const handleImagem = (file) => {
@@ -327,6 +395,17 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
           </div>
 
           <div className={styles.field}>
+            <button
+              type="button"
+              className={styles.btnCancelar}
+              onClick={() => setMidiasModalOpen(true)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', width: 'fit-content' }}
+            >
+              <ImageIcon size={16} /> Gerenciar mídias do evento
+            </button>
+          </div>
+
+          <div className={styles.field}>
             <label className={styles.label} htmlFor="ee-valor">Valor do ingresso (R$)</label>
             <input
               id="ee-valor"
@@ -378,6 +457,79 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
           </div>
 
           <div className={styles.field}>
+            <span className={styles.label}>Dias do evento (horários específicos por data)</span>
+            <span className={styles.hint}>
+              {form.data_inicio && form.data_fim
+                ? `As datas devem ser ${descreverRangeDias(form.data_inicio, form.data_fim)} (o período do evento).`
+                : 'Carregando período do evento...'}
+            </span>
+
+            {dias.length > 0 && (
+              <ul className={styles.diasList}>
+                {dias.map((dia) => (
+                  <li key={dia.id} className={styles.diaItem}>
+                    <div className={styles.diaItemInfo}>
+                      <span>{formatDateBR(soData(dia.data))} · {dia.hora_inicio?.slice(0, 5)} – {dia.hora_fim?.slice(0, 5)}</span>
+                      {dia.observacao && <span className={styles.diaItemObs}>{dia.observacao}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.btnRemoverDia}
+                      onClick={() => handleRemoverDia(dia.id)}
+                    >
+                      Remover
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {diaErro && <span className={styles.hint} style={{ color: 'var(--danger)' }}>{diaErro}</span>}
+
+            <div className={styles.row}>
+              <input
+                type="date"
+                className={styles.input}
+                aria-label="Data do dia"
+                min={form.data_inicio || undefined}
+                max={form.data_fim || undefined}
+                value={novoDia.data}
+                onChange={(e) => handleNovoDiaCampo('data', e.target.value)}
+              />
+              <input
+                type="time"
+                className={styles.input}
+                aria-label="Horário de início do dia"
+                value={novoDia.hora_inicio}
+                onChange={(e) => handleNovoDiaCampo('hora_inicio', e.target.value)}
+              />
+              <input
+                type="time"
+                className={styles.input}
+                aria-label="Horário de término do dia"
+                value={novoDia.hora_fim}
+                onChange={(e) => handleNovoDiaCampo('hora_fim', e.target.value)}
+              />
+            </div>
+            <input
+              type="text"
+              className={styles.input}
+              placeholder="Observação (opcional)"
+              value={novoDia.observacao}
+              onChange={(e) => handleNovoDiaCampo('observacao', e.target.value)}
+              maxLength={255}
+            />
+            <button
+              type="button"
+              className={cn(styles.btnCancelar, styles.btnAdicionarDia)}
+              onClick={handleAdicionarDia}
+              disabled={salvandoDia}
+            >
+              {salvandoDia ? 'Adicionando...' : '+ Adicionar dia'}
+            </button>
+          </div>
+
+          <div className={styles.field}>
             <label className={styles.label} htmlFor="ee-local">Local</label>
             <input
               id="ee-local"
@@ -412,6 +564,12 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
           </div>
         </form>
       </div>
+
+      <GerenciadorMidiasEventoModal
+        eventoId={evento.id}
+        open={midiasModalOpen}
+        onClose={() => setMidiasModalOpen(false)}
+      />
     </div>
   )
 }

@@ -66,6 +66,14 @@ function mapDatabaseEvent(row) {
     image = image.substring(idx)
   }
 
+  const midias = (row.midias || []).map((m) => {
+    let url = m.url || ''
+    if (url.includes('/media/')) {
+      url = url.substring(url.indexOf('/media/'))
+    }
+    return { ...m, url }
+  })
+
   return {
     id: row.id,
     comunidade_id: row.comunidade_id,   // necessário para a lógica condicional de dashboard
@@ -85,12 +93,14 @@ function mapDatabaseEvent(row) {
     local: row.local_nome || city,
     time_start: row.dias?.[0]?.hora_inicio || '',
     time_end: row.dias?.[0]?.hora_fim || '',
+    dias: (row.dias || []).map((d) => ({ ...d, data: d.data ? String(d.data).split('T')[0] : '' })),
     vendors: row.vendors || [],
     latitude: row.latitude,
     longitude: row.longitude,
     capacidade_maxima: row.capacidade_maxima ?? null,
     vagas_restantes: row.vagas_restantes ?? null,
     esgotado: Boolean(row.esgotado),
+    midias,
   }
 }
 

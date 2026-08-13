@@ -13,6 +13,7 @@ export function useCnpjVerificacao(cnpj, { debounceMs = 600 } = {}) {
 
   useEffect(() => {
     if (!isValidCnpj(cnpj)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reseta o status quando o CNPJ digitado fica inválido
       setStatus('idle')
       setRazaoSocial(null)
       return

@@ -64,7 +64,7 @@ function mapComunidadeDetail(row) {
       data_fim: e.data_fim,
       local: e.local_nome,
       valor_ingresso: e.valor_ingresso,
-      foto_capa_url: e.foto_capa_url,
+      foto_capa_url: normalizarMedia(e.foto_capa_url),
       status: e.status,
     })),
     midias: (row.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })),

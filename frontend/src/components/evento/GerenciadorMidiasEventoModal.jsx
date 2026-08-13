@@ -1,10 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
 import { X, Upload, Trash2, Image as ImageIcon } from 'lucide-react'
-import styles from '../configuracoes/configuracoes.module.css'
-import editStyles from '../editar_perfil/editar_perfil.module.css'
+import styles from '../../paginas/configuracoes/configuracoes.module.css'
+import editStyles from '../../paginas/editar_perfil/editar_perfil.module.css'
 import shared from '../../styles/shared.module.css'
 import api from '../../services/api'
-import { useAuth } from '../../contexts/AuthContext'
 
 function normalizarMedia(url) {
   if (url && url.includes('/media/')) {
@@ -13,8 +12,7 @@ function normalizarMedia(url) {
   return url || ''
 }
 
-export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
-  const { usuario } = useAuth()
+export default function GerenciadorMidiasEventoModal({ eventoId, open, onClose }) {
   const [midias, setMidias] = useState([])
   const [carregando, setCarregando] = useState(true)
   const [enviando, setEnviando] = useState(false)
@@ -22,17 +20,13 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
   const [erro, setErro] = useState('')
   const fileInputRef = useRef(null)
 
-  const isBanda = usuario?.tipo === 'banda'
-
   const carregarMidias = async () => {
-    if (!usuario?.id) return
     setCarregando(true)
     try {
-      const endpoint = isBanda ? `/bandas/${usuario.id}` : `/comunidades/${usuario.id}`
-      const { data } = await api.get(endpoint)
+      const { data } = await api.get(`/eventos/${eventoId}`)
       setMidias((data.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })))
     } catch (err) {
-      console.error('Erro ao carregar mídias:', err)
+      console.error('Erro ao carregar mídias do evento:', err)
       setErro('Não foi possível carregar as mídias.')
     } finally {
       setCarregando(false)
@@ -46,7 +40,8 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
       setTitulo('')
       carregarMidias()
     }
-  }, [open, usuario?.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, eventoId])
 
   if (!open) return null
 
@@ -63,15 +58,13 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
     }
 
     try {
-      const endpoint = isBanda ? '/bandas/me/midias' : '/comunidades/me/midias'
-      const { data } = await api.post(endpoint, formData, {
+      const { data } = await api.post(`/eventos/${eventoId}/midias`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      setMidias((prev) => [...prev, { ...data, url: normalizarMedia(data.url) }])
+      setMidias((prev) => [...prev, { ...data.midia, url: normalizarMedia(data.midia.url) }])
       setTitulo('')
-      if (onSuccess) onSuccess()
     } catch (err) {
-      console.error('Erro ao enviar mídia:', err)
+      console.error('Erro ao enviar mídia do evento:', err)
       setErro(err.response?.data?.error || 'Erro ao enviar mídia.')
     } finally {
       setEnviando(false)
@@ -82,18 +75,20 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
   const handleRemover = async (midiaId) => {
     setErro('')
     try {
-      const endpoint = isBanda ? `/bandas/me/midias/${midiaId}` : `/comunidades/me/midias/${midiaId}`
-      await api.delete(endpoint)
+      await api.delete(`/eventos/${eventoId}/midias/${midiaId}`)
       setMidias((prev) => prev.filter((m) => m.id !== midiaId))
-      if (onSuccess) onSuccess()
     } catch (err) {
-      console.error('Erro ao remover mídia:', err)
+      console.error('Erro ao remover mídia do evento:', err)
       setErro(err.response?.data?.error || 'Erro ao remover mídia.')
     }
   }
 
   return (
-    <div className={styles.modalOverlay} role="presentation" onClick={onClose}>
+    <div
+      className={styles.modalOverlay}
+      role="presentation"
+      onClick={(e) => { e.stopPropagation(); onClose() }}
+    >
       <div
         className={styles.modalCard}
         style={{ maxWidth: '640px' }}
@@ -103,7 +98,7 @@ export default function GerenciadorMidiasModal({ open, onClose, onSuccess }) {
       >
         <div className={styles.modalHeader}>
           <h2 className={styles.modalTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={22} color="var(--accent)" /> Mídias da Vitrine
+            <ImageIcon size={22} color="var(--accent)" /> Mídias do Evento
           </h2>
           <button type="button" className={styles.modalClose} onClick={onClose} aria-label="Fechar">
             <X size={20} />
