@@ -89,6 +89,8 @@ function mapDatabaseEvent(row) {
     latitude: row.latitude,
     longitude: row.longitude,
     capacidade_maxima: row.capacidade_maxima ?? null,
+    vagas_restantes: row.vagas_restantes ?? null,
+    esgotado: Boolean(row.esgotado),
   }
 }
 

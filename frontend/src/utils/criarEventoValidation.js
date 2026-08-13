@@ -133,6 +133,14 @@ export function validateField(name, value, form = {}) {
     }
     case 'referencia':
       return ''
+    case 'capacidadeMaxima': {
+      const text = String(value ?? '').trim()
+      if (!text) return ''
+      if (!/^\d+$/.test(text) || parseInt(text, 10) < 1) {
+        return 'Informe um número inteiro maior que zero.'
+      }
+      return ''
+    }
     default:
       return ''
   }
@@ -160,6 +168,7 @@ export function validateForm(form) {
     'bairro',
     'rua',
     'referencia',
+    'capacidadeMaxima',
   ]
   const errors = {}
   fields.forEach((field) => {

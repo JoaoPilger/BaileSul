@@ -172,6 +172,46 @@
   color: var(--white);
   border-color: rgba(255,255,255,.28);
 }
+.navbar-bell-btn {
+  position: relative;
+}
+.navbar-bell-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger, #C24545);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  border: 1.5px solid var(--dark);
+}
+.navbar-bell-badge--inline {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--danger, #C24545);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  margin-left: auto;
+}
+.navbar-mobile-link--button {
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 .navbar-login-btn {
   color: var(--white);
   background: rgba(13,73,107,.5);

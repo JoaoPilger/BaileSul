@@ -176,8 +176,20 @@ const buscarPorId = async (req, res) => {
       [id]
     );
 
+    let vagas_restantes = null;
+    if (evento.capacidade_maxima != null) {
+      const ocupacaoRes = await pool.query(
+        `SELECT COALESCE(SUM(quantidade), 0)::int AS total FROM reservas
+         WHERE evento_id = $1 AND status_pagamento IN ('pendente', 'confirmado')`,
+        [id]
+      );
+      vagas_restantes = Math.max(0, evento.capacidade_maxima - ocupacaoRes.rows[0].total);
+    }
+
     return res.json({
       ...evento,
+      vagas_restantes,
+      esgotado: vagas_restantes !== null && vagas_restantes <= 0,
       dias: diasRes.rows,
       bandas: bandasRes.rows,
       midias: midiasRes.rows,

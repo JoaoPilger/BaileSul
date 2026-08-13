@@ -28,14 +28,34 @@ const criar = async (req, res) => {
   try {
     // Verificar se evento existe e está agendado
     const eventoRes = await pool.query(
-      "SELECT id, comunidade_id, titulo FROM eventos WHERE id = $1 AND status = 'agendado'",
+      "SELECT id, comunidade_id, titulo, capacidade_maxima FROM eventos WHERE id = $1 AND status = 'agendado'",
       [evento_id]
     );
     if (eventoRes.rows.length === 0) {
       return res.status(404).json({ error: 'Evento não encontrado ou não está disponível' });
     }
 
-    const { comunidade_id, titulo } = eventoRes.rows[0];
+    const { comunidade_id, titulo, capacidade_maxima } = eventoRes.rows[0];
+
+    // Encerra novas reservas quando a capacidade máxima do evento é atingida.
+    // Conta pendente + confirmado (não só confirmado) para não permitir que
+    // reservas pendentes simultâneas estourem o limite antes de serem confirmadas.
+    if (capacidade_maxima != null) {
+      const ocupacaoRes = await pool.query(
+        `SELECT COALESCE(SUM(quantidade), 0)::int AS total FROM reservas
+         WHERE evento_id = $1 AND status_pagamento IN ('pendente', 'confirmado')`,
+        [evento_id]
+      );
+      const vagasRestantes = capacidade_maxima - ocupacaoRes.rows[0].total;
+      if (vagasRestantes <= 0) {
+        return res.status(409).json({ error: 'Ingressos esgotados para este evento' });
+      }
+      if (quantidade > vagasRestantes) {
+        return res.status(409).json({
+          error: `Restam apenas ${vagasRestantes} ingresso(s) disponível(is) para este evento`,
+        });
+      }
+    }
 
     // Anti-duplicata: usuário já tem reserva pendente/confirmada para este evento?
     const duplicataRes = await pool.query(

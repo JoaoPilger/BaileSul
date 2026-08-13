@@ -7,6 +7,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
+import Snackbar from '../../components/ui/Snackbar'
 import { loadEventById } from '../../utils/events'
 import api from '../../services/api'
 import styles from './evento.module.css';
@@ -116,6 +117,7 @@ export default function EventoPage() {
   const [nomeRetirada, setNomeRetirada] = useState('')
   const [reservaLoading, setReservaLoading] = useState(false)
   const [reservaErro, setReservaErro] = useState('')
+  const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -243,6 +245,9 @@ export default function EventoPage() {
   const priceDisplay = formatPrice(evento.price)
   const isFree = priceDisplay === 'Grátis'
   const styleLabel = formatStyle(evento.style)
+  const quantidadeMaxima = evento.vagas_restantes != null
+    ? Math.max(1, Math.min(10, evento.vagas_restantes))
+    : 10
   const localDisplay =
     evento.local ||
     addressDisplay ||
@@ -272,6 +277,13 @@ export default function EventoPage() {
       }
 
       closeModal()
+      setSnackbar({
+        open: true,
+        message:
+          pagamento === 'whatsapp'
+            ? 'Reserva feita! Combine o pagamento pelo WhatsApp que abrimos para você.'
+            : 'Reserva feita com sucesso! Você pode acompanhá-la em "Meus Ingressos".',
+      })
     } catch (err) {
       setReservaErro(err.response?.data?.error || 'Erro de conexão. Tente novamente.')
     } finally {
@@ -416,7 +428,7 @@ export default function EventoPage() {
                     </div>
                   )}
 
-                  {evento.capacity && (
+                  {evento.capacidade_maxima != null && (
                     <div className={styles['ev-info-item']}>
                       <div className={styles['ev-info-icon']} aria-hidden>
                         <svg viewBox="0 0 24 24">
@@ -428,7 +440,11 @@ export default function EventoPage() {
                       </div>
                       <div className={styles['ev-info-text']}>
                         <span className={styles['ev-info-label']}>Capacidade</span>
-                        <span className={styles['ev-info-value']}>{evento.capacity}</span>
+                        <span className={styles['ev-info-value']}>
+                          {evento.esgotado
+                            ? 'Esgotado'
+                            : `${evento.vagas_restantes} de ${evento.capacidade_maxima} vagas disponíveis`}
+                        </span>
                       </div>
                     </div>
                   )}
@@ -457,8 +473,13 @@ export default function EventoPage() {
                     <span className={cn(styles['ev-price'], isFree && styles['ev-price--free'])}>
                       {priceDisplay}
                     </span>
-                    <button type="button" className={styles['ev-btn-reservar']} onClick={openModal}>
-                      Reservar
+                    <button
+                      type="button"
+                      className={styles['ev-btn-reservar']}
+                      onClick={openModal}
+                      disabled={evento.esgotado}
+                    >
+                      {evento.esgotado ? 'Esgotado' : 'Reservar'}
                     </button>
                   </div>
                 </div>
@@ -518,7 +539,7 @@ export default function EventoPage() {
                   value={quantidade}
                   onChange={(e) => setQuantidade(e.target.value)}
                 >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  {Array.from({ length: quantidadeMaxima }, (_, i) => i + 1).map((n) => (
                     <option key={n} value={n}>{n}</option>
                   ))}
                 </select>
@@ -590,6 +611,11 @@ export default function EventoPage() {
       )}
 
       <Footer />
+      <Snackbar
+        open={snackbar.open}
+        message={snackbar.message}
+        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+      />
     </>
   )
 }

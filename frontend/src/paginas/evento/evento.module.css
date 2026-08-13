@@ -528,6 +528,13 @@
   transform: translateY(0);
 }
 
+.ev-btn-reservar:disabled {
+  background: var(--text-muted);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
 .ev-about {
   background: var(--surface);
   border: 1px solid var(--border);

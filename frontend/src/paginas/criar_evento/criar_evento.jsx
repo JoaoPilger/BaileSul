@@ -67,6 +67,7 @@ export default function CriarEvento() {
     bairro:    '',
     rua:       '',
     referencia:'',
+    capacidadeMaxima: '',
   })
   const [imagemFile, setImagemFile]     = useState(null)
   const [imagemPreview, setImagemPreview] = useState(null)
@@ -127,6 +128,7 @@ export default function CriarEvento() {
     if (name === 'cep') next = formatCep(value)
     else if (name === 'price') next = formatPriceInput(value)
     else if (name === 'city' || name === 'bairro') next = formatCityField(value)
+    else if (name === 'capacidadeMaxima') next = value.replace(/\D/g, '').slice(0, 6)
     else if (TEXT_LIMITS[name]) next = formatTextField(value, TEXT_LIMITS[name])
 
     if (name === 'band') setBandaId(null)
@@ -444,6 +446,9 @@ export default function CriarEvento() {
     if (valorIngresso !== null) {
       formData.append('valor_ingresso', String(valorIngresso))
     }
+    if (normalizedForm.capacidadeMaxima.trim()) {
+      formData.append('capacidade_maxima', normalizedForm.capacidadeMaxima.trim())
+    }
 
     const fallbackImage = 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80'
     if (imagemFile) {
@@ -671,6 +676,25 @@ export default function CriarEvento() {
                   <svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                 </div>
                 <FieldHint message={showError('price')} />
+              </div>
+
+              <div className={styles['ce-field']}>
+                <label className={styles['ce-field-label']} htmlFor="capacidadeMaxima">Capacidade Máxima de Ingressos</label>
+                <div className={styles['ce-input-wrap']}>
+                  <input
+                    id="capacidadeMaxima"
+                    name="capacidadeMaxima"
+                    type="text"
+                    className={inputClass('capacidadeMaxima')}
+                    placeholder="Ex: 300 (deixe em branco se não houver limite)"
+                    value={form.capacidadeMaxima}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    inputMode="numeric"
+                  />
+                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                </div>
+                <FieldHint message={showError('capacidadeMaxima')} />
               </div>
             </div>
 

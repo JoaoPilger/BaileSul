@@ -1,0 +1,134 @@
+.panel {
+  position: fixed;
+  top: calc(var(--nav-h) + 8px);
+  right: 16px;
+  left: auto;
+  width: min(380px, calc(100% - 32px));
+  max-height: min(70vh, 520px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 200;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .panel {
+    right: 8px;
+    left: 8px;
+    width: auto;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent);
+}
+
+.marcarTodas {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px;
+}
+.marcarTodas:hover {
+  text-decoration: underline;
+}
+
+.lista {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.estado,
+.vazio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.item:last-child {
+  border-bottom: none;
+}
+.item:hover {
+  background: var(--accent-20, rgba(13, 73, 107, 0.08));
+}
+.item:not(.item--naoLida) {
+  cursor: default;
+}
+.item:not(.item--naoLida):hover {
+  background: none;
+}
+
+.itemDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  background: transparent;
+}
+.item--naoLida .itemDot {
+  background: var(--accent);
+}
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemTitulo {
+  font-weight: 600;
+  font-size: 0.86rem;
+  color: #000;
+}
+
+.itemMensagem {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.itemQuando {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}

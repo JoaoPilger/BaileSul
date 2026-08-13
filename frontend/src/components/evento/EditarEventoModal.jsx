@@ -20,6 +20,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
     data_fim: '',
     local_nome: '',
     valor_ingresso: '',
+    capacidade_maxima: '',
   })
   const [tipoEvento, setTipoEvento] = useState('')
   const [imagemFile, setImagemFile] = useState(null)
@@ -51,6 +52,8 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
             data.valor_ingresso != null && data.valor_ingresso !== ''
               ? String(data.valor_ingresso).replace('.', ',')
               : '',
+          capacidade_maxima:
+            data.capacidade_maxima != null ? String(data.capacidade_maxima) : '',
         })
         setTipoEvento(data.tipo_evento || '')
         setImagemPreview(normalizarMedia(data.foto_capa_url))
@@ -158,6 +161,12 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
       valorNum = n
     }
 
+    const capacidadeTxt = String(form.capacidade_maxima).trim()
+    if (capacidadeTxt !== '' && (!/^\d+$/.test(capacidadeTxt) || parseInt(capacidadeTxt, 10) < 1)) {
+      setErro('Informe uma capacidade máxima válida (número inteiro maior que zero).')
+      return
+    }
+
     const formData = new FormData()
     formData.append('titulo', form.titulo.trim())
     formData.append('descricao', form.descricao || '')
@@ -165,6 +174,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
     formData.append('data_fim', dataFim)
     formData.append('local_nome', form.local_nome || '')
     if (valorNum !== null) formData.append('valor_ingresso', String(valorNum))
+    if (capacidadeTxt !== '') formData.append('capacidade_maxima', capacidadeTxt)
     if (imagemFile) formData.append('foto_capa', imagemFile)
 
     setSalvando(true)
@@ -328,6 +338,19 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
               onChange={(e) => handleCampo('valor_ingresso', e.target.value.replace(/[^\d.,]/g, ''))}
             />
             <span className={styles.hint}>Deixe 0 para entrada gratuita.</span>
+          </div>
+
+          <div className={styles.field}>
+            <label className={styles.label} htmlFor="ee-capacidade">Capacidade máxima de ingressos</label>
+            <input
+              id="ee-capacidade"
+              type="text"
+              inputMode="numeric"
+              className={styles.input}
+              placeholder="Ex: 300 — deixe em branco se não houver limite"
+              value={form.capacidade_maxima}
+              onChange={(e) => handleCampo('capacidade_maxima', e.target.value.replace(/\D/g, '').slice(0, 6))}
+            />
           </div>
 
           <div className={styles.row}>
