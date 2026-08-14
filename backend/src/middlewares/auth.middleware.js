@@ -13,9 +13,14 @@ const autenticar = async (req, res, next) => {
 
   const token = authHeader.split(' ')[1];
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (err) {
+    return res.status(401).json({ error: 'Token inválido ou expirado' });
+  }
 
+  try {
     const { rows } = await pool.query(
       'SELECT id FROM auth_tokens WHERE token = $1 AND usuario_id = $2 AND expires_at > NOW() AND deleted_at IS NULL',
       [token, decoded.id]
@@ -28,7 +33,11 @@ const autenticar = async (req, res, next) => {
     req.usuario = decoded; // { id, tipo }
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Token inválido ou expirado' });
+    // Erro de banco/rede (ex.: instabilidade falando com o Postgres do
+    // Supabase) não significa token inválido — não pode derrubar a sessão
+    // do usuário, já que o frontend limpa o login em qualquer 401.
+    console.error('Erro ao validar token no banco:', err.message);
+    return res.status(503).json({ error: 'Serviço de autenticação indisponível. Tente novamente.' });
   }
 };
 

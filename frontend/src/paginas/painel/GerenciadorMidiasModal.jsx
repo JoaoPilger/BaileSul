@@ -7,9 +7,6 @@ import api from '../../services/api'
 import { useAuth } from '../../contexts/AuthContext'
 
 function normalizarMedia(url) {
-  if (url && url.includes('/media/')) {
-    return url.substring(url.indexOf('/media/'))
-  }
   return url || ''
 }
 

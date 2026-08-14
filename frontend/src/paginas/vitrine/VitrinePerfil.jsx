@@ -86,9 +86,6 @@ const CONFIG = {
 }
 
 function normalizarMedia(url) {
-  if (url && url.includes('/media/')) {
-    return url.substring(url.indexOf('/media/'))
-  }
   return url || ''
 }
 

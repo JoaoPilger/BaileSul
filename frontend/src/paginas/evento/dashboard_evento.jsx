@@ -525,10 +525,7 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
 
   const { evento, metricas, reservas, vendedores, bandas, historico_pagamentos, crescimento } = dados
 
-  const imageSrc = evento.foto_capa_url || DEFAULT_IMAGE
-  const imageFinal = imageSrc.includes('/media/')
-    ? imageSrc.substring(imageSrc.indexOf('/media/'))
-    : imageSrc
+  const imageFinal = evento.foto_capa_url || DEFAULT_IMAGE
 
   return (
     <div className={styles['dash-shell']}>

@@ -83,19 +83,9 @@ function mapDatabaseEvent(row) {
     city = row.cidade || row.local_nome || ''
   }
 
-  let image = row.foto_capa_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80'
-  if (image.includes('/media/')) {
-    const idx = image.indexOf('/media/')
-    image = image.substring(idx)
-  }
+  const image = row.foto_capa_url || 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80'
 
-  const midias = (row.midias || []).map((m) => {
-    let url = m.url || ''
-    if (url.includes('/media/')) {
-      url = url.substring(url.indexOf('/media/'))
-    }
-    return { ...m, url }
-  })
+  const midias = row.midias || []
 
   return {
     id: row.id,

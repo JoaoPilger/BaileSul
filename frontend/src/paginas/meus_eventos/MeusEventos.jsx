@@ -82,10 +82,7 @@ function mapDataLocal(ev, fallbackCidadeEstado) {
   hoje.setHours(0, 0, 0, 0)
   const diasFaltando = dataInicioDate ? Math.ceil((dataInicioDate - hoje) / (1000 * 60 * 60 * 24)) : 0
 
-  let image = ev.foto_capa_url || ''
-  if (image && image.includes('/media/')) {
-    image = image.substring(image.indexOf('/media/'))
-  }
+  const image = ev.foto_capa_url || ''
 
   return { formattedDate, city, cidade, diasFaltando: diasFaltando > 0 ? diasFaltando : 0, image }
 }

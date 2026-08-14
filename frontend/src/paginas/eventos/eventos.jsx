@@ -9,7 +9,8 @@ import styles from '../../styles/listings.module.css'
 
 function ListingCard({ event }) {
   const navigate = useNavigate()
-  const date = new Date(event.date)
+  const [ano, mes, dia] = event.date.split('-').map(Number)
+  const date = new Date(ano, mes - 1, dia)
   const day = date.toLocaleDateString('pt-BR', { day: '2-digit' })
   const month = date.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '')
 
