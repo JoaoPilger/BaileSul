@@ -1,6 +1,5 @@
 const pool = require('../config/database');
 const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
-const { caminhoParaUrl } = require('../middlewares/upload');
 const { geocodificarEndereco } = require('../services/external.service');
 const { criarNotificacao } = require('../services/notificacao.service');
 
@@ -36,7 +35,7 @@ const formatDateBR = (dateStr) => {
  */
 const resolverFotoCapa = (req) => {
   if (req.file) {
-    return caminhoParaUrl(req.file.path, req);
+    return req.file.path;
   }
   if (typeof req.body?.foto_capa_url === 'string' && req.body.foto_capa_url.trim()) {
     return req.body.foto_capa_url.trim();
@@ -600,7 +599,7 @@ const adicionarMidia = async (req, res) => {
     return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
   }
 
-  const url = caminhoParaUrl(req.file.path, req);
+  const url = req.file.path;
   const tipo = req.file.mimetype.startsWith('video/') ? 'video' : 'imagem';
   const titulo = req.body.titulo || null;
   const descricao = req.body.descricao || null;

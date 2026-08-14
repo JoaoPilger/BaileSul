@@ -1,30 +1,22 @@
 /**
- * Middleware de upload local com Multer.
+ * Middleware de upload com Multer + Supabase Storage.
  *
- * Estrutura de pastas criada automaticamente dentro de src/media/:
- *   src/media/eventos/capas/        → foto_capa_url de eventos
- *   src/media/eventos/midias/       → evento_midias (imagens/vídeos)
- *   src/media/perfis/bandas/        → video_url e perfil_midias de bandas
- *   src/media/perfis/comunidades/   → perfil_midias de comunidades
+ * Os arquivos são recebidos em memória (multer.memoryStorage) e enviados
+ * direto para o bucket público "media" no Supabase Storage — nada é
+ * gravado em disco local (o disco do Render é efêmero e some a cada deploy).
  *
- * O campo `url` salvo no banco segue o padrão:
- *   /media/<subpasta>/<filename>
- * e é servido estaticamente pelo Express (configurar app.use('/media', ...)).
+ * Estrutura de "pastas" (prefixos de objeto) dentro do bucket:
+ *   eventos/capas/        → foto_capa_url de eventos
+ *   eventos/midias/        → evento_midias (imagens/vídeos)
+ *   perfis/bandas/         → foto_perfil_url e perfil_midias de bandas
+ *   perfis/comunidades/    → foto_perfil_url e perfil_midias de comunidades
+ *
+ * Após o upload, `req.file.path` já contém a URL pública final do arquivo
+ * no Supabase (mesmo formato de valor que os controllers salvam no banco).
  */
 
-const path = require('path');
-const fs   = require('fs');
 const multer = require('multer');
-
-// Raiz da pasta media — resolve para src/media independente de onde o processo roda
-const MEDIA_ROOT = path.resolve(__dirname, '..', 'media');
-
-/**
- * Garante que o diretório exista antes de o multer tentar escrever nele.
- */
-const garantirDir = (dir) => {
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-};
+const { supabase, BUCKET } = require('../config/supabaseStorage');
 
 /**
  * Tipos MIME aceitos e extensões correspondentes.
@@ -46,31 +38,53 @@ const extDeMime = (mime) => {
   };
   // O único jeito de chegar aqui com um mime fora do mapa é a exceção de
   // application/octet-stream em filtroMime (alguns clientes mobile mandam
-  // imagens assim). path.extname(mime) nesse caso dava string vazia — o
-  // arquivo ficava salvo sem extensão nenhuma, o que também abria brecha
-  // pra upload de qualquer tipo de arquivo disfarçado de imagem. Fixar em
-  // ".jpg" garante um content-type de imagem quando o arquivo for servido.
+  // imagens assim). Fixar em ".jpg" garante um content-type de imagem
+  // quando o arquivo for servido, evitando upload de tipo disfarçado.
   return mapa[mime] ?? '.jpg';
 };
 
 /**
- * Fábrica de storage: recebe uma função `destDir(req)` que devolve o
- * caminho absoluto da subpasta onde o arquivo será salvo.
+ * Storage engine do Multer que envia o arquivo direto para o Supabase
+ * Storage, sem tocar em disco local. `destPasta(req)` devolve o prefixo
+ * (ex.: "eventos/capas") onde o objeto deve ser salvo dentro do bucket.
  */
-const criarStorage = (destDir) =>
-  multer.diskStorage({
-    destination(req, file, cb) {
-      const dir = destDir(req);
-      garantirDir(dir);
-      cb(null, dir);
-    },
-    filename(req, file, cb) {
-      const ts  = Date.now();
-      const rnd = Math.random().toString(36).slice(2, 8);
-      const ext = extDeMime(file.mimetype);
-      cb(null, `${ts}_${rnd}${ext}`);
-    },
-  });
+class SupabaseStorageEngine {
+  constructor(destPasta) {
+    this.destPasta = destPasta;
+  }
+
+  _handleFile(req, file, cb) {
+    const chunks = [];
+    file.stream.on('data', (chunk) => chunks.push(chunk));
+    file.stream.on('error', (err) => cb(err));
+    file.stream.on('end', async () => {
+      try {
+        const buffer = Buffer.concat(chunks);
+        const ts  = Date.now();
+        const rnd = Math.random().toString(36).slice(2, 8);
+        const ext = extDeMime(file.mimetype);
+        const objectPath = `${this.destPasta(req)}/${ts}_${rnd}${ext}`;
+
+        const { error } = await supabase.storage
+          .from(BUCKET)
+          .upload(objectPath, buffer, { contentType: file.mimetype, upsert: false });
+        if (error) return cb(error);
+
+        const { data } = supabase.storage.from(BUCKET).getPublicUrl(objectPath);
+        cb(null, { path: data.publicUrl, objectPath, size: buffer.length });
+      } catch (err) {
+        cb(err);
+      }
+    });
+  }
+
+  _removeFile(req, file, cb) {
+    if (!file.objectPath) return cb(null);
+    supabase.storage.from(BUCKET).remove([file.objectPath]).then(() => cb(null), cb);
+  }
+}
+
+const criarStorage = (destPasta) => new SupabaseStorageEngine(destPasta);
 
 /**
  * Filtro de tipo MIME genérico.
@@ -105,23 +119,28 @@ const filtroMime = (mimesAceitos) => (req, file, cb) => {
 /**
  * Upload de foto de capa de evento.
  * Campo multipart: "foto_capa"
- * Salva em: src/media/eventos/capas/
+ * Salva em: eventos/capas/
  */
 const uploadCapaEvento = multer({
-  storage: criarStorage(() => path.join(MEDIA_ROOT, 'eventos', 'capas')),
+  storage: criarStorage(() => 'eventos/capas'),
   fileFilter: filtroMime(MIME_IMAGENS),
   limits: { fileSize: 8 * 1024 * 1024 }, // 8 MB
 }).single('foto_capa');
 
+// Limite de tamanho de arquivo do plano gratuito do Supabase Storage: 50 MB
+// por objeto. Usamos 49 MB para garantir que o erro amigável do multer
+// dispare antes de um erro opaco vindo da API do Supabase.
+const LIMITE_MIDIA = 49 * 1024 * 1024;
+
 /**
  * Upload de mídia de evento (imagem ou vídeo).
  * Campo multipart: "arquivo"
- * Salva em: src/media/eventos/midias/
+ * Salva em: eventos/midias/
  */
 const uploadMidiaEvento = multer({
-  storage: criarStorage(() => path.join(MEDIA_ROOT, 'eventos', 'midias')),
+  storage: criarStorage(() => 'eventos/midias'),
   fileFilter: filtroMime(MIME_MIDIA),
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+  limits: { fileSize: LIMITE_MIDIA },
 }).single('arquivo');
 
 /**
@@ -134,40 +153,11 @@ const uploadMidiaPerfil = multer({
   storage: criarStorage((req) => {
     const tipo = req.params?.dono_tipo ?? req.usuario?.tipo ?? 'bandas';
     const sub  = tipo === 'comunidade' ? 'comunidades' : 'bandas';
-    return path.join(MEDIA_ROOT, 'perfis', sub);
+    return `perfis/${sub}`;
   }),
   fileFilter: filtroMime(MIME_MIDIA),
-  limits: { fileSize: 200 * 1024 * 1024 }, // 200 MB
+  limits: { fileSize: LIMITE_MIDIA },
 }).single('arquivo');
-
-// ─────────────────────────────────────────────────────────────
-//  Helper: converte caminho absoluto → URL relativa /media/...
-// ─────────────────────────────────────────────────────────────
-
-/**
- * Recebe o caminho absoluto gerado pelo multer e devolve a URL
- * persistida no banco (http(s) absoluta quando possível).
- */
-const caminhoParaUrl = (filePath, req) => {
-  const rel = path.relative(MEDIA_ROOT, filePath);
-  const pathUrl = '/media/' + rel.split(path.sep).join('/');
-
-  if (req) {
-    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
-    const host = req.headers['x-forwarded-host'] || req.get('host');
-    if (host) {
-      return `${proto}://${host}${pathUrl}`;
-    }
-  }
-
-  const base = process.env.API_PUBLIC_URL
-    || process.env.CLIENT_URL?.split(',')[0]?.trim();
-  if (base) {
-    return `${base.replace(/\/$/, '')}${pathUrl}`;
-  }
-
-  return pathUrl;
-};
 
 // ─────────────────────────────────────────────────────────────
 //  Middleware de tratamento de erros do Multer
@@ -193,6 +183,10 @@ const uploadErrorHandler = (err, req, res, next) => {
   if (err?.status === 415) {
     return res.status(415).json({ error: err.message });
   }
+  if (err) {
+    console.error('Erro no upload para o Supabase Storage:', err.message);
+    return res.status(502).json({ error: 'Falha ao enviar arquivo para o armazenamento.' });
+  }
   next(err);
 };
 
@@ -200,6 +194,5 @@ module.exports = {
   uploadCapaEvento,
   uploadMidiaEvento,
   uploadMidiaPerfil,
-  caminhoParaUrl,
   uploadErrorHandler,
 };

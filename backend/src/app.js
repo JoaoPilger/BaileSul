@@ -1,12 +1,14 @@
 require('dotenv').config();
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 
 // ── Validação de variáveis de ambiente obrigatórias ─────────────────────────
-const ENV_OBRIGATORIAS = ['JWT_SECRET', 'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+const ENV_OBRIGATORIAS = [
+  'JWT_SECRET', 'DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD',
+  'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
+];
 const envFaltando = ENV_OBRIGATORIAS.filter((k) => !process.env[k]);
 if (envFaltando.length > 0) {
   console.error(`Variáveis de ambiente obrigatórias ausentes: ${envFaltando.join(', ')}`);
@@ -46,10 +48,6 @@ app.use(
 
 // ── Body parser com limite explícito ─────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
-
-// ── Arquivos de mídia (capas, fotos de perfil, etc.) ───────────────────────
-const MEDIA_ROOT = path.resolve(__dirname, 'media');
-app.use('/media', express.static(MEDIA_ROOT));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 

@@ -4,10 +4,9 @@
 --    - eventos: coluna tipo_evento adicionada (categoria do
 --      evento, com CHECK restringindo aos valores suportados
 --      pela aplicação) + índice idx_eventos_tipo_evento
---    - eventos.chk_foto_capa_url: aceita apenas URLs
---      http(s), sem suporte a caminho local '/media/'
---    - perfil_midias.chk_perfil_midia_url: passa a aceitar
---      também caminhos locais '/media/'
+--    - eventos.chk_foto_capa_url: aceita apenas URLs http(s)
+--    - perfil_midias.chk_perfil_midia_url: aceita URLs http(s)
+--      (mídia hospedada no Supabase Storage)
 --    - perfis_bandas e perfis_comunidades: foto_perfil_url
 --      sem CHECK de formato (aceita qualquer valor)
 --

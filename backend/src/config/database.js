@@ -1,4 +1,15 @@
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
+
+// Certificado raiz do Supabase — o pooler (Supavisor) usa uma cadeia de CA
+// própria, não reconhecida pela store padrão do Node, então sem isso o
+// handshake TLS falha com "self-signed certificate in certificate chain".
+// DB_HOST aponta pro Supabase em qualquer ambiente (local ou produção),
+// então a verificação de certificado vale sempre, não só em produção.
+const supabaseCa = fs
+  .readFileSync(path.join(__dirname, 'certs', 'supabase-ca.crt'))
+  .toString();
 
 const pool = new Pool({
   host:     process.env.DB_HOST,
@@ -6,10 +17,7 @@ const pool = new Pool({
   database: process.env.DB_NAME,
   user:     process.env.DB_USER,
   password: process.env.DB_PASSWORD,
-  // SSL habilitado em produção; desativado em desenvolvimento local
-  ssl: process.env.NODE_ENV === 'production'
-    ? { rejectUnauthorized: true }
-    : false,
+  ssl: { rejectUnauthorized: true, ca: supabaseCa },
   // Configurações de pool
   max: 10,
   idleTimeoutMillis: 30_000,

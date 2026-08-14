@@ -348,8 +348,6 @@ const buscarSugestoes = async (req, res) => {
   }
 };
 
-const { caminhoParaUrl } = require('../middlewares/upload');
-
 /**
  * POST /api/bandas/me/foto-perfil
  * Define/substitui a foto de perfil (avatar) da banda.
@@ -366,7 +364,7 @@ const atualizarFotoPerfil = async (req, res) => {
     return res.status(400).json({ error: 'Envie uma imagem para a foto de perfil.' });
   }
 
-  const url = caminhoParaUrl(req.file.path, req);
+  const url = req.file.path;
 
   try {
     await pool.query(
@@ -396,7 +394,7 @@ const adicionarMidia = async (req, res) => {
   }
 
   const tipo = req.file.mimetype.startsWith('video') ? 'video' : 'imagem';
-  const url = caminhoParaUrl(req.file.path, req);
+  const url = req.file.path;
 
   try {
     const { rows } = await pool.query(
