@@ -173,8 +173,10 @@ class _EventoConteudo extends StatelessWidget {
       children: [
         _ImagemEvento(imageUrl: event.imageUrl),
         const SizedBox(height: 12),
-        _ChipGenero(label: event.genre),
-        const SizedBox(height: 8),
+        if (event.genre.isNotEmpty) ...[
+          _ChipGenero(label: event.genre),
+          const SizedBox(height: 10),
+        ],
         Text(
           event.title,
           style: const TextStyle(
@@ -185,15 +187,33 @@ class _EventoConteudo extends StatelessWidget {
             height: 1.15,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          event.location,
-          style: TextStyle(
-            color: BaileSulColors.accent.withValues(alpha: 0.85),
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            height: 1.3,
-          ),
+        const SizedBox(height: 10),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(Icons.location_on_rounded, size: 15, color: BaileSulColors.accentLight),
+                  const SizedBox(width: 5),
+                  Expanded(
+                    child: Text(
+                      event.location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: BaileSulColors.accent.withValues(alpha: 0.85),
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            _ShareButton(onPressed: () {}),
+          ],
         ),
         const SizedBox(height: 14),
         _InfoCard(
@@ -229,53 +249,65 @@ class _EventoConteudo extends StatelessWidget {
             children: [
               _LinhaInfo(
                 icon: Icons.calendar_month_outlined,
+                label: 'Data',
                 text: event.dateTime,
               ),
               if (event.startDateTime.isNotEmpty && event.endDateTime.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 _LinhaInfo(
                   icon: Icons.access_time_outlined,
-                  text: '${event.startDateTime} → ${event.endDateTime}',
+                  label: 'Horário',
+                  text: '${event.startDateTime} – ${event.endDateTime}',
                 ),
               ],
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               _LinhaInfo(
                 icon: Icons.location_on_outlined,
+                label: 'Local',
                 text: event.location,
               ),
               if (event.address.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 _LinhaInfo(
                   icon: Icons.map_outlined,
+                  label: 'Endereço',
                   text: event.address,
                 ),
               ],
               if (event.organizer.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 _LinhaInfo(
                   icon: Icons.apartment_outlined,
+                  label: 'Organização',
                   text: event.organizer,
                 ),
               ],
               if (event.status.isNotEmpty) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 _LinhaInfo(
                   icon: Icons.circle_outlined,
-                  text: 'Status: ${event.status}',
+                  label: 'Status',
+                  text: event.status,
                 ),
               ],
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: BaileSulColors.cardBorder),
-              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        _InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const Text(
                 'Valor do Ingresso',
                 style: TextStyle(
                   color: BaileSulColors.mutedText,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -284,7 +316,7 @@ class _EventoConteudo extends StatelessWidget {
                       event.price,
                       style: const TextStyle(
                         color: BaileSulColors.headerText,
-                        fontSize: 22,
+                        fontSize: 24,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.3,
                       ),
@@ -302,67 +334,51 @@ class _EventoConteudo extends StatelessWidget {
                       elevation: reservado ? 0 : 3,
                       shadowColor: BaileSulColors.accent.withValues(alpha: 0.4),
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 28,
+                        horizontal: 26,
                         vertical: 14,
                       ),
                       minimumSize: const Size(120, 48),
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(9),
                       ),
                       textStyle: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
+                        letterSpacing: 0.6,
                       ),
                     ),
-                    child: Text(reservado ? 'Reservado' : 'Reservar'),
+                    child: Text(reservado ? 'RESERVADO' : 'RESERVAR'),
                   ),
                 ],
               ),
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.share_outlined, size: 18),
-            label: const Text('Compartilhar evento'),
-            style: FilledButton.styleFrom(
-              backgroundColor: BaileSulColors.accent,
-              foregroundColor: Colors.white,
-              elevation: 2,
-              shadowColor: BaileSulColors.accent.withValues(alpha: 0.35),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              textStyle: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         const Text(
-          'Localização',
+          'LOCALIZAÇÃO',
           style: TextStyle(
-            color: BaileSulColors.headerText,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.2,
+            color: BaileSulColors.accent,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.4,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Container(
           height: 140,
           width: double.infinity,
           decoration: BoxDecoration(
-            color: BaileSulColors.styleSurfaceA,
-            borderRadius: BorderRadius.circular(10),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: BaileSulColors.cardBorder),
+          ),
+          alignment: Alignment.center,
+          child: Icon(
+            Icons.map_outlined,
+            size: 34,
+            color: BaileSulColors.mutedText.withValues(alpha: 0.4),
           ),
         ),
       ],
@@ -378,27 +394,79 @@ class _ImagemEvento extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(14),
       child: SizedBox(
-        height: 150,
+        height: 170,
         width: double.infinity,
-        child: Image.network(
-          imageUrl,
-          fit: BoxFit.cover,
-          errorBuilder: (context, error, stackTrace) => Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF7C9AB1), Color(0xFF0D496B)],
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) => Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF7C9AB1), Color(0xFF0D496B)],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.music_note_rounded,
+                  size: 48,
+                  color: Colors.white.withValues(alpha: 0.5),
+                ),
               ),
             ),
-            alignment: Alignment.center,
-            child: Icon(
-              Icons.music_note_rounded,
-              size: 48,
-              color: Colors.white.withValues(alpha: 0.5),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: _BotaoVoltar(),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Botão flutuante de voltar sobre a imagem, espelhando `.ev-back-btn`
+/// (frontend/src/paginas/evento/evento.jsx).
+class _BotaoVoltar extends StatelessWidget {
+  const _BotaoVoltar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(999),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.25),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () {
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        },
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.arrow_back_rounded, size: 16, color: BaileSulColors.accent),
+              SizedBox(width: 5),
+              Text(
+                'Voltar',
+                style: TextStyle(
+                  color: BaileSulColors.accent,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -406,6 +474,7 @@ class _ImagemEvento extends StatelessWidget {
   }
 }
 
+/// Tag do tipo de evento, espelhando `.ev-tag` (fundo claro, não sólido).
 class _ChipGenero extends StatelessWidget {
   const _ChipGenero({required this.label});
 
@@ -416,28 +485,70 @@ class _ChipGenero extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: BaileSulColors.accent,
-        borderRadius: BorderRadius.circular(20),
+        color: BaileSulColors.accent.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: BaileSulColors.accent.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            Icons.music_note_rounded,
-            size: 14,
-            color: Colors.white.withValues(alpha: 0.95),
+          const Icon(
+            Icons.confirmation_number_outlined,
+            size: 13,
+            color: BaileSulColors.accent,
           ),
           const SizedBox(width: 5),
           Text(
             label,
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.95),
+            style: const TextStyle(
+              color: BaileSulColors.accent,
               fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.2,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Botão de compartilhar contornado, espelhando `.ev-share-btn`.
+class _ShareButton extends StatelessWidget {
+  const _ShareButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onPressed,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: BaileSulColors.cardBorder),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.share_outlined, size: 15, color: BaileSulColors.mutedText),
+              const SizedBox(width: 6),
+              Text(
+                'Compartilhar',
+                style: TextStyle(
+                  color: BaileSulColors.mutedText,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -452,10 +563,10 @@ class _InfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: BaileSulColors.styleSurfaceA,
-        borderRadius: BorderRadius.circular(10),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: BaileSulColors.cardBorder),
       ),
       child: child,
@@ -463,10 +574,13 @@ class _InfoCard extends StatelessWidget {
   }
 }
 
+/// Linha de informação com selo de ícone + rótulo/valor, espelhando
+/// `.ev-info-item` / `.ev-info-icon` / `.ev-info-label` / `.ev-info-value`.
 class _LinhaInfo extends StatelessWidget {
-  const _LinhaInfo({required this.icon, required this.text});
+  const _LinhaInfo({required this.icon, required this.label, required this.text});
 
   final IconData icon;
+  final String label;
   final String text;
 
   @override
@@ -474,16 +588,41 @@ class _LinhaInfo extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: BaileSulColors.headerText),
-        const SizedBox(width: 10),
+        Container(
+          width: 32,
+          height: 32,
+          decoration: BoxDecoration(
+            color: BaileSulColors.accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 16, color: BaileSulColors.accent),
+        ),
+        const SizedBox(width: 11),
         Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: BaileSulColors.headerText,
-              fontSize: 13,
-              height: 1.35,
-            ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label.toUpperCase(),
+                style: TextStyle(
+                  color: BaileSulColors.mutedText.withValues(alpha: 0.85),
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: BaileSulColors.headerText,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w500,
+                  height: 1.3,
+                ),
+              ),
+            ],
           ),
         ),
       ],

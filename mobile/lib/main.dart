@@ -65,6 +65,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: appNavigatorKey,
+      navigatorObservers: [routeObserver],
       title: 'BaileSul',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

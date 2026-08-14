@@ -128,10 +128,10 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
           height: 42,
           alignment: Alignment.center,
           decoration: BoxDecoration(
-            color: ativo ? const Color(0xFF0D496B) : Colors.white,
+            color: ativo ? BaileSulColors.accent : Colors.white,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: ativo ? const Color(0xFF0D496B) : const Color(0xFFD7DDE5),
+              color: ativo ? BaileSulColors.accent : BaileSulColors.cardBorder,
             ),
           ),
           child: Text(
@@ -207,7 +207,7 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD7DDE5)),
+        border: Border.all(color: BaileSulColors.cardBorder),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +223,7 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
                     : 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=900&q=80',
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => Container(
-                  color: const Color(0xFFE8ECF0),
+                  color: BaileSulColors.pageBackground,
                   child: const Icon(Icons.event, size: 36, color: BaileSulColors.mutedText),
                 ),
               ),
@@ -256,15 +256,18 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                     decoration: BoxDecoration(
-                      color: pago ? const Color(0xFF0D496B) : const Color(0xFFE8F4FB),
+                      // Verde para pago / âmbar para reservado, espelhando
+                      // .mi-card-badge.confirmado / .pendente (meusIngressos.module.css).
+                      color: pago ? const Color(0x1F16A34A) : const Color(0x1FD97706),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
                       pago ? 'Pago' : 'Reservado',
                       style: TextStyle(
-                        color: pago ? Colors.white : const Color(0xFF0D496B),
+                        color: pago ? const Color(0xFF15803D) : const Color(0xFFB45309),
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
+                        letterSpacing: 0.3,
                       ),
                     ),
                   ),
@@ -284,7 +287,7 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
                     child: TextButton(
                       onPressed: () => _abrirDetalhes(reserva),
                       style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF0D496B),
+                        foregroundColor: BaileSulColors.accent,
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       ),
                       child: const Text('Ver detalhes'),
@@ -322,7 +325,7 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFD7DDE5)),
+            border: Border.all(color: BaileSulColors.cardBorder),
           ),
           child: TextField(
             onChanged: (value) => setState(() => _busca = value),
@@ -359,7 +362,7 @@ class _MeusIngressosPageState extends State<MeusIngressosPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0xFFD7DDE5)),
+              border: Border.all(color: BaileSulColors.cardBorder),
             ),
             child: Text(
               _error!,
@@ -485,7 +488,7 @@ class _EmptyBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD7DDE5)),
+        border: Border.all(color: BaileSulColors.cardBorder),
       ),
       child: Text(
         text,

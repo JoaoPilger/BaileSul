@@ -148,25 +148,45 @@ class _PagamentosPageState extends State<PagamentosPage> {
 
   Widget _buildTab(String key, String label) {
     final bool ativo = _abaAtiva == key;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => setState(() => _abaAtiva = key),
-        child: Container(
-          height: 44,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: ativo ? const Color(0xFF0D496B) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: ativo ? const Color(0xFF0D496B) : const Color(0xFFD1D5DB)),
-          ),
-          child: Text(
-            '$label • ${_contagem[key] ?? 0}',
-            style: TextStyle(
-              color: ativo ? Colors.white : const Color(0xFF111827),
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+    return GestureDetector(
+      onTap: () => setState(() => _abaAtiva = key),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 96),
+        height: 72,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: ativo ? const Color(0xFF0D496B) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: ativo ? const Color(0xFF0D496B) : const Color(0xFFD1D5DB)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: ativo ? Colors.white : const Color(0xFF111827),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
             ),
-          ),
+            const SizedBox(height: 4),
+            Text(
+              '${_contagem[key] ?? 0}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: ativo ? Colors.white : const Color(0xFF0D496B),
+                fontWeight: FontWeight.w800,
+                fontSize: 20,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -188,7 +208,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 14,
             offset: const Offset(0, 8),
           ),
@@ -234,7 +254,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
                   children: [
                     const Text('Valor Total', style: TextStyle(fontSize: 12, color: Color(0xFF667085))),
                     const SizedBox(height: 4),
-                    Text('R\$ ' + valorTotal.toStringAsFixed(2).replaceAll('.', ','), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                    Text('R\$ ${valorTotal.toStringAsFixed(2).replaceAll('.', ',')}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -255,27 +275,33 @@ class _PagamentosPageState extends State<PagamentosPage> {
             Row(
               children: [
                 Expanded(
-                  child: FilledButton(
-                    onPressed: _processandoId == reserva['id'] ? null : () => _confirmar(reserva['id'] as int),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0D496B),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: SizedBox(
+                    height: 48,
+                    child: FilledButton(
+                      onPressed: _processandoId == reserva['id'] ? null : () => _confirmar(reserva['id'] as int),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0D496B),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                      child: const Text('Confirmar'),
                     ),
-                    child: const Text('Confirmar'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
-                  child: OutlinedButton(
-                    onPressed: _processandoId == reserva['id'] ? null : () => _rejeitar(reserva['id'] as int),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF111827),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _processandoId == reserva['id'] ? null : () => _rejeitar(reserva['id'] as int),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF111827),
+                        side: const BorderSide(color: Color(0xFFE2E8F0)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      ),
+                      child: const Text('Rejeitar'),
                     ),
-                    child: const Text('Rejeitar'),
                   ),
                 ),
               ],
@@ -353,41 +379,43 @@ class _PagamentosPageState extends State<PagamentosPage> {
                           Container(
                             width: double.infinity,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              color: BaileSulColors.accent,
                               borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.05),
-                                  blurRadius: 14,
-                                  offset: const Offset(0, 8),
-                                ),
-                              ],
                             ),
                             padding: const EdgeInsets.all(16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Total Confirmado', style: TextStyle(fontSize: 12, color: Color(0xFF6B7280))),
+                                Text(
+                                  'TOTAL CONFIRMADO',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.8,
+                                    color: Colors.white.withValues(alpha: 0.7),
+                                  ),
+                                ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  'R\$ ' + _totalConfirmado.toStringAsFixed(2).replaceAll('.', ','),
-                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Color(0xFF111111)),
+                                  'R\$ ${_totalConfirmado.toStringAsFixed(2).replaceAll('.', ',')}',
+                                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white),
                                 ),
                               ],
                             ),
                           ),
                           const SizedBox(height: 18),
-                          Row(
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 10,
                             children: [
                               _buildTab('pendente', 'Pendente'),
-                              const SizedBox(width: 10),
                               _buildTab('confirmado', 'Confirmados'),
-                              const SizedBox(width: 10),
                               _buildTab('rejeitado', 'Rejeitados'),
                             ],
                           ),
                           const SizedBox(height: 16),
                           Container(
+                            height: 52,
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(14),
@@ -395,16 +423,17 @@ class _PagamentosPageState extends State<PagamentosPage> {
                             ),
                             child: Row(
                               children: [
-                                const SizedBox(width: 12),
-                                const Icon(Icons.search, color: Color(0xFF667085), size: 18),
+                                const SizedBox(width: 16),
+                                const Icon(Icons.search, color: Color(0xFF667085), size: 20),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: TextField(
                                     onChanged: (value) => setState(() => _busca = value),
+                                    style: const TextStyle(fontSize: 15),
                                     decoration: const InputDecoration(
                                       hintText: 'Busca por nome, email ou evento',
                                       border: InputBorder.none,
-                                      isDense: true,
+                                      contentPadding: EdgeInsets.symmetric(vertical: 14),
                                     ),
                                   ),
                                 ),

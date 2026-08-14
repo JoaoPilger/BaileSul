@@ -2,12 +2,14 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show Uint8List, kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
+import '../utils/formatadores.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
@@ -620,6 +622,8 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
                           label: 'WhatsApp de Contato',
                           controller: _whatsappController,
                           keyboardType: TextInputType.phone,
+                          inputFormatters: const [TelefoneTextInputFormatter()],
+                          maxLength: 15,
                           validator: _validarWhatsapp,
                           placeholder: '(48) 9 0000-0000',
                           hint: 'Utilizado para direcionar mensagens dos clientes/contratantes.',
@@ -792,6 +796,8 @@ class _CampoTexto extends StatelessWidget {
     required this.controller,
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
+    this.maxLength,
+    this.inputFormatters,
     this.validator,
     this.placeholder,
     this.hint,
@@ -801,6 +807,8 @@ class _CampoTexto extends StatelessWidget {
   final TextEditingController controller;
   final TextInputType keyboardType;
   final int maxLines;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
   final String? Function(String?)? validator;
   final String? placeholder;
   final String? hint;
@@ -823,6 +831,8 @@ class _CampoTexto extends StatelessWidget {
           controller: controller,
           keyboardType: keyboardType,
           maxLines: maxLines,
+          maxLength: maxLength,
+          inputFormatters: inputFormatters,
           validator: validator,
           style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
           decoration: InputDecoration(

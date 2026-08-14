@@ -85,10 +85,11 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
         _error = err.toString().replaceFirst('Exception: ', '');
       });
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -196,13 +197,13 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color:
-            map[status.toLowerCase()]?.withOpacity(0.12) ??
-            Colors.grey.withOpacity(0.15),
+            map[status.toLowerCase()]?.withValues(alpha: 0.12) ??
+            Colors.grey.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
           color:
-              map[status.toLowerCase()]?.withOpacity(0.28) ??
-              Colors.grey.withOpacity(0.3),
+              map[status.toLowerCase()]?.withValues(alpha: 0.28) ??
+              Colors.grey.withValues(alpha: 0.3),
         ),
       ),
       child: Text(
@@ -242,8 +243,8 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    Colors.black.withOpacity(0.35),
-                    Colors.black.withOpacity(0.04),
+                    Colors.black.withValues(alpha: 0.35),
+                    Colors.black.withValues(alpha: 0.04),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
@@ -324,7 +325,7 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: BaileSulColors.accent.withOpacity(0.12),
+                    color: BaileSulColors.accent.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
@@ -495,7 +496,7 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: (color ?? BaileSulColors.accent).withOpacity(0.12),
+                color: (color ?? BaileSulColors.accent).withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -544,49 +545,54 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          alignment: WrapAlignment.center,
-          runAlignment: WrapAlignment.center,
-          children: [
-            SizedBox(
-              width: 160,
-              child: _buildStatCard(
-                'Reservas Totais',
-                '${_metricas['total_reservas'] ?? 0}',
-                icon: Icons.event_note,
-                color: Colors.blue,
-              ),
-            ),
-            SizedBox(
-              width: 160,
-              child: _buildStatCard(
-                'Confirmadas',
-                '${_metricas['reservas_confirmadas'] ?? 0}',
-                icon: Icons.check_circle_outline,
-                color: Colors.green,
-              ),
-            ),
-            SizedBox(
-              width: 160,
-              child: _buildStatCard(
-                'Pendentes',
-                '${_metricas['reservas_pendentes'] ?? 0}',
-                icon: Icons.hourglass_top,
-                color: Colors.amber,
-              ),
-            ),
-            SizedBox(
-              width: 160,
-              child: _buildStatCard(
-                'Ingressos',
-                '${_metricas['total_ingressos_confirmados'] ?? 0}',
-                icon: Icons.confirmation_number_outlined,
-                color: BaileSulColors.accent,
-              ),
-            ),
-          ],
+        SizedBox(
+          width: double.infinity,
+          child: _buildStatCard(
+            'Reservas Totais',
+            '${_metricas['total_reservas'] ?? 0}',
+            icon: Icons.event_note,
+            color: Colors.blue,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: _buildStatCard(
+            'Confirmadas',
+            '${_metricas['reservas_confirmadas'] ?? 0}',
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: _buildStatCard(
+            'Pendentes',
+            '${_metricas['reservas_pendentes'] ?? 0}',
+            icon: Icons.hourglass_top,
+            color: Colors.amber,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: _buildStatCard(
+            'Ingressos',
+            '${_metricas['total_ingressos_confirmados'] ?? 0}',
+            icon: Icons.confirmation_number_outlined,
+            color: BaileSulColors.accent,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: _buildStatCard(
+            'Receita Estimada',
+            _formatBRL(_metricas['receita_estimada']),
+            icon: Icons.payments_outlined,
+            color: const Color(0xFF0F6E56),
+          ),
         ),
         const SizedBox(height: 16),
         if (capMax > 0)
@@ -833,7 +839,7 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: BaileSulColors.accent.withOpacity(0.15),
+                  color: BaileSulColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -1069,7 +1075,7 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Status: ${anterior} → ${novo}',
+                  'Status: $anterior → $novo',
                   style: const TextStyle(
                     color: BaileSulColors.mutedText,
                     fontSize: 13,
@@ -1194,7 +1200,7 @@ class _DashboardEventoPageState extends State<DashboardEventoPage> {
 }
 
 class GrowthChart extends StatelessWidget {
-  const GrowthChart({required this.dados});
+  const GrowthChart({super.key, required this.dados});
 
   final List<dynamic> dados;
 

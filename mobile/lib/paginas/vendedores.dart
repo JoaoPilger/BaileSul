@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../services/vendedor_service.dart';
+import '../utils/formatadores.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
@@ -666,9 +666,11 @@ class _NovoVendedorSheetState extends State<_NovoVendedorSheet> {
                 controller: _whatsappController,
                 enabled: !_enviando,
                 keyboardType: TextInputType.phone,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                inputFormatters: const [TelefoneTextInputFormatter()],
+                maxLength: 15,
                 decoration: InputDecoration(
-                  hintText: 'Ex: 47999999999',
+                  hintText: '(47) 99999-9999',
+                  counterText: '',
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),

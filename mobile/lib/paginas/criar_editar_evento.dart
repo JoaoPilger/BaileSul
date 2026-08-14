@@ -10,7 +10,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
-import '../widgets/map_location_picker.dart';
+import '../widgets/map_location_preview.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
@@ -50,7 +50,6 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
 
   String _tipoEvento = 'musical';
 
-  MapLocation? _localizacaoSelecionada;
   Uint8List? _capaBytes;
   String _capaFilename = 'capa.jpg';
   bool _salvando = false;
@@ -475,117 +474,83 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                               maxLines: 4,
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_tipoEvento == 'musical')
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        _FormField(
-                                          label: 'Banda/Artista *',
-                                          controller: _bandaController,
-                                          focusNode: _bandaFocusNode,
-                                          suffixIcon: _bandaBuscando
-                                              ? const Padding(
-                                                  padding: EdgeInsets.all(6),
-                                                  child: SizedBox(
-                                                    width: 12,
-                                                    height: 12,
-                                                    child: CircularProgressIndicator(strokeWidth: 2),
-                                                  ),
-                                                )
-                                              : null,
+                            if (_tipoEvento == 'musical') ...[
+                              _FormField(
+                                label: 'Banda/Artista *',
+                                controller: _bandaController,
+                                focusNode: _bandaFocusNode,
+                                suffixIcon: _bandaBuscando
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(6),
+                                        child: SizedBox(
+                                          width: 12,
+                                          height: 12,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
                                         ),
-                                        if (_bandaSugestoesOpen && _bandaSugestoes.isNotEmpty)
-                                          _BandaSugestoesList(
-                                            sugestoes: _bandaSugestoes,
-                                            onSelecionar: _selecionarBanda,
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                if (_tipoEvento == 'musical') const SizedBox(width: 12),
-                                Expanded(
-                                  child: _TipoEventoField(
-                                    value: _tipoEvento,
-                                    labels: _tipoEventoLabels,
-                                    onChanged: (value) => setState(() => _tipoEvento = value),
-                                  ),
+                                      )
+                                    : null,
+                              ),
+                              if (_bandaSugestoesOpen && _bandaSugestoes.isNotEmpty)
+                                _BandaSugestoesList(
+                                  sugestoes: _bandaSugestoes,
+                                  onSelecionar: _selecionarBanda,
                                 ),
+                              const SizedBox(height: 12),
+                            ],
+                            _TipoEventoField(
+                              value: _tipoEvento,
+                              labels: _tipoEventoLabels,
+                              onChanged: (value) => setState(() => _tipoEvento = value),
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Ingresso / Entrada',
+                              controller: _precoController,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.allow(RegExp(r'[0-9,.]')),
                               ],
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Ingresso / Entrada',
-                                    controller: _precoController,
-                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Capacidade Máxima',
-                                    controller: _capacidadeController,
-                                    keyboardType: TextInputType.number,
-                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                                  ),
-                                ),
-                              ],
+                            _FormField(
+                              label: 'Capacidade Máxima',
+                              controller: _capacidadeController,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                             ),
                             const SizedBox(height: 24),
                             const _SectionTitle('Data e Horários'),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Data de Início *',
-                                    controller: _dataInicioController,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 10,
-                                    inputFormatters: [_DateTextInputFormatter()],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Data de Término *',
-                                    controller: _dataFimController,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 10,
-                                    inputFormatters: [_DateTextInputFormatter()],
-                                  ),
-                                ),
-                              ],
+                            _FormField(
+                              label: 'Data de Início *',
+                              controller: _dataInicioController,
+                              keyboardType: TextInputType.number,
+                              maxLength: 10,
+                              inputFormatters: [_DateTextInputFormatter()],
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Horário de Início',
-                                    controller: _horaInicioController,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 5,
-                                    inputFormatters: [_TimeTextInputFormatter()],
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Horário de Término',
-                                    controller: _horaFimController,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 5,
-                                    inputFormatters: [_TimeTextInputFormatter()],
-                                  ),
-                                ),
-                              ],
+                            _FormField(
+                              label: 'Data de Término *',
+                              controller: _dataFimController,
+                              keyboardType: TextInputType.number,
+                              maxLength: 10,
+                              inputFormatters: [_DateTextInputFormatter()],
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Horário de Início',
+                              controller: _horaInicioController,
+                              keyboardType: TextInputType.number,
+                              maxLength: 5,
+                              inputFormatters: [_TimeTextInputFormatter()],
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Horário de Término',
+                              controller: _horaFimController,
+                              keyboardType: TextInputType.number,
+                              maxLength: 5,
+                              inputFormatters: [_TimeTextInputFormatter()],
                             ),
                             const SizedBox(height: 24),
                             const _SectionTitle('Imagem de Capa'),
@@ -594,56 +559,40 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                             const SizedBox(height: 24),
                             const _SectionTitle('Localização'),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'CEP',
-                                    controller: _cepController,
-                                    focusNode: _cepFocusNode,
-                                    keyboardType: TextInputType.number,
-                                    maxLength: 8,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    suffixIcon: _buscandoCep
-                                        ? const Padding(
-                                            padding: EdgeInsets.all(6),
-                                            child: SizedBox(
-                                              width: 12,
-                                              height: 12,
-                                              child: CircularProgressIndicator(strokeWidth: 2),
-                                            ),
-                                          )
-                                        : null,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Cidade *',
-                                    controller: _cidadeController,
-                                  ),
-                                ),
+                            _FormField(
+                              label: 'CEP',
+                              controller: _cepController,
+                              focusNode: _cepFocusNode,
+                              keyboardType: TextInputType.number,
+                              maxLength: 8,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
                               ],
+                              suffixIcon: _buscandoCep
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(6),
+                                      child: SizedBox(
+                                        width: 12,
+                                        height: 12,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Bairro',
-                                    controller: _bairroController,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'Rua',
-                                    controller: _ruaController,
-                                  ),
-                                ),
-                              ],
+                            _FormField(
+                              label: 'Cidade *',
+                              controller: _cidadeController,
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Bairro',
+                              controller: _bairroController,
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Rua',
+                              controller: _ruaController,
                             ),
                             const SizedBox(height: 12),
                             _FormField(
@@ -653,12 +602,12 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                             const SizedBox(height: 14),
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: MapLocationPicker(
+                              child: MapLocationPreview(
                                 height: 170,
-                                selectedLocation: _localizacaoSelecionada,
-                                onLocationChanged: (MapLocation location) {
-                                  setState(() => _localizacaoSelecionada = location);
-                                },
+                                ruaController: _ruaController,
+                                bairroController: _bairroController,
+                                cidadeController: _cidadeController,
+                                cepController: _cepController,
                               ),
                             ),
                             const SizedBox(height: 22),

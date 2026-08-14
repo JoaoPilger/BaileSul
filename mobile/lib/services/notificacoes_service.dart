@@ -1,93 +1,177 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import 'sessao_usuario.dart';
+
+const Duration _pollInterval = Duration(seconds: 60);
+
+String formatarQuando(DateTime data) {
+  final Duration diff = DateTime.now().difference(data);
+  if (diff.inMinutes < 1) return 'agora';
+  if (diff.inMinutes < 60) return 'há ${diff.inMinutes} min';
+  if (diff.inHours < 24) return 'há ${diff.inHours}h';
+  if (diff.inDays < 7) return 'há ${diff.inDays}d';
+  return '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year}';
+}
 
 class NotificacaoItem {
-  final String id;
-  final String titulo;
-  final String mensagem;
-  final String tempo;
-  final bool isRead;
-  final IconData icon;
-
   NotificacaoItem({
     required this.id,
     required this.titulo,
     required this.mensagem,
-    required this.tempo,
-    this.isRead = false,
-    required this.icon,
+    required this.criadoEm,
+    required this.isRead,
   });
 
-  NotificacaoItem copyWith({
-    String? id,
-    String? titulo,
-    String? mensagem,
-    String? tempo,
-    bool? isRead,
-    IconData? icon,
-  }) {
+  final String id;
+  final String titulo;
+  final String mensagem;
+  final DateTime criadoEm;
+  final bool isRead;
+
+  String get tempo => formatarQuando(criadoEm);
+
+  factory NotificacaoItem.fromJson(Map<String, dynamic> json) {
     return NotificacaoItem(
-      id: id ?? this.id,
-      titulo: titulo ?? this.titulo,
-      mensagem: mensagem ?? this.mensagem,
-      tempo: tempo ?? this.tempo,
-      isRead: isRead ?? this.isRead,
-      icon: icon ?? this.icon,
+      id: json['id'].toString(),
+      titulo: json['titulo']?.toString() ?? '',
+      mensagem: json['mensagem']?.toString() ?? '',
+      criadoEm: DateTime.tryParse(json['criado_em']?.toString() ?? '') ?? DateTime.now(),
+      isRead: json['lida'] == true,
     );
   }
+
+  NotificacaoItem copyWith({bool? isRead}) => NotificacaoItem(
+        id: id,
+        titulo: titulo,
+        mensagem: mensagem,
+        criadoEm: criadoEm,
+        isRead: isRead ?? this.isRead,
+      );
 }
 
+class NotificacoesPagina {
+  const NotificacoesPagina({
+    required this.itens,
+    required this.total,
+    required this.totalPaginas,
+  });
+
+  final List<NotificacaoItem> itens;
+  final int total;
+  final int totalPaginas;
+
+  static const NotificacoesPagina vazia =
+      NotificacoesPagina(itens: [], total: 0, totalPaginas: 0);
+}
+
+/// Contagem de notificações não lidas (usada pelo badge do sino no header,
+/// espelhando `useNotificacoes` do frontend web). O histórico completo com
+/// filtros/paginação e as ações de marcar como lida vivem na própria página
+/// de notificações — este serviço só expõe a contagem reativa e as chamadas
+/// de API cruas.
 class NotificacoesService extends ChangeNotifier {
-  NotificacoesService._();
+  NotificacoesService._() {
+    Timer.periodic(_pollInterval, (_) => atualizarContagem());
+  }
+
   static final NotificacoesService instance = NotificacoesService._();
 
-  final List<NotificacaoItem> _notificacoes = [
-    NotificacaoItem(
-      id: '1',
-      titulo: 'Ingresso Confirmado',
-      mensagem: 'Seu ingresso para o Baile da Primavera foi gerado com sucesso.',
-      tempo: 'Há 5 min',
-      isRead: false,
-      icon: Icons.confirmation_number_outlined,
-    ),
-    NotificacaoItem(
-      id: '2',
-      titulo: 'Novo Show Disponível',
-      mensagem: 'A banda "Os Serranos" acaba de agendar um novo show em Porto Alegre.',
-      tempo: 'Há 2 horas',
-      isRead: false,
-      icon: Icons.event_outlined,
-    ),
-    NotificacaoItem(
-      id: '3',
-      titulo: 'Lembrete Importante',
-      mensagem: 'O evento "Baile do Chopp" começa em 2 horas. Não se atrasar!',
-      tempo: 'Ontem',
-      isRead: false,
-      icon: Icons.access_time,
-    ),
-  ];
+  int unreadCount = 0;
 
-  List<NotificacaoItem> get notificacoes => _notificacoes;
+  static Map<String, String> _headers(String token) => {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
 
-  int get unreadCount => _notificacoes.where((n) => !n.isRead).length;
+  static String? get _token => SessaoUsuario.instance.token;
 
-  void marcarComoLida(String id) {
-    final index = _notificacoes.indexWhere((n) => n.id == id);
-    if (index != -1) {
-      _notificacoes[index] = _notificacoes[index].copyWith(isRead: true);
-      notifyListeners();
+  Future<void> atualizarContagem() async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) {
+      if (unreadCount != 0) {
+        unreadCount = 0;
+        notifyListeners();
+      }
+      return;
+    }
+    try {
+      final Uri url = Uri.parse('${ApiConfig.baseUrl}/notificacoes/contagem');
+      final http.Response resp =
+          await http.get(url, headers: _headers(token)).timeout(const Duration(seconds: 10));
+      if (resp.statusCode != 200) return;
+      final Map<String, dynamic> decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+      final int novo = decoded['nao_lidas'] is int
+          ? decoded['nao_lidas'] as int
+          : int.tryParse('${decoded['nao_lidas']}') ?? 0;
+      if (novo != unreadCount) {
+        unreadCount = novo;
+        notifyListeners();
+      }
+    } catch (_) {
+      // Silencioso: badge apenas não atualiza nesse ciclo.
     }
   }
 
-  void marcarTodasComoLidas() {
-    for (int i = 0; i < _notificacoes.length; i++) {
-      _notificacoes[i] = _notificacoes[i].copyWith(isRead: true);
+  /// GET /notificacoes?status=&pagina=&limite= — histórico paginado.
+  Future<NotificacoesPagina> buscar({
+    required String status,
+    required int pagina,
+    int limite = 10,
+  }) async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) return NotificacoesPagina.vazia;
+
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/notificacoes').replace(
+      queryParameters: {
+        'status': status,
+        'pagina': '$pagina',
+        'limite': '$limite',
+      },
+    );
+    final http.Response resp =
+        await http.get(url, headers: _headers(token)).timeout(const Duration(seconds: 15));
+    if (resp.statusCode != 200) {
+      throw Exception('Não foi possível carregar as notificações.');
     }
-    notifyListeners();
+
+    final Map<String, dynamic> decoded = jsonDecode(resp.body) as Map<String, dynamic>;
+    final List<dynamic> dados = decoded['dados'] as List<dynamic>? ?? <dynamic>[];
+    final Map<String, dynamic> paginacao =
+        decoded['paginacao'] as Map<String, dynamic>? ?? <String, dynamic>{};
+
+    return NotificacoesPagina(
+      itens: dados
+          .map((dynamic e) => NotificacaoItem.fromJson(Map<String, dynamic>.from(e as Map)))
+          .toList(),
+      total: paginacao['total'] is int
+          ? paginacao['total'] as int
+          : int.tryParse('${paginacao['total']}') ?? 0,
+      totalPaginas: paginacao['total_paginas'] is int
+          ? paginacao['total_paginas'] as int
+          : int.tryParse('${paginacao['total_paginas']}') ?? 0,
+    );
   }
 
-  void limparNotificacao(String id) {
-    _notificacoes.removeWhere((n) => n.id == id);
-    notifyListeners();
+  /// PATCH /notificacoes/:id/lida
+  Future<void> marcarComoLida(String id) async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) return;
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/notificacoes/$id/lida');
+    await http.patch(url, headers: _headers(token)).timeout(const Duration(seconds: 10));
+    unawaited(atualizarContagem());
+  }
+
+  /// PATCH /notificacoes/lidas
+  Future<void> marcarTodasComoLidas() async {
+    final String? token = _token;
+    if (token == null || token.isEmpty) return;
+    final Uri url = Uri.parse('${ApiConfig.baseUrl}/notificacoes/lidas');
+    await http.patch(url, headers: _headers(token)).timeout(const Duration(seconds: 10));
+    unawaited(atualizarContagem());
   }
 }

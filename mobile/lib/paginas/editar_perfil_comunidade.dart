@@ -10,7 +10,6 @@ import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../utils/formatadores.dart';
-import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
@@ -49,8 +48,6 @@ class _EditarPerfilComunidadePageState
   String? _erroSalvar;
 
   String? _fotoPerfilUrl;
-  MapLocation? _localizacaoSelecionada;
-  bool _localizacaoAlterada = false;
   List<Map<String, dynamic>> _midias = [];
   final FocusNode _cepFocusNode = FocusNode();
 
@@ -150,11 +147,6 @@ class _EditarPerfilComunidadePageState
         _estadoController.text = decoded['estado']?.toString() ?? '';
         final String fotoPerfil = decoded['foto_perfil_url']?.toString() ?? '';
         _fotoPerfilUrl = fotoPerfil.isNotEmpty ? fotoPerfil : null;
-        final double? lat = double.tryParse('${decoded['latitude'] ?? ''}');
-        final double? lng = double.tryParse('${decoded['longitude'] ?? ''}');
-        _localizacaoSelecionada =
-            (lat != null && lng != null) ? MapLocation(latitude: lat, longitude: lng) : null;
-        _localizacaoAlterada = false;
         _midias = midiasRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _loading = false;
       });
@@ -216,10 +208,6 @@ class _EditarPerfilComunidadePageState
         'cidade': _cidadeController.text.trim(),
         'estado': _estadoController.text.trim(),
       };
-      if (_localizacaoAlterada && _localizacaoSelecionada != null) {
-        corpo['latitude'] = _localizacaoSelecionada!.latitude;
-        corpo['longitude'] = _localizacaoSelecionada!.longitude;
-      }
 
       final http.Response resp = await http
           .put(
@@ -642,6 +630,8 @@ class _EditarPerfilComunidadePageState
                           label: 'WhatsApp de Contato',
                           controller: _whatsappController,
                           keyboardType: TextInputType.phone,
+                          inputFormatters: const [TelefoneTextInputFormatter()],
+                          maxLength: 15,
                           validator: _validarWhatsapp,
                           hint: 'Utilizado para direcionar mensagens dos clientes/contratantes.',
                         ),
@@ -669,43 +659,27 @@ class _EditarPerfilComunidadePageState
                         const SizedBox(height: 12),
                         _CampoTexto(label: 'Endereço Completo', controller: _enderecoController),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              flex: 2,
-                              child: _CampoTexto(label: 'Cidade', controller: _cidadeController),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _CampoTexto(
-                                label: 'Estado (UF)',
-                                controller: _estadoController,
-                                maxLength: 2,
-                                validator: _validarEstado,
+                        _CampoTexto(label: 'Cidade', controller: _cidadeController),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'Estado (UF)',
+                          controller: _estadoController,
+                          maxLength: 2,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp('[a-zA-Z]')),
+                            TextInputFormatter.withFunction(
+                              (oldValue, newValue) => newValue.copyWith(
+                                text: newValue.text.toUpperCase(),
                               ),
                             ),
                           ],
+                          validator: _validarEstado,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 4),
                         Text(
-                          'Toque no mapa para marcar o ponto exato da comunidade. Se você não '
-                          'marcar manualmente, a localização é calculada automaticamente a '
-                          'partir do endereço informado ao salvar.',
+                          'A localização no mapa é calculada automaticamente a partir do '
+                          'endereço informado ao salvar.',
                           style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12, height: 1.4),
-                        ),
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: MapLocationPicker(
-                            height: 180,
-                            selectedLocation: _localizacaoSelecionada,
-                            onLocationChanged: (MapLocation location) {
-                              setState(() {
-                                _localizacaoSelecionada = location;
-                                _localizacaoAlterada = true;
-                              });
-                            },
-                          ),
                         ),
                         const SizedBox(height: 12),
                         _CampoTexto(
@@ -951,10 +925,12 @@ class _AvatarUpload extends StatelessWidget {
   Widget build(BuildContext context) {
     final String url = ApiConfig.resolveMediaUrl(fotoUrl);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Container(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: enviando ? null : onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
           width: 150,
           height: 92,
           decoration: BoxDecoration(
@@ -972,29 +948,33 @@ class _AvatarUpload extends StatelessWidget {
                   ),
                 )
               : (url.isNotEmpty
-                  ? Image.network(
-                      url,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) =>
-                          const Icon(Icons.apartment, color: BaileSulColors.accent, size: 30),
+                  ? Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.add, color: BaileSulColors.accent, size: 34),
+                        ),
+                        Positioned(
+                          right: 6,
+                          bottom: 6,
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: const BoxDecoration(
+                              color: BaileSulColors.accent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.add, color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ],
                     )
-                  : const Icon(Icons.apartment, color: BaileSulColors.accent, size: 30)),
+                  : const Icon(Icons.add, color: BaileSulColors.accent, size: 34)),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: enviando ? null : onTap,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: BaileSulColors.headerText,
-              side: const BorderSide(color: BaileSulColors.cardBorder),
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            icon: const Icon(Icons.upload_outlined, size: 16),
-            label: Text(enviando ? 'Enviando foto...' : 'Alterar Foto'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

@@ -9,6 +9,19 @@ import '../widgets/mobile_header.dart';
 import 'home.dart';
 
 
+/// Rótulos em PT-BR para cada `tipo_evento` aceito pela API — mesma lista
+/// usada em `criar_editar_evento.dart` (_tipoEventoLabels), não inventar
+/// novos tipos aqui.
+const Map<String, String> _tipoEventoLabels = <String, String>{
+  'musical': 'Musical',
+  'almoco': 'Almoço',
+  'bingo': 'Bingo',
+  'expos': 'Expos',
+  'futebol': 'Futebol',
+};
+
+String _formatTipoEvento(String tipo) => _tipoEventoLabels[tipo] ?? tipo;
+
 /// Rota: `/pesquisa-eventos`
 
 class PesquisaPadraoEventos extends StatefulWidget {
@@ -25,6 +38,32 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   List<EventoApi> _eventosFiltrados = <EventoApi>[];
   bool _carregando = true;
   String? _erro;
+  String _cidadeSelecionada = '';
+  String _estiloSelecionado = '';
+  String _sortBy = 'recent';
+
+  List<String> get _cidadesDisponiveis {
+    final Set<String> cidades = _todosEventos
+        .map((EventoApi e) => e.comunidadeCidade)
+        .where((String c) => c.isNotEmpty)
+        .toSet();
+    final List<String> lista = cidades.toList()..sort();
+    return lista;
+  }
+
+  List<String> get _estilosDisponiveis {
+    final Set<String> estilos = _todosEventos
+        .map((EventoApi e) => e.tipoEvento)
+        .where((String s) => s.isNotEmpty)
+        .toSet();
+    final List<String> lista = estilos.toList()..sort();
+    return lista;
+  }
+
+  bool get _temFiltrosAtivos =>
+      _buscaController.text.trim().isNotEmpty ||
+      _cidadeSelecionada.isNotEmpty ||
+      _estiloSelecionado.isNotEmpty;
 
   @override
   void initState() {
@@ -61,7 +100,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
         if (!mounted) return;
         setState(() {
           _todosEventos = eventos;
-          _eventosFiltrados = List<EventoApi>.from(eventos);
+          _aplicarFiltros();
           _carregando = false;
         });
       } else {
@@ -88,22 +127,66 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
     return <dynamic>[];
   }
 
-  void _filtrarEventos(String termo) {
-    final String query = termo.trim().toLowerCase();
+  void _aplicarFiltros() {
+    final String query = _buscaController.text.trim().toLowerCase();
+    Iterable<EventoApi> out = _todosEventos;
+    if (query.isNotEmpty) {
+      out = out.where(
+        (EventoApi e) =>
+            e.titulo.toLowerCase().contains(query) ||
+            e.localNome.toLowerCase().contains(query) ||
+            e.comunidadeNome.toLowerCase().contains(query) ||
+            e.comunidadeCidade.toLowerCase().contains(query),
+      );
+    }
+    if (_cidadeSelecionada.isNotEmpty) {
+      out = out.where((EventoApi e) => e.comunidadeCidade == _cidadeSelecionada);
+    }
+    if (_estiloSelecionado.isNotEmpty) {
+      out = out.where((EventoApi e) => e.tipoEvento == _estiloSelecionado);
+    }
+
+    final List<EventoApi> resultado = out.toList();
+    int? dataOrdenavel(EventoApi e) => DateTime.tryParse(e.dataInicio)?.millisecondsSinceEpoch;
+    if (_sortBy == 'recent') {
+      resultado.sort((a, b) => (dataOrdenavel(b) ?? 0).compareTo(dataOrdenavel(a) ?? 0));
+    } else if (_sortBy == 'oldest') {
+      resultado.sort((a, b) => (dataOrdenavel(a) ?? 0).compareTo(dataOrdenavel(b) ?? 0));
+    }
+    _eventosFiltrados = resultado;
+  }
+
+  void _onBuscaChanged(String texto) {
+    setState(_aplicarFiltros);
+  }
+
+  void _onCidadeChanged(String? cidade) {
     setState(() {
-      if (query.isEmpty) {
-        _eventosFiltrados = List<EventoApi>.from(_todosEventos);
-      } else {
-        _eventosFiltrados = _todosEventos
-            .where(
-              (EventoApi e) =>
-                  e.titulo.toLowerCase().contains(query) ||
-                  e.localNome.toLowerCase().contains(query) ||
-                  e.comunidadeNome.toLowerCase().contains(query) ||
-                  e.comunidadeCidade.toLowerCase().contains(query),
-            )
-            .toList();
-      }
+      _cidadeSelecionada = cidade ?? '';
+      _aplicarFiltros();
+    });
+  }
+
+  void _onEstiloChanged(String? estilo) {
+    setState(() {
+      _estiloSelecionado = estilo ?? '';
+      _aplicarFiltros();
+    });
+  }
+
+  void _onSortByChanged(String? sortBy) {
+    setState(() {
+      _sortBy = sortBy ?? 'recent';
+      _aplicarFiltros();
+    });
+  }
+
+  void _limparFiltros() {
+    _buscaController.clear();
+    setState(() {
+      _cidadeSelecionada = '';
+      _estiloSelecionado = '';
+      _aplicarFiltros();
     });
   }
 
@@ -143,39 +226,125 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                           Expanded(
                             child: Container(
                               color: BaileSulColors.pageBackground,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Eventos',
-                                    style: TextStyle(
-                                      color: BaileSulColors.headerText,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: -0.5,
-                                      height: 1.1,
+                                  // Hero escuro — espelha .listing-hero de
+                                  // listings.module.css (eventos.jsx): título
+                                  // e subtítulo iguais aos do site.
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+                                    decoration: const BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topRight,
+                                        end: Alignment.bottomLeft,
+                                        colors: [Color(0xFF0D2535), BaileSulColors.dark],
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Todos os eventos disponíveis',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1.15,
+                                            letterSpacing: -0.3,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Text(
+                                          'Veja os eventos cadastrados e encontre os melhores da sua região.',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.75),
+                                            fontSize: 14,
+                                            height: 1.4,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Encontre os melhores bailes da região',
-                                    style: TextStyle(
-                                      color: BaileSulColors.mutedText.withValues(alpha: 0.8),
-                                      fontSize: 14,
-                                      height: 1.4,
+                                  Padding(
+                                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            const Expanded(
+                                              child: Text(
+                                                'Eventos Cadastrados',
+                                                style: TextStyle(
+                                                  color: BaileSulColors.headerText,
+                                                  fontSize: 19,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: -0.3,
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                              decoration: BoxDecoration(
+                                                color: BaileSulColors.accent.withValues(alpha: 0.08),
+                                                borderRadius: BorderRadius.circular(20),
+                                              ),
+                                              child: Text(
+                                                '${_eventosFiltrados.length} evento${_eventosFiltrados.length == 1 ? '' : 's'}',
+                                                style: const TextStyle(
+                                                  color: BaileSulColors.accent,
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        _CampoBusca(
+                                          controller: _buscaController,
+                                          onChanged: _onBuscaChanged,
+                                          onClear: () {
+                                            _buscaController.clear();
+                                            setState(_aplicarFiltros);
+                                          },
+                                        ),
+                                        if (_cidadesDisponiveis.isNotEmpty) ...[
+                                          const SizedBox(height: 10),
+                                          _FiltroDropdown(
+                                            value: _cidadeSelecionada,
+                                            hint: 'Todas as cidades',
+                                            items: _cidadesDisponiveis,
+                                            onChanged: _onCidadeChanged,
+                                          ),
+                                        ],
+                                        if (_estilosDisponiveis.isNotEmpty) ...[
+                                          const SizedBox(height: 10),
+                                          _FiltroDropdown(
+                                            value: _estiloSelecionado,
+                                            hint: 'Todos os tipos',
+                                            items: _estilosDisponiveis,
+                                            labelBuilder: _formatTipoEvento,
+                                            onChanged: _onEstiloChanged,
+                                          ),
+                                        ],
+                                        const SizedBox(height: 10),
+                                        _FiltroDropdown(
+                                          value: _sortBy,
+                                          hint: 'Mais recente',
+                                          allowClear: false,
+                                          items: const <String>['recent', 'oldest'],
+                                          labelBuilder: (String v) =>
+                                              v == 'oldest' ? 'Mais antigo' : 'Mais recente',
+                                          onChanged: _onSortByChanged,
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 18),
-                                  _CampoBusca(
-                                    controller: _buscaController,
-                                    onChanged: _filtrarEventos,
-                                    onClear: () {
-                                      _buscaController.clear();
-                                      _filtrarEventos('');
-                                    },
-                                  ),
-                                  const SizedBox(height: 20),
                                   if (_carregando)
                                     const Padding(
                                       padding: EdgeInsets.symmetric(vertical: 60),
@@ -187,7 +356,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                                     )
                                   else if (_erro != null)
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 24),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                       child: _EstadoVazio(
                                         icone: Icons.error_outline_rounded,
                                         titulo: 'Ops!',
@@ -198,20 +367,17 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                                     )
                                   else if (_eventosFiltrados.isEmpty)
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 24),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                       child: _EstadoVazio(
                                         icone: Icons.event_busy_rounded,
                                         titulo: 'Nenhum evento encontrado',
-                                        subtitulo: _buscaController.text.trim().isNotEmpty
-                                            ? 'Tente outro termo de busca.'
+                                        subtitulo: _temFiltrosAtivos
+                                            ? 'Tente ajustar seus filtros ou busque por outro termo.'
                                             : 'Ainda não há eventos cadastrados na plataforma.',
-                                        labelBotao: _buscaController.text.trim().isNotEmpty
-                                            ? 'Limpar busca'
-                                            : 'Atualizar',
+                                        labelBotao: _temFiltrosAtivos ? 'Limpar filtros' : 'Atualizar',
                                         onBotao: () {
-                                          if (_buscaController.text.trim().isNotEmpty) {
-                                            _buscaController.clear();
-                                            _filtrarEventos('');
+                                          if (_temFiltrosAtivos) {
+                                            _limparFiltros();
                                           } else {
                                             _carregarEventos();
                                           }
@@ -219,14 +385,18 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                                       ),
                                     )
                                   else
-                                    Column(
-                                      children: _eventosFiltrados.map((evento) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(bottom: 18),
-                                          child: _EventoCard(evento: evento),
-                                        );
-                                      }).toList(),
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                                      child: Column(
+                                        children: _eventosFiltrados.map((evento) {
+                                          return Padding(
+                                            padding: const EdgeInsets.only(bottom: 18),
+                                            child: _EventoCard(evento: evento),
+                                          );
+                                        }).toList(),
+                                      ),
                                     ),
+                                  const SizedBox(height: 12),
                                 ],
                               ),
                             ),
@@ -282,7 +452,7 @@ class _CampoBusca extends StatelessWidget {
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
-              hintText: 'Buscar eventos por nome, local ou comunidade',
+              hintText: 'Buscar evento...',
               hintStyle: TextStyle(
                 color: BaileSulColors.mutedText.withValues(alpha: 0.6),
                 fontSize: 14,
@@ -311,6 +481,62 @@ class _CampoBusca extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+/// Dropdown branco arredondado reutilizado pelos filtros de cidade, estilo
+/// e ordenação — mesmo estilo visual usado em pesquisa_padrao_bandas.dart e
+/// pesquisa_padrao_comunidade.dart (não usar dropdown preenchido em azul).
+class _FiltroDropdown extends StatelessWidget {
+  const _FiltroDropdown({
+    required this.value,
+    required this.hint,
+    required this.items,
+    required this.onChanged,
+    this.labelBuilder,
+    this.allowClear = true,
+  });
+
+  final String value;
+  final String hint;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+  final String Function(String value)? labelBuilder;
+  final bool allowClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: BaileSulColors.cardBorder),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          isExpanded: true,
+          value: value.isEmpty ? (allowClear ? null : items.first) : value,
+          hint: Text(
+            hint,
+            style: TextStyle(color: BaileSulColors.mutedText, fontSize: 14),
+          ),
+          icon: const Icon(Icons.expand_more_rounded, color: BaileSulColors.mutedText),
+          style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+          items: <DropdownMenuItem<String>>[
+            if (allowClear)
+              DropdownMenuItem<String>(value: '', child: Text(hint)),
+            ...items.map(
+              (String v) => DropdownMenuItem<String>(
+                value: v,
+                child: Text(labelBuilder != null ? labelBuilder!(v) : v),
+              ),
+            ),
+          ],
+          onChanged: (String? v) => onChanged(v == '' ? null : v),
+        ),
+      ),
     );
   }
 }
@@ -398,6 +624,23 @@ class _EventoCard extends StatelessWidget {
 
   final EventoApi evento;
 
+  static const List<String> _mesesAbreviados = <String>[
+    'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+    'jul', 'ago', 'set', 'out', 'nov', 'dez',
+  ];
+
+  String? get _dia {
+    final DateTime? inicio = DateTime.tryParse(evento.dataInicio);
+    if (inicio == null) return null;
+    return inicio.day.toString().padLeft(2, '0');
+  }
+
+  String? get _mes {
+    final DateTime? inicio = DateTime.tryParse(evento.dataInicio);
+    if (inicio == null) return null;
+    return _mesesAbreviados[inicio.month - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
@@ -446,28 +689,14 @@ class _EventoCard extends StatelessWidget {
                       )
                     else
                       _placeholderImagem(),
-                    // Gradiente sobre a imagem
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.05),
-                            Colors.black.withValues(alpha: 0.55),
-                          ],
-                        ),
+                    // Selo de dia/mês (topo esquerda), espelhando
+                    // .eventCardDateBadge de shared.module.css.
+                    if (_dia != null)
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: _SeloData(dia: _dia!, mes: _mes!),
                       ),
-                    ),
-                    // Badge da comunidade (topo esquerda)
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: _BadgeEvento(
-                        label: evento.comunidadeNome,
-                        filled: true,
-                      ),
-                    ),
                     // Preço (canto inferior direito)
                     Positioned(
                       bottom: 12,
@@ -486,6 +715,17 @@ class _EventoCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (evento.comunidadeNome.isNotEmpty)
+                      Text(
+                        evento.comunidadeNome.toUpperCase(),
+                        style: const TextStyle(
+                          color: BaileSulColors.accent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.9,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
                     Text(
                       evento.titulo,
                       maxLines: 2,
@@ -497,15 +737,10 @@ class _EventoCard extends StatelessWidget {
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _MetaRow(
                       icon: Icons.location_on_rounded,
                       text: evento.localComCidadeEstado,
-                    ),
-                    const SizedBox(height: 6),
-                    _MetaRow(
-                      icon: Icons.calendar_month_rounded,
-                      text: evento.dataFormatada,
                     ),
                   ],
                 ),
@@ -531,6 +766,58 @@ class _EventoCard extends StatelessWidget {
         Icons.music_note_rounded,
         size: 52,
         color: Colors.white.withValues(alpha: 0.5),
+      ),
+    );
+  }
+}
+
+/// Selo de dia/mês sobre a imagem do card (mesmo design do home.dart).
+class _SeloData extends StatelessWidget {
+  const _SeloData({required this.dia, required this.mes});
+
+  final String dia;
+  final String mes;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BaileSulColors.accent,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: BaileSulColors.accent.withValues(alpha: 0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              dia,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+              ),
+            ),
+            Text(
+              mes.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+                height: 1.1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -655,6 +942,7 @@ class EventoApi {
     required this.comunidadeNome,
     required this.comunidadeCidade,
     required this.comunidadeEstado,
+    required this.tipoEvento,
   });
 
   factory EventoApi.fromJson(Map<String, dynamic> json) {
@@ -674,6 +962,7 @@ class EventoApi {
           json['comunidade_nome']?.toString() ?? json['comunidade']?.toString() ?? 'Comunidade',
       comunidadeCidade: json['comunidade_cidade']?.toString() ?? json['cidade']?.toString() ?? '',
       comunidadeEstado: json['comunidade_estado']?.toString() ?? json['estado']?.toString() ?? '',
+      tipoEvento: json['tipo_evento']?.toString() ?? '',
     );
   }
 
@@ -691,6 +980,7 @@ class EventoApi {
   final String comunidadeNome;
   final String comunidadeCidade;
   final String comunidadeEstado;
+  final String tipoEvento;
 
   /// Formata a data para exibição amigável (ex: "14 Jun · 22h").
   String get dataFormatada {

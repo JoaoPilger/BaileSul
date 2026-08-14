@@ -7,9 +7,11 @@ import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
+import 'home.dart';
 
+/// Rota: `/calendario` — espelha frontend/src/paginas/calendario/calendario.jsx.
 class CalendarioPage extends StatefulWidget {
-  const CalendarioPage({Key? key}) : super(key: key);
+  const CalendarioPage({super.key});
 
   @override
   State<CalendarioPage> createState() => _CalendarioPageState();
@@ -23,11 +25,7 @@ class _CalendarioPageState extends State<CalendarioPage> {
   bool _loadingEvents = false;
   String? _eventsError;
 
-  final _tituloCtrl = TextEditingController();
-  final _localCtrl = TextEditingController();
-  final _descricaoCtrl = TextEditingController();
-
-  static const _monthNames = [
+  static const List<String> _monthNames = [
     'Janeiro',
     'Fevereiro',
     'Março',
@@ -39,21 +37,23 @@ class _CalendarioPageState extends State<CalendarioPage> {
     'Setembro',
     'Outubro',
     'Novembro',
-    'Dezembro'
+    'Dezembro',
+  ];
+
+  static const List<String> _weekdayLabels = [
+    'DOM',
+    'SEG',
+    'TER',
+    'QUA',
+    'QUI',
+    'SEX',
+    'SÁB',
   ];
 
   @override
   void initState() {
     super.initState();
     _carregarEventos();
-  }
-
-  @override
-  void dispose() {
-    _tituloCtrl.dispose();
-    _localCtrl.dispose();
-    _descricaoCtrl.dispose();
-    super.dispose();
   }
 
   void _prevMonth() {
@@ -68,11 +68,10 @@ class _CalendarioPageState extends State<CalendarioPage> {
     });
   }
 
-  Future<void> _selecionarData(DateTime data) async {
+  void _selecionarData(DateTime data) {
     setState(() {
       _selectedDate = data;
       _selectedEvents = _eventosDaData(data);
-      _eventsError = null;
     });
   }
 
@@ -148,9 +147,21 @@ class _CalendarioPageState extends State<CalendarioPage> {
     );
   }
 
-  List<Widget> _buildDayHeaders() {
-    const labels = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-    return labels.map((l) => Center(child: Text(l, style: const TextStyle(fontSize: 12)))).toList();
+  void _abrirEvento(_CalendarEvent event) {
+    Navigator.pushNamed(
+      context,
+      '/evento',
+      arguments: EventItem(
+        id: event.id,
+        title: event.title,
+        genre: event.genre,
+        location: event.location,
+        dateTime: event.dateLabel,
+        price: event.price,
+        imageUrl: event.imageUrl,
+        organizer: event.organization,
+      ),
+    );
   }
 
   List<DateTime?> _computeCalendarDays(DateTime month) {
@@ -174,180 +185,186 @@ class _CalendarioPageState extends State<CalendarioPage> {
   Widget _buildCalendarCard() {
     final days = _computeCalendarDays(_visibleMonth);
     final monthLabel = '${_monthNames[_visibleMonth.month - 1]} de ${_visibleMonth.year}';
-    final accent = const Color(0xFF0F5166);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 18, offset: const Offset(0, 6))],
-      ),
-      padding: const EdgeInsets.all(24),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      monthLabel,
-                      style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                      overflow: TextOverflow.ellipsis,
+    return _Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    monthLabel,
+                    style: const TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.3,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Row(children: [IconButton(onPressed: _prevMonth, icon: const Icon(Icons.chevron_left)), IconButton(onPressed: _nextMonth, icon: const Icon(Icons.chevron_right))])
-                ],
-              ),
-              const SizedBox(height: 18),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 7,
-                childAspectRatio: 3,
-                children: _buildDayHeaders()
-                    .map((w) => Center(child: DefaultTextStyle(style: TextStyle(color: Colors.grey.shade600, fontSize: 12), child: w)))
-                    .toList(),
-              ),
-              const SizedBox(height: 12),
-              GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: days.length,
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, childAspectRatio: 1.6),
-                itemBuilder: (context, index) {
-                  final d = days[index];
-                  if (d == null) return const SizedBox.shrink();
-                  final isToday = DateTime.now().year == d.year && DateTime.now().month == d.month && DateTime.now().day == d.day;
-                  final isSelected = d.year == _selectedDate.year && d.month == _selectedDate.month && d.day == _selectedDate.day;
-
-                  return GestureDetector(
-                    onTap: () => _selecionarData(d),
-                    child: Container(
-                      margin: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
-                        border: isSelected ? null : Border.all(color: Colors.grey.shade200, width: 1),
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 1,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          clipBehavior: Clip.none,
-                          children: [
-                            if (isSelected)
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: accent,
-                                    borderRadius: BorderRadius.circular(5),
-                                    boxShadow: [BoxShadow(color: accent.withOpacity(0.2), blurRadius: 12, offset: const Offset(0, 6))],
-                                  ),
-                                ),
-                              ),
-                            Positioned.fill(
-                              child: Center(
-                                child: Text(
-                                  '${d.day}',
-                                  style: TextStyle(
-                                    color: isSelected ? Colors.white : (isToday ? accent : Colors.black87),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (_temEventoNaData(d))
-                              Positioned(
-                                top: -10,
-                                left: 0,
-                                right: 0,
-                                child: Center(
-                                  child: Container(
-                                    width: 4,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: accent,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 2)],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+                ),
+                _NavButton(icon: Icons.chevron_left_rounded, onPressed: _prevMonth),
+                const SizedBox(width: 8),
+                _NavButton(icon: Icons.chevron_right_rounded, onPressed: _nextMonth),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: _weekdayLabels
+                  .map(
+                    (w) => Expanded(
+                      child: Center(
+                        child: Text(
+                          w,
+                          style: TextStyle(
+                            color: BaileSulColors.mutedText.withValues(alpha: 0.75),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.6,
+                          ),
                         ),
                       ),
                     ),
-                  );
-                },
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 6),
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: days.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 7,
+                childAspectRatio: 0.95,
               ),
-            ],
-          ),
-        ],
+              itemBuilder: (context, index) {
+                final d = days[index];
+                if (d == null) return const SizedBox.shrink();
+                final now = DateTime.now();
+                final isToday = now.year == d.year && now.month == d.month && now.day == d.day;
+                final isSelected = _mesmaData(d, _selectedDate);
+                final hasEvent = _temEventoNaData(d);
+
+                return _CalendarCell(
+                  day: d.day,
+                  isToday: isToday,
+                  isSelected: isSelected,
+                  hasEvent: hasEvent,
+                  onTap: () => _selecionarData(d),
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildEventsCard() {
-    final formatted = '${_selectedDate.day} de ${_monthNames[_selectedDate.month - 1]} de ${_selectedDate.year}';
-    final accent = const Color(0xFF0F5166);
+  Widget _buildAgendaCard() {
+    final selectedDate = _selectedDate;
+    final weekday = _weekdayFullName(selectedDate.weekday);
+    final dateLabel =
+        '$weekday, ${selectedDate.day} de ${_monthNames[selectedDate.month - 1]} de ${selectedDate.year}';
+    final bool podeCriarEvento = SessaoUsuario.instance.podeCriarEvento || !SessaoUsuario.instance.autenticado;
 
-    return Container(
-      width: 340,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 14, offset: const Offset(0, 6))]),
+    return _Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 12),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('AGENDA', style: TextStyle(color: accent, fontSize: 12, fontWeight: FontWeight.w700)), const SizedBox(height: 6), Text(formatted, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700))]),
-                const SizedBox.shrink()
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'AGENDA',
+                        style: TextStyle(
+                          color: BaileSulColors.accentLight,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        dateLabel,
+                        style: const TextStyle(
+                          color: BaileSulColors.headerText,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (podeCriarEvento) ...[
+                  const SizedBox(width: 10),
+                  _CriarEventoButton(
+                    onPressed: () => Navigator.pushNamed(context, '/criar-evento'),
+                  ),
+                ],
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: BaileSulColors.cardBorder),
           if (_loadingEvents)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 36.0, horizontal: 18),
-              child: Center(child: CircularProgressIndicator()),
+              padding: EdgeInsets.symmetric(vertical: 48),
+              child: Center(child: CircularProgressIndicator(color: BaileSulColors.accent)),
             )
           else if (_eventsError != null)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 36.0, horizontal: 18),
+              padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
               child: Column(
                 children: [
-                  Icon(Icons.cloud_off_rounded, size: 44, color: Colors.blueGrey.shade200),
+                  Icon(Icons.cloud_off_rounded, size: 40, color: BaileSulColors.mutedText.withValues(alpha: 0.5)),
                   const SizedBox(height: 12),
-                  Text(_eventsError!, style: const TextStyle(fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                  Text(
+                    _eventsError!,
+                    style: const TextStyle(color: BaileSulColors.mutedText, fontWeight: FontWeight.w600),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
               ),
             )
           else if (_selectedEvents.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 36.0, horizontal: 18),
+              padding: const EdgeInsets.symmetric(vertical: 44, horizontal: 20),
               child: Column(
                 children: [
-                  Icon(Icons.event_note_outlined, size: 44, color: Colors.blueGrey.shade200),
+                  Icon(Icons.event_note_outlined, size: 38, color: BaileSulColors.accentLight.withValues(alpha: 0.45)),
                   const SizedBox(height: 12),
-                  const Text('Nenhum evento nesta data', style: TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text('Selecione outro dia no calendário', style: TextStyle(color: Colors.grey.shade500)),
+                  const Text(
+                    'Nenhum evento nesta data',
+                    style: TextStyle(color: BaileSulColors.headerText, fontWeight: FontWeight.w700, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Selecione outro dia no calendário',
+                    style: TextStyle(color: BaileSulColors.mutedText.withValues(alpha: 0.8), fontSize: 12.5),
+                  ),
                 ],
               ),
             )
           else
             Padding(
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(14),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (int index = 0; index < _selectedEvents.length; index++) ...[
-                    _CalendarEventCard(event: _selectedEvents[index]),
-                    if (index < _selectedEvents.length - 1) const SizedBox(height: 14),
+                  for (int i = 0; i < _selectedEvents.length; i++) ...[
+                    _CalendarEventCard(
+                      event: _selectedEvents[i],
+                      onTap: () => _abrirEvento(_selectedEvents[i]),
+                    ),
+                    if (i < _selectedEvents.length - 1) const SizedBox(height: 10),
                   ],
                 ],
               ),
@@ -357,46 +374,367 @@ class _CalendarioPageState extends State<CalendarioPage> {
     );
   }
 
+  String _weekdayFullName(int weekday) {
+    const names = [
+      'segunda-feira',
+      'terça-feira',
+      'quarta-feira',
+      'quinta-feira',
+      'sexta-feira',
+      'sábado',
+      'domingo',
+    ];
+    return names[weekday - 1];
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade200,
-      body: Column(
-        children: [
-          MobileHeader(onMenuPressed: _showMenu),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1200),
+    return ListenableBuilder(
+      listenable: SessaoUsuario.instance,
+      builder: (BuildContext context, Widget? child) {
+        return Scaffold(
+          backgroundColor: BaileSulColors.pageBackground,
+          body: Column(
+            children: [
+              MobileHeader(onMenuPressed: _showMenu),
+              Expanded(
+                child: Container(
+                  color: BaileSulColors.pageBackground,
                   child: LayoutBuilder(
                     builder: (context, constraints) {
-                      final isWide = constraints.maxWidth > 1000;
-                      return isWide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(child: _buildCalendarCard()),
-                                const SizedBox(width: 24),
-                                _buildEventsCard(),
-                              ],
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                _buildCalendarCard(),
-                                const SizedBox(height: 12),
-                                _buildEventsCard(),
-                              ],
-                            );
+                      return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight - 32,
+                          ),
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 1200),
+                              child: LayoutBuilder(
+                                builder: (context, innerConstraints) {
+                                  final isWide = innerConstraints.maxWidth > 900;
+                                  return isWide
+                                      ? Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(flex: 6, child: _buildCalendarCard()),
+                                            const SizedBox(width: 20),
+                                            Expanded(flex: 4, child: _buildAgendaCard()),
+                                          ],
+                                        )
+                                      : Column(
+                                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                                          children: [
+                                            _buildCalendarCard(),
+                                            const SizedBox(height: 16),
+                                            _buildAgendaCard(),
+                                          ],
+                                        );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
                     },
                   ),
                 ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Cartão branco padrão, espelhando `.cal-card` / `.cal-aside`.
+class _Card extends StatelessWidget {
+  const _Card({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: BaileSulColors.cardBorder),
+        boxShadow: BaileSulColors.cardShadow,
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: child,
+    );
+  }
+}
+
+/// Botão de navegação de mês, espelhando `.cal-nav-btn`.
+class _NavButton extends StatelessWidget {
+  const _NavButton({required this.icon, required this.onPressed});
+
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onPressed,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(9),
+            border: Border.all(color: BaileSulColors.cardBorder),
+          ),
+          child: Icon(icon, size: 19, color: BaileSulColors.mutedText),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botão "Criar evento", espelhando `.cal-btn-add`.
+class _CriarEventoButton extends StatelessWidget {
+  const _CriarEventoButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: BaileSulColors.accent,
+      borderRadius: BorderRadius.circular(9),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(9),
+        onTap: onPressed,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.add_rounded, size: 16, color: Colors.white),
+              SizedBox(width: 4),
+              Text(
+                'Criar evento',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Célula de dia do calendário, espelhando `.cal-cell`.
+class _CalendarCell extends StatelessWidget {
+  const _CalendarCell({
+    required this.day,
+    required this.isToday,
+    required this.isSelected,
+    required this.hasEvent,
+    required this.onTap,
+  });
+
+  final int day;
+  final bool isToday;
+  final bool isSelected;
+  final bool hasEvent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color textColor = isSelected
+        ? Colors.white
+        : (isToday ? BaileSulColors.accent : BaileSulColors.headerText);
+
+    return Padding(
+      padding: const EdgeInsets.all(2),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: onTap,
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              color: isSelected
+                  ? BaileSulColors.accent
+                  : (isToday ? BaileSulColors.accent.withValues(alpha: 0.1) : Colors.transparent),
+              border: isToday && !isSelected
+                  ? Border.all(color: BaileSulColors.accent.withValues(alpha: 0.35))
+                  : null,
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: BaileSulColors.accent.withValues(alpha: 0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            alignment: Alignment.center,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '$day',
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 13.5,
+                    fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+                if (hasEvent) ...[
+                  const SizedBox(height: 2),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isSelected ? Colors.white.withValues(alpha: 0.7) : BaileSulColors.accent,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-        ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Card de evento na agenda do dia, espelhando `.cal-event-card`.
+class _CalendarEventCard extends StatelessWidget {
+  const _CalendarEventCard({required this.event, required this.onTap});
+
+  final _CalendarEvent event;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: BaileSulColors.pageBackground,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: BaileSulColors.cardBorder),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 88,
+                  child: Image.network(
+                    event.imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFF7C9AB1), Color(0xFF0D496B)],
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.music_note_rounded,
+                        size: 26,
+                        color: Colors.white.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (event.genre.isNotEmpty)
+                          Text(
+                            event.genre.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: BaileSulColors.accentLight,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.7,
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        Text(
+                          event.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: BaileSulColors.headerText,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_on_rounded, size: 12, color: BaileSulColors.mutedText),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      event.location,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: BaileSulColors.mutedText,
+                                        fontSize: 11.5,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              event.price,
+                              style: const TextStyle(
+                                color: BaileSulColors.accent,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -404,6 +742,7 @@ class _CalendarioPageState extends State<CalendarioPage> {
 
 class _CalendarEvent {
   const _CalendarEvent({
+    required this.id,
     required this.date,
     required this.title,
     required this.genre,
@@ -415,6 +754,7 @@ class _CalendarEvent {
     required this.dateLabel,
   });
 
+  final int id;
   final DateTime date;
   final String title;
   final String genre;
@@ -428,21 +768,22 @@ class _CalendarEvent {
   factory _CalendarEvent.fromApi(Map<String, dynamic> json) {
     final String? dataInicio = (json['data_evento'] ?? json['data_inicio'])?.toString();
     final DateTime? parsedDate = dataInicio == null || dataInicio.length < 10
-      ? null
-      : DateTime.tryParse(dataInicio.substring(0, 10));
+        ? null
+        : DateTime.tryParse(dataInicio.substring(0, 10));
     final String dateLabel = parsedDate == null
-      ? ''
-      : '${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year}';
+        ? ''
+        : '${parsedDate.day.toString().padLeft(2, '0')}/${parsedDate.month.toString().padLeft(2, '0')}/${parsedDate.year}';
 
     final String descricao = json['descricao']?.toString() ?? '';
     final String communityName = (json['comunidade'] ?? json['comunidade_nome'])?.toString() ?? 'Organização não informada';
     final String horaInicio = json['hora_inicio']?.toString() ?? '';
     final String horaFim = json['hora_fim']?.toString() ?? '';
     final String timeLabel = horaInicio.isNotEmpty
-      ? (horaFim.isNotEmpty ? '$horaInicio - $horaFim' : horaInicio)
-      : (parsedDate == null ? '' : '${parsedDate.hour.toString().padLeft(2, '0')}h');
+        ? (horaFim.isNotEmpty ? '$horaInicio - $horaFim' : horaInicio)
+        : (parsedDate == null ? '' : '${parsedDate.hour.toString().padLeft(2, '0')}h');
 
     return _CalendarEvent(
+      id: int.tryParse(json['id']?.toString() ?? '') ?? 0,
       date: parsedDate == null
           ? DateTime.now()
           : DateTime(parsedDate.year, parsedDate.month, parsedDate.day),
@@ -450,7 +791,7 @@ class _CalendarEvent {
       genre: descricao.isNotEmpty ? descricao : 'Evento',
       location: json['local_nome']?.toString() ?? 'Local não informado',
       time: timeLabel,
-      price: json['valor_ingresso']?.toString() ?? 'Consulte',
+      price: _formatarPreco(json['valor_ingresso']),
       imageUrl: json['foto_capa_url']?.toString().isNotEmpty == true
           ? json['foto_capa_url'].toString()
           : 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=900&q=80',
@@ -458,102 +799,13 @@ class _CalendarEvent {
       dateLabel: dateLabel,
     );
   }
-}
 
-class _CalendarEventCard extends StatelessWidget {
-  const _CalendarEventCard({required this.event});
-
-  final _CalendarEvent event;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color accent = const Color(0xFF0F5166);
-
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-            child: AspectRatio(
-              aspectRatio: 16 / 10,
-              child: Image.network(
-                event.imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  color: Colors.blueGrey.shade100,
-                  alignment: Alignment.center,
-                  child: Icon(
-                    Icons.music_note_rounded,
-                    size: 44,
-                    color: accent.withValues(alpha: 0.65),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  event.title,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  event.genre,
-                  style: TextStyle(
-                    color: accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.1,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _EventInfoRow(icon: Icons.calendar_month_outlined, text: event.dateLabel),
-                const SizedBox(height: 8),
-                _EventInfoRow(icon: Icons.location_on_rounded, text: event.location),
-                const SizedBox(height: 8),
-                _EventInfoRow(icon: Icons.apartment_outlined, text: event.organization),
-                const SizedBox(height: 8),
-                if (event.time.isNotEmpty)
-                  _EventInfoRow(icon: Icons.access_time_rounded, text: event.time),
-                if (event.time.isNotEmpty) const SizedBox(height: 8),
-                _EventInfoRow(icon: Icons.confirmation_number_outlined, text: event.price),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EventInfoRow extends StatelessWidget {
-  const _EventInfoRow({required this.icon, required this.text});
-
-  final IconData icon;
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: const Color(0xFF0F5166)),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
+  /// Formata o valor do ingresso (ex: "R$ 50,00" ou "Grátis"), espelhando o
+  /// mesmo padrão usado em EventoApi.valorFormatado (pesquisa_padrao_eventos.dart).
+  static String _formatarPreco(dynamic valorIngresso) {
+    if (valorIngresso == null) return 'Grátis';
+    final double? valor = double.tryParse(valorIngresso.toString());
+    if (valor == null || valor <= 0) return 'Grátis';
+    return 'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
   }
 }

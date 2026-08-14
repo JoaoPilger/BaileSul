@@ -254,32 +254,32 @@ const criar = async (req, res) => {
     return res.status(400).json({ error: 'data_fim não pode ser anterior a data_inicio' });
   }
 
-  const vendedoresRes = await pool.query(
-    `SELECT COUNT(*)::int AS total FROM vendedores WHERE comunidade_id = $1 AND ativo = true`,
-    [comunidade_id]
-  );
-  if (vendedoresRes.rows[0].total < VENDEDORES_MINIMO) {
-    return res.status(422).json({
-      error: `É preciso ter pelo menos ${VENDEDORES_MINIMO} vendedores ativos cadastrados para criar um evento.`,
-    });
-  }
-
-  const foto_capa_url = resolverFotoCapa(req) ?? null;
-
-  let latitude = null;
-  let longitude = null;
-  if (local_endereco) {
-    const cleanAddress = local_endereco.includes(';')
-      ? local_endereco.split(';').filter(p => p.trim()).join(', ')
-      : local_endereco;
-    const coords = await geocodificarEndereco(cleanAddress);
-    if (coords) {
-      latitude = coords.latitude;
-      longitude = coords.longitude;
-    }
-  }
-
   try {
+    const vendedoresRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM vendedores WHERE comunidade_id = $1 AND ativo = true`,
+      [comunidade_id]
+    );
+    if (vendedoresRes.rows[0].total < VENDEDORES_MINIMO) {
+      return res.status(422).json({
+        error: `É preciso ter pelo menos ${VENDEDORES_MINIMO} vendedores ativos cadastrados para criar um evento.`,
+      });
+    }
+
+    const foto_capa_url = resolverFotoCapa(req) ?? null;
+
+    let latitude = null;
+    let longitude = null;
+    if (local_endereco) {
+      const cleanAddress = local_endereco.includes(';')
+        ? local_endereco.split(';').filter(p => p.trim()).join(', ')
+        : local_endereco;
+      const coords = await geocodificarEndereco(cleanAddress);
+      if (coords) {
+        latitude = coords.latitude;
+        longitude = coords.longitude;
+      }
+    }
+
     // 1. Criação do evento na tabela 'eventos'
     const { rows } = await pool.query(
       `INSERT INTO eventos

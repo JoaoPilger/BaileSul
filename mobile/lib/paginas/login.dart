@@ -12,7 +12,6 @@ import '../services/auth_service.dart';
 import '../services/sessao_usuario.dart';
 import '../navigation/app_navigator.dart';
 import '../widgets/cnpj_status_badge.dart';
-import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import '../utils/formatadores.dart';
@@ -58,6 +57,16 @@ bool _senhaValida(String senha) =>
     RegExp(r'\d').hasMatch(senha);
 
 enum _RegistrationFieldMask { telefone, cpf, cnpj, cep }
+
+const List<String> _estilosBanda = <String>[
+  'Forró', 'Axé', 'Samba', 'Pagode', 'Baile Gaúcho', 'MPB',
+  'Sertanejo', 'Rock', 'Pop', 'Eletrônico', 'Gospel', 'Outro',
+];
+
+const List<String> _estadosBrasil = <String>[
+  'AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG',
+  'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO',
+];
 
 Widget _registrationErrorMessage(String? erro) {
   if (erro == null) return const SizedBox.shrink();
@@ -159,19 +168,30 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              const Center(
+                                child: _CardIconBadge(Icons.person_outline),
+                              ),
+                              const SizedBox(height: 16),
                               Text(
-                                'Login',
+                                'Bem-vindo de volta',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium
                                     ?.copyWith(
                                       color: BaileSulColors.headerText,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
-                              const SizedBox(height: 42),
-                              _LoginLabel('Email', context),
+                              const SizedBox(height: 6),
+                              Text(
+                                'Entre com suas credenciais para continuar',
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: BaileSulColors.mutedText),
+                              ),
+                              const SizedBox(height: 32),
+                              _LoginLabel('E-mail', context),
                               const SizedBox(height: 6),
                               _LoginField(
                                 controller: _emailController,
@@ -228,26 +248,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                               const SizedBox(height: 22),
-                              Text(
-                                'ou',
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: BaileSulColors.headerText,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                              ),
-                              const SizedBox(height: 16),
-                              const _SocialLoginButton(label: 'Google'),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: [
                                   Text(
-                                    'Não possui uma conta? ',
+                                    'Não tem uma conta? ',
                                     style: Theme.of(context).textTheme.bodyLarge
                                         ?.copyWith(
-                                          color: BaileSulColors.headerText,
+                                          color: BaileSulColors.mutedText,
                                         ),
                                   ),
                                   TextButton(
@@ -267,13 +276,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                       foregroundColor: BaileSulColors.accent,
                                     ),
                                     child: Text(
-                                      'Cadastro',
+                                      'Cadastre-se',
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodyLarge
                                           ?.copyWith(
                                             color: BaileSulColors.accent,
-                                            fontWeight: FontWeight.w500,
+                                            fontWeight: FontWeight.w600,
                                           ),
                                     ),
                                   ),
@@ -332,31 +341,32 @@ class CadastroScreen extends StatelessWidget {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
+                              const Center(
+                                child: _CardIconBadge(Icons.person_add_alt_1_outlined),
+                              ),
+                              const SizedBox(height: 16),
                               Text(
-                                'Cadastro',
+                                'Criar conta',
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium
                                     ?.copyWith(
                                       color: BaileSulColors.headerText,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w700,
                                     ),
                               ),
-                              const SizedBox(height: 26),
+                              const SizedBox(height: 6),
                               Text(
-                                'Tipo de conta:',
+                                'Escolha o tipo de cadastro para continuar',
                                 textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(
-                                      color: BaileSulColors.headerText,
-                                      fontWeight: FontWeight.w400,
-                                    ),
+                                style: Theme.of(context).textTheme.bodyMedium
+                                    ?.copyWith(color: BaileSulColors.mutedText),
                               ),
-                              const SizedBox(height: 18),
+                              const SizedBox(height: 28),
                               _AccountTypeButton(
+                                icon: Icons.person_outline,
                                 label: 'Pessoal',
-                                selected: true,
                                 onPressed: () {
                                   Navigator.of(context).push(
                                     MaterialPageRoute<void>(
@@ -368,6 +378,7 @@ class CadastroScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               _AccountTypeButton(
+                                icon: Icons.groups_outlined,
                                 label: 'Comunidade',
                                 onPressed: () {
                                   Navigator.of(context).push(
@@ -380,6 +391,7 @@ class CadastroScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               _AccountTypeButton(
+                                icon: Icons.music_note_outlined,
                                 label: 'Banda',
                                 onPressed: () {
                                   Navigator.of(context).push(
@@ -389,6 +401,40 @@ class CadastroScreen extends StatelessWidget {
                                     ),
                                   );
                                 },
+                              ),
+                              const SizedBox(height: 24),
+                              Wrap(
+                                alignment: WrapAlignment.center,
+                                crossAxisAlignment: WrapCrossAlignment.center,
+                                children: [
+                                  Text(
+                                    'Já tem uma conta? ',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(
+                                          color: BaileSulColors.mutedText,
+                                        ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      foregroundColor: BaileSulColors.accent,
+                                    ),
+                                    child: Text(
+                                      'Entrar',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyLarge
+                                          ?.copyWith(
+                                            color: BaileSulColors.accent,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
@@ -417,10 +463,12 @@ class PersonalRegistrationScreen extends StatefulWidget {
 class _PersonalRegistrationScreenState
     extends State<PersonalRegistrationScreen> {
   final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _sobrenomeController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _telefoneController = TextEditingController();
-  final TextEditingController _cpfController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
 
   bool _termosAceitos = false;
   bool _carregando = false;
@@ -429,10 +477,11 @@ class _PersonalRegistrationScreenState
   @override
   void dispose() {
     _nomeController.dispose();
+    _sobrenomeController.dispose();
     _emailController.dispose();
     _telefoneController.dispose();
-    _cpfController.dispose();
     _senhaController.dispose();
+    _confirmarSenhaController.dispose();
     super.dispose();
   }
 
@@ -443,21 +492,14 @@ class _PersonalRegistrationScreenState
     });
 
     final String nome = _nomeController.text.trim();
+    final String sobrenome = _sobrenomeController.text.trim();
     final String email = _emailController.text.trim();
-    final String cpf = somenteDigitos(_cpfController.text);
     final String senha = _senhaController.text;
+    final String confirmarSenha = _confirmarSenhaController.text;
 
-    if (nome.isEmpty || email.isEmpty || cpf.isEmpty || senha.isEmpty) {
+    if (nome.isEmpty || email.isEmpty || senha.isEmpty || confirmarSenha.isEmpty) {
       setState(() {
         _erro = 'Preencha todos os campos obrigatórios.';
-        _carregando = false;
-      });
-      return;
-    }
-
-    if (cpf.length != 11) {
-      setState(() {
-        _erro = 'Informe um CPF válido.';
         _carregando = false;
       });
       return;
@@ -472,20 +514,33 @@ class _PersonalRegistrationScreenState
       return;
     }
 
-    if (!_termosAceitos) {
+    if (senha != confirmarSenha) {
       setState(() {
-        _erro = 'Você precisa aceitar os termos de compartilhamento.';
+        _erro = 'As senhas não coincidem.';
         _carregando = false;
       });
       return;
     }
+
+    if (!_termosAceitos) {
+      setState(() {
+        _erro = 'Você precisa aceitar os termos de uso.';
+        _carregando = false;
+      });
+      return;
+    }
+
+    final String nomeCompleto = <String>[
+      nome,
+      sobrenome,
+    ].where((String s) => s.isNotEmpty).join(' ').trim();
 
     try {
       await SessaoUsuario.instance.cadastrar(
         email: email,
         senha: senha,
         tipo: TipoConta.pessoal,
-        perfil: <String, dynamic>{'nome': nome},
+        perfil: <String, dynamic>{'nome': nomeCompleto},
       );
 
       if (!mounted) return;
@@ -509,33 +564,34 @@ class _PersonalRegistrationScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       body: _RegistrationScreenShell(
-        title: 'Cadastro',
+        icon: Icons.person_add_alt_1_outlined,
+        title: 'Criar conta',
+        subtitle: 'Preencha os dados para começar',
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _SectionTitle('Informações Básicas'),
             const SizedBox(height: 18),
             _RegistrationField(
-              label: 'Nome Completo',
+              label: 'Nome*',
               controller: _nomeController,
             ),
             const SizedBox(height: 12),
             _RegistrationField(
-              label: 'Email*',
+              label: 'Sobrenome',
+              controller: _sobrenomeController,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'E-mail*',
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 12),
             _RegistrationField(
-              label: 'Telefone*',
+              label: 'Telefone',
               controller: _telefoneController,
               mask: _RegistrationFieldMask.telefone,
-            ),
-            const SizedBox(height: 12),
-            _RegistrationField(
-              label: 'CPF*',
-              controller: _cpfController,
-              mask: _RegistrationFieldMask.cpf,
             ),
             const SizedBox(height: 12),
             _RegistrationField(
@@ -543,23 +599,22 @@ class _PersonalRegistrationScreenState
               controller: _senhaController,
               obscureText: true,
             ),
-            const SizedBox(height: 20),
-            const _SectionTitle('Imagem de Perfil'),
             const SizedBox(height: 12),
-            _UploadBox(
-              label: 'Clique para fazer upload de imagens',
-              height: 160,
+            _RegistrationField(
+              label: 'Confirmar senha*',
+              controller: _confirmarSenhaController,
+              obscureText: true,
             ),
             const SizedBox(height: 8),
             _TermsRow(
+              label: 'Li e aceito os Termos de Uso e a Política de Privacidade',
               value: _termosAceitos,
               onChanged: (bool value) => setState(() => _termosAceitos = value),
             ),
             _registrationErrorMessage(_erro),
             const SizedBox(height: 6),
             _ActionRow(
-              primaryLabel: 'Cadastrar-se',
-              secondaryLabel: 'Cancelar',
+              primaryLabel: 'Criar conta',
               carregando: _carregando,
               onPrimary: _cadastrar,
             ),
@@ -585,6 +640,8 @@ class _CommunityRegistrationScreenState
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _cnpjController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _cidadeController = TextEditingController();
   final TextEditingController _bairroController = TextEditingController();
@@ -594,7 +651,6 @@ class _CommunityRegistrationScreenState
   bool _termosAceitos = false;
   bool _carregando = false;
   bool _buscandoCep = false;
-  MapLocation? _localizacaoSelecionada;
   String? _erro;
   final FocusNode _cepFocusNode = FocusNode();
   CnpjStatus _cnpjStatus = CnpjStatus.idle;
@@ -617,6 +673,7 @@ class _CommunityRegistrationScreenState
     _emailController.dispose();
     _cnpjController.dispose();
     _senhaController.dispose();
+    _confirmarSenhaController.dispose();
     _cepController.dispose();
     _cepFocusNode.dispose();
     _cidadeController.dispose();
@@ -687,6 +744,7 @@ class _CommunityRegistrationScreenState
     final String email = _emailController.text.trim();
     final String cnpj = formatarCnpj(_cnpjController.text);
     final String senha = _senhaController.text;
+    final String confirmarSenha = _confirmarSenhaController.text;
     final String cidade = _cidadeController.text.trim();
     final String bairro = _bairroController.text.trim();
     final String rua = _ruaController.text.trim();
@@ -696,7 +754,8 @@ class _CommunityRegistrationScreenState
         telefone.isEmpty ||
         email.isEmpty ||
         cnpj.isEmpty ||
-        senha.isEmpty) {
+        senha.isEmpty ||
+        confirmarSenha.isEmpty) {
       setState(() {
         _erro = 'Preencha todos os campos obrigatórios (incluindo CNPJ).';
         _carregando = false;
@@ -716,6 +775,14 @@ class _CommunityRegistrationScreenState
       setState(() {
         _erro =
             'A senha deve ter ao menos 8 caracteres, incluindo letras e números.';
+        _carregando = false;
+      });
+      return;
+    }
+
+    if (senha != confirmarSenha) {
+      setState(() {
+        _erro = 'As senhas não coincidem.';
         _carregando = false;
       });
       return;
@@ -746,10 +813,6 @@ class _CommunityRegistrationScreenState
           'whatsapp': somenteDigitos(telefone),
           'endereco': endereco.isNotEmpty ? endereco : rua,
           'cidade': cidade.isNotEmpty ? cidade : null,
-          if (_localizacaoSelecionada != null) ...<String, dynamic>{
-            'latitude': _localizacaoSelecionada!.latitude,
-            'longitude': _localizacaoSelecionada!.longitude,
-          },
         },
       );
 
@@ -774,58 +837,52 @@ class _CommunityRegistrationScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       body: _RegistrationScreenShell(
-        title: 'Cadastro',
+        icon: Icons.groups_outlined,
+        title: 'Cadastro de Comunidade',
+        subtitle: 'Preencha os dados da sua comunidade',
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const _SectionTitle('Informações Básicas'),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Nome da Comunidade*',
-                    controller: _nomeController,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Telefone*',
-                    controller: _telefoneController,
-                    mask: _RegistrationFieldMask.telefone,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'Nome da Comunidade*',
+              controller: _nomeController,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Email*',
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'CNPJ*',
-                    controller: _cnpjController,
-                    mask: _RegistrationFieldMask.cnpj,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'Telefone*',
+              controller: _telefoneController,
+              mask: _RegistrationFieldMask.telefone,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Email*',
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'CNPJ*',
+              controller: _cnpjController,
+              mask: _RegistrationFieldMask.cnpj,
             ),
             Align(
               alignment: Alignment.centerRight,
               child: CnpjStatusBadge(status: _cnpjStatus, razaoSocial: _cnpjRazaoSocial),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
+            const _SectionTitle('Senha de acesso'),
+            const SizedBox(height: 18),
             _RegistrationField(
               label: 'Senha*',
               controller: _senhaController,
+              obscureText: true,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Confirmar senha*',
+              controller: _confirmarSenhaController,
               obscureText: true,
             ),
             const SizedBox(height: 20),
@@ -833,71 +890,48 @@ class _CommunityRegistrationScreenState
             const SizedBox(height: 12),
             const _UploadBox(
               label: 'Clique para fazer upload de imagens',
-              height: 84,
+              height: 100,
             ),
             const SizedBox(height: 24),
             const _SectionTitle('Localização'),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'CEP *',
-                    controller: _cepController,
-                    mask: _RegistrationFieldMask.cep,
-                    focusNode: _cepFocusNode,
-                    loading: _buscandoCep,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Cidade *',
-                    controller: _cidadeController,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'CEP *',
+              controller: _cepController,
+              mask: _RegistrationFieldMask.cep,
+              focusNode: _cepFocusNode,
+              loading: _buscandoCep,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Bairro *',
-                    controller: _bairroController,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Rua *',
-                    controller: _ruaController,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'Cidade *',
+              controller: _cidadeController,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Bairro *',
+              controller: _bairroController,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Rua *',
+              controller: _ruaController,
             ),
             const SizedBox(height: 12),
             _RegistrationField(
               label: 'Referência',
               controller: _referenciaController,
             ),
-            const SizedBox(height: 12),
-            MapLocationPicker(
-              height: 190,
-              selectedLocation: _localizacaoSelecionada,
-              onLocationChanged: (MapLocation location) {
-                setState(() => _localizacaoSelecionada = location);
-              },
-            ),
             const SizedBox(height: 8),
             _TermsRow(
+              label: 'Aceito os Termos de compartilhamento de informações',
               value: _termosAceitos,
               onChanged: (bool value) => setState(() => _termosAceitos = value),
             ),
             _registrationErrorMessage(_erro),
             const SizedBox(height: 6),
             _ActionRow(
-              primaryLabel: 'Salvar',
+              primaryLabel: 'Cadastrar-se',
               secondaryLabel: 'Cancelar',
               carregando: _carregando,
               onPrimary: _cadastrar,
@@ -922,17 +956,16 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _cnpjController = TextEditingController();
   final TextEditingController _senhaController = TextEditingController();
-  final TextEditingController _cepController = TextEditingController();
-  final TextEditingController _cidadeController = TextEditingController();
-  final TextEditingController _bairroController = TextEditingController();
-  final TextEditingController _ruaController = TextEditingController();
-  final TextEditingController _referenciaController = TextEditingController();
+  final TextEditingController _confirmarSenhaController =
+      TextEditingController();
+  final TextEditingController _cidadeCriacaoController =
+      TextEditingController();
 
+  String? _estilo;
+  String? _estadoCriacao;
   bool _termosAceitos = false;
   bool _carregando = false;
-  bool _buscandoCep = false;
   String? _erro;
-  final FocusNode _cepFocusNode = FocusNode();
   CnpjStatus _cnpjStatus = CnpjStatus.idle;
   String? _cnpjRazaoSocial;
   Timer? _cnpjDebounce;
@@ -940,9 +973,6 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
   @override
   void initState() {
     super.initState();
-    _cepFocusNode.addListener(() {
-      if (!_cepFocusNode.hasFocus) _buscarCep();
-    });
     _cnpjController.addListener(_onCnpjChanged);
   }
 
@@ -953,12 +983,8 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
     _emailController.dispose();
     _cnpjController.dispose();
     _senhaController.dispose();
-    _cepController.dispose();
-    _cepFocusNode.dispose();
-    _cidadeController.dispose();
-    _bairroController.dispose();
-    _ruaController.dispose();
-    _referenciaController.dispose();
+    _confirmarSenhaController.dispose();
+    _cidadeCriacaoController.dispose();
     _cnpjDebounce?.cancel();
     super.dispose();
   }
@@ -985,33 +1011,6 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
     });
   }
 
-  Future<void> _buscarCep() async {
-    final String digits = somenteDigitos(_cepController.text);
-    if (digits.length != 8) return;
-
-    setState(() => _buscandoCep = true);
-    try {
-      final Uri url = Uri.parse('https://viacep.com.br/ws/$digits/json/');
-      final http.Response resp = await http.get(url).timeout(const Duration(seconds: 10));
-      final dynamic decoded = jsonDecode(resp.body);
-
-      if (!mounted || decoded is! Map || decoded['erro'] == true) return;
-
-      setState(() {
-        final String cidade = decoded['localidade']?.toString() ?? '';
-        if (cidade.isNotEmpty) _cidadeController.text = cidade;
-        final String bairro = decoded['bairro']?.toString() ?? '';
-        if (bairro.isNotEmpty) _bairroController.text = bairro;
-        final String rua = decoded['logradouro']?.toString() ?? '';
-        if (rua.isNotEmpty) _ruaController.text = rua;
-      });
-    } catch (_) {
-      // Falha silenciosa: usuário pode preencher manualmente
-    } finally {
-      if (mounted) setState(() => _buscandoCep = false);
-    }
-  }
-
   Future<void> _cadastrar() async {
     setState(() {
       _erro = null;
@@ -1023,14 +1022,17 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
     final String email = _emailController.text.trim();
     final String cnpj = formatarCnpj(_cnpjController.text);
     final String senha = _senhaController.text;
+    final String confirmarSenha = _confirmarSenhaController.text;
 
     if (nome.isEmpty ||
         telefone.isEmpty ||
         email.isEmpty ||
         cnpj.isEmpty ||
-        senha.isEmpty) {
+        _estilo == null ||
+        senha.isEmpty ||
+        confirmarSenha.isEmpty) {
       setState(() {
-        _erro = 'Preencha todos os campos obrigatórios (incluindo CNPJ).';
+        _erro = 'Preencha todos os campos obrigatórios (incluindo CNPJ e estilo).';
         _carregando = false;
       });
       return;
@@ -1053,9 +1055,17 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
       return;
     }
 
+    if (senha != confirmarSenha) {
+      setState(() {
+        _erro = 'As senhas não coincidem.';
+        _carregando = false;
+      });
+      return;
+    }
+
     if (!_termosAceitos) {
       setState(() {
-        _erro = 'Você precisa aceitar os termos de compartilhamento.';
+        _erro = 'Você precisa aceitar os termos de uso.';
         _carregando = false;
       });
       return;
@@ -1068,6 +1078,7 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
         tipo: TipoConta.banda,
         perfil: <String, dynamic>{
           'nome_artistico': nome,
+          'estilo_musical': _estilo?.toLowerCase(),
           'cnpj': cnpj,
           'whatsapp': somenteDigitos(telefone),
         },
@@ -1094,117 +1105,91 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _RegistrationScreenShell(
-        title: 'Cadastro',
+        icon: Icons.music_note_outlined,
+        title: 'Cadastro de Banda',
+        subtitle: 'Preencha os dados da sua banda',
         content: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const _SectionTitle('Informações da Banda'),
+            const _SectionTitle('Informações Básicas'),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Nome da Banda*',
-                    controller: _nomeController,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Telefone*',
-                    controller: _telefoneController,
-                    mask: _RegistrationFieldMask.telefone,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'Nome da Banda*',
+              controller: _nomeController,
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Email*',
-                    controller: _emailController,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'CNPJ*',
-                    controller: _cnpjController,
-                    mask: _RegistrationFieldMask.cnpj,
-                  ),
-                ),
-              ],
+            _RegistrationField(
+              label: 'Telefone*',
+              controller: _telefoneController,
+              mask: _RegistrationFieldMask.telefone,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Email*',
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'CNPJ*',
+              controller: _cnpjController,
+              mask: _RegistrationFieldMask.cnpj,
             ),
             Align(
               alignment: Alignment.centerRight,
               child: CnpjStatusBadge(status: _cnpjStatus, razaoSocial: _cnpjRazaoSocial),
             ),
             const SizedBox(height: 12),
+            _RegistrationDropdown(
+              label: 'Estilo da Banda*',
+              value: _estilo,
+              items: _estilosBanda,
+              onChanged: (String? value) => setState(() => _estilo = value),
+            ),
+            const SizedBox(height: 12),
+            _RegistrationField(
+              label: 'Cidade de Criação',
+              controller: _cidadeCriacaoController,
+            ),
+            const SizedBox(height: 12),
+            _RegistrationDropdown(
+              label: 'Estado',
+              value: _estadoCriacao,
+              items: _estadosBrasil,
+              onChanged: (String? value) =>
+                  setState(() => _estadoCriacao = value),
+            ),
+            const SizedBox(height: 20),
+            const _SectionTitle('Senha de acesso'),
+            const SizedBox(height: 18),
             _RegistrationField(
               label: 'Senha*',
               controller: _senhaController,
               obscureText: true,
             ),
-            const SizedBox(height: 20),
-            _UploadBox(label: 'Imagem da Banda', height: 100),
-            const SizedBox(height: 20),
-            const _SectionTitle('Localização'),
-            const SizedBox(height: 18),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'CEP *',
-                    controller: _cepController,
-                    mask: _RegistrationFieldMask.cep,
-                    focusNode: _cepFocusNode,
-                    loading: _buscandoCep,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Cidade *',
-                    controller: _cidadeController,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Bairro *',
-                    controller: _bairroController,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _RegistrationField(
-                    label: 'Rua *',
-                    controller: _ruaController,
-                  ),
-                ),
-              ],
-            ),
             const SizedBox(height: 12),
             _RegistrationField(
-              label: 'Referência',
-              controller: _referenciaController,
+              label: 'Confirmar senha*',
+              controller: _confirmarSenhaController,
+              obscureText: true,
+            ),
+            const SizedBox(height: 20),
+            const _SectionTitle('Imagem de Capa'),
+            const SizedBox(height: 12),
+            const _UploadBox(
+              label: 'Clique para fazer upload de imagens',
+              height: 100,
             ),
             const SizedBox(height: 8),
             _TermsRow(
+              label: 'Li e aceito os Termos de Uso e a Política de Privacidade',
               value: _termosAceitos,
               onChanged: (bool value) => setState(() => _termosAceitos = value),
             ),
             _registrationErrorMessage(_erro),
             const SizedBox(height: 6),
             _ActionRow(
-              primaryLabel: 'Salvar',
+              primaryLabel: 'Cadastrar-se',
               secondaryLabel: 'Cancelar',
               carregando: _carregando,
               onPrimary: _cadastrar,
@@ -1217,9 +1202,16 @@ class _BandRegistrationScreenState extends State<BandRegistrationScreen> {
 }
 
 class _RegistrationScreenShell extends StatelessWidget {
-  const _RegistrationScreenShell({required this.title, required this.content});
+  const _RegistrationScreenShell({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.content,
+  });
 
+  final IconData icon;
   final String title;
+  final String subtitle;
   final Widget content;
 
   @override
@@ -1255,21 +1247,25 @@ class _RegistrationScreenShell extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
+                            Center(child: _CardIconBadge(icon)),
+                            const SizedBox(height: 16),
                             Text(
                               title,
+                              textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.headlineMedium
                                   ?.copyWith(
                                     color: BaileSulColors.headerText,
-                                    fontWeight: FontWeight.w400,
+                                    fontWeight: FontWeight.w700,
                                   ),
                             ),
-                            const SizedBox(height: 18),
-                            const Divider(
-                              height: 1,
-                              thickness: 1,
-                              color: Color(0xFFE9E9E9),
+                            const SizedBox(height: 6),
+                            Text(
+                              subtitle,
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: BaileSulColors.mutedText),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 22),
                             content,
                           ],
                         ),
@@ -1298,6 +1294,77 @@ class _SectionTitle extends StatelessWidget {
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
         color: BaileSulColors.headerText,
         fontWeight: FontWeight.w400,
+      ),
+    );
+  }
+}
+
+/// Campo de seleção (dropdown) usado nos formulários de cadastro, espelhando
+/// os `<select class="field-input">` do web (ex.: estilo da banda, estado).
+class _RegistrationDropdown extends StatelessWidget {
+  const _RegistrationDropdown({
+    required this.label,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  final String label;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: DropdownButtonFormField<String>(
+        initialValue: value,
+        isExpanded: true,
+        icon: Icon(
+          Icons.keyboard_arrow_down_rounded,
+          color: BaileSulColors.headerText.withValues(alpha: 0.6),
+        ),
+        style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+        dropdownColor: Colors.white,
+        decoration: InputDecoration(
+          hintText: label,
+          hintStyle: TextStyle(
+            color: BaileSulColors.headerText.withValues(alpha: 0.45),
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: BaileSulColors.accent,
+              width: 1.5,
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12,
+            vertical: 12,
+          ),
+        ),
+        items: items
+            .map(
+              (String item) => DropdownMenuItem<String>(
+                value: item,
+                child: Text(item, overflow: TextOverflow.ellipsis),
+              ),
+            )
+            .toList(),
+        onChanged: onChanged,
       ),
     );
   }
@@ -1361,7 +1428,7 @@ class _RegistrationFieldState extends State<_RegistrationField> {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 42,
+      height: 48,
       child: TextField(
         controller: widget.controller,
         focusNode: widget.focusNode,
@@ -1386,17 +1453,17 @@ class _RegistrationFieldState extends State<_RegistrationField> {
             fontWeight: FontWeight.w400,
           ),
           filled: true,
-          fillColor: BaileSulColors.inputFill,
+          fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(
               color: BaileSulColors.accent,
               width: 1.5,
@@ -1404,7 +1471,7 @@ class _RegistrationFieldState extends State<_RegistrationField> {
           ),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
-            vertical: 10,
+            vertical: 12,
           ),
           suffixIcon: widget.obscureText
               ? IconButton(
@@ -1564,6 +1631,8 @@ class _UploadBoxState extends State<_UploadBox> {
                         child: Text(
                           widget.label,
                           textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(color: const Color(0xFF295F83)),
                         ),
@@ -1578,8 +1647,13 @@ class _UploadBoxState extends State<_UploadBox> {
 }
 
 class _TermsRow extends StatelessWidget {
-  const _TermsRow({required this.value, required this.onChanged});
+  const _TermsRow({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
 
+  final String label;
   final bool value;
   final ValueChanged<bool> onChanged;
 
@@ -1595,7 +1669,7 @@ class _TermsRow extends StatelessWidget {
           child: GestureDetector(
             onTap: () => onChanged(!value),
             child: Text(
-              'termos de compartilhamento de informações',
+              label,
               style: Theme.of(
                 context,
               ).textTheme.bodySmall?.copyWith(color: BaileSulColors.headerText),
@@ -1610,62 +1684,72 @@ class _TermsRow extends StatelessWidget {
 class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.primaryLabel,
-    required this.secondaryLabel,
+    this.secondaryLabel,
     this.onPrimary,
     this.carregando = false,
   });
 
   final String primaryLabel;
-  final String secondaryLabel;
+  final String? secondaryLabel;
   final VoidCallback? onPrimary;
   final bool carregando;
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 34,
-            child: FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFD7D7D7),
-                foregroundColor: BaileSulColors.headerText,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              child: Text(secondaryLabel),
-            ),
+  Widget _buildPrimaryButton() {
+    return SizedBox(
+      height: 44,
+      child: FilledButton(
+        onPressed: carregando ? null : onPrimary,
+        style: FilledButton.styleFrom(
+          backgroundColor: const Color(0xFF0E5880),
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const SizedBox(width: 18),
-        Expanded(
-          child: SizedBox(
-            height: 34,
-            child: FilledButton(
-              onPressed: carregando ? null : onPrimary,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0E5880),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(2),
+        child: carregando
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
                 ),
+              )
+            : Text(primaryLabel),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String? secondary = secondaryLabel;
+    if (secondary == null) {
+      // Espelha o cadastro pessoal no web, que tem apenas o botão de envio,
+      // sem par Cancelar/Cadastrar-se.
+      return _buildPrimaryButton();
+    }
+
+    // Espelha o site: em telas estreitas os botões empilham em coluna
+    // reversa (ação principal em cima, cancelar embaixo), largura total.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildPrimaryButton(),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 44,
+          child: FilledButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFD7D7D7),
+              foregroundColor: BaileSulColors.headerText,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(2),
               ),
-              child: carregando
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Text(primaryLabel),
             ),
+            child: Text(secondary),
           ),
         ),
       ],
@@ -1735,17 +1819,17 @@ class _LoginFieldState extends State<_LoginField> {
         cursorColor: BaileSulColors.headerText,
         decoration: InputDecoration(
           filled: true,
-          fillColor: BaileSulColors.inputFill,
+          fillColor: Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
-            borderSide: BorderSide.none,
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(color: BaileSulColors.headerText.withValues(alpha: 0.13)),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(2),
+            borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(
               color: BaileSulColors.accent,
               width: 1.5,
@@ -1776,58 +1860,86 @@ class _LoginFieldState extends State<_LoginField> {
   }
 }
 
-class _SocialLoginButton extends StatelessWidget {
-  const _SocialLoginButton({required this.label});
+class _AccountTypeButton extends StatelessWidget {
+  const _AccountTypeButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
 
+  final IconData icon;
   final String label;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: FilledButton(
-        onPressed: () {},
-        style: FilledButton.styleFrom(
-          backgroundColor: BaileSulColors.cardBorder,
-          foregroundColor: BaileSulColors.headerText,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            border: Border.all(color: BaileSulColors.cardBorder, width: 1.5),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: BaileSulColors.accent.withValues(alpha: 0.07),
+                  border: Border.all(
+                    color: BaileSulColors.accent.withValues(alpha: 0.15),
+                  ),
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Icon(icon, size: 19, color: BaileSulColors.accent),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    color: BaileSulColors.headerText,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: BaileSulColors.mutedText.withValues(alpha: 0.7),
+              ),
+            ],
+          ),
         ),
-        child: Text(label),
       ),
     );
   }
 }
 
-class _AccountTypeButton extends StatelessWidget {
-  const _AccountTypeButton({
-    required this.label,
-    required this.onPressed,
-    this.selected = false,
-  });
+/// Emblema circular com ícone destacado usado nos cabeçalhos dos cartões de
+/// login/cadastro, espelhando `.card-icon` de login.module.css/cadastro.module.css.
+class _CardIconBadge extends StatelessWidget {
+  const _CardIconBadge(this.icon);
 
-  final String label;
-  final VoidCallback onPressed;
-  final bool selected;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 40,
-      child: OutlinedButton(
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          backgroundColor: BaileSulColors.inputFill,
-          foregroundColor: BaileSulColors.headerText,
-          side: BorderSide(
-            color: selected
-                ? const Color(0xFF1180E8)
-                : BaileSulColors.inputFill,
-            width: selected ? 2 : 1,
-          ),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-        ),
-        child: Text(label),
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: BaileSulColors.accent.withValues(alpha: 0.08),
+        border: Border.all(color: BaileSulColors.accent.withValues(alpha: 0.18)),
+        borderRadius: BorderRadius.circular(14),
       ),
+      child: Icon(icon, size: 24, color: BaileSulColors.accent),
     );
   }
 }

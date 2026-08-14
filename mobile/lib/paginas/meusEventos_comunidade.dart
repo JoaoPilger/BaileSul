@@ -8,6 +8,7 @@ import 'package:http_parser/http_parser.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../config/api_config.dart';
+import '../navigation/app_navigator.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
@@ -23,7 +24,7 @@ class MeusEventosComunidadePage extends StatefulWidget {
   State<MeusEventosComunidadePage> createState() => _MeusEventosComunidadePageState();
 }
 
-class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
+class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> with RouteAware {
   bool _loading = false;
   String? _error;
   List<Map<String, dynamic>> _eventos = [];
@@ -45,6 +46,26 @@ class _MeusEventosComunidadePageState extends State<MeusEventosComunidadePage> {
   @override
   void initState() {
     super.initState();
+    _carregarEventos();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute<dynamic>);
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    // Uma rota empilhada por cima (ex.: Criar Evento aberto pelo menu
+    // hambúrguer) foi fechada e esta tela ficou visível de novo — recarrega
+    // sozinha em vez de depender do usuário reconstruir a tela manualmente.
     _carregarEventos();
   }
 

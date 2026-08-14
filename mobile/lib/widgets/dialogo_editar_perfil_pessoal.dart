@@ -7,7 +7,7 @@ import '../config/api_config.dart';
 import '../paginas/home.dart' show BaileSulColors;
 import '../services/sessao_usuario.dart';
 
-/// Abre o formulário de edição do perfil pessoal (nome, cidade, estado).
+/// Abre o formulário de edição do perfil pessoal (nome e e-mail).
 Future<void> mostrarDialogoEditarPerfilPessoal(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
@@ -27,8 +27,7 @@ class _EditarPerfilPessoalSheet extends StatefulWidget {
 class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nomeController = TextEditingController();
-  final _cidadeController = TextEditingController();
-  final _estadoController = TextEditingController();
+  final _emailController = TextEditingController();
 
   bool _carregando = true;
   bool _salvando = false;
@@ -52,8 +51,7 @@ class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
   @override
   void dispose() {
     _nomeController.dispose();
-    _cidadeController.dispose();
-    _estadoController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -68,8 +66,7 @@ class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
         final Map<String, dynamic> data = jsonDecode(resp.body) as Map<String, dynamic>;
         _nomeController.text = (data['nome'] as String?) ?? '';
-        _cidadeController.text = (data['cidade'] as String?) ?? '';
-        _estadoController.text = (data['estado'] as String?) ?? '';
+        _emailController.text = (data['email'] as String?) ?? '';
       } else {
         setState(() => _erro = 'Não foi possível carregar seu perfil. Tente novamente.');
       }
@@ -97,8 +94,6 @@ class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
             headers: _headers,
             body: jsonEncode({
               'nome': _nomeController.text.trim(),
-              'cidade': _cidadeController.text.trim(),
-              'estado': _estadoController.text.trim(),
             }),
           )
           .timeout(const Duration(seconds: 15));
@@ -170,14 +165,6 @@ class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
                       fontWeight: FontWeight.w800,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Atualize seus dados pessoais.',
-                    style: TextStyle(
-                      color: BaileSulColors.mutedText.withValues(alpha: 0.8),
-                      fontSize: 13,
-                    ),
-                  ),
                   const SizedBox(height: 20),
                   if (_carregando)
                     const Padding(
@@ -187,18 +174,15 @@ class _EditarPerfilPessoalSheetState extends State<_EditarPerfilPessoalSheet> {
                   else ...[
                     _CampoTexto(
                       controller: _nomeController,
-                      label: 'Nome',
+                      label: 'Nome *',
                       validator: (v) =>
                           (v == null || v.trim().isEmpty) ? 'Informe seu nome.' : null,
                     ),
                     const SizedBox(height: 14),
-                    _CampoTexto(controller: _cidadeController, label: 'Cidade'),
-                    const SizedBox(height: 14),
                     _CampoTexto(
-                      controller: _estadoController,
-                      label: 'Estado (UF)',
-                      maxLength: 2,
-                      textCapitalization: TextCapitalization.characters,
+                      controller: _emailController,
+                      label: 'E-mail',
+                      enabled: false,
                     ),
                   ],
                   if (_erro != null) ...[
@@ -250,23 +234,20 @@ class _CampoTexto extends StatelessWidget {
     required this.controller,
     required this.label,
     this.validator,
-    this.maxLength,
-    this.textCapitalization = TextCapitalization.none,
+    this.enabled = true,
   });
 
   final TextEditingController controller;
   final String label;
   final String? Function(String?)? validator;
-  final int? maxLength;
-  final TextCapitalization textCapitalization;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     return TextFormField(
       controller: controller,
       validator: validator,
-      maxLength: maxLength,
-      textCapitalization: textCapitalization,
+      enabled: enabled,
       style: const TextStyle(fontSize: 15, color: BaileSulColors.headerText),
       decoration: InputDecoration(
         labelText: label,
@@ -279,6 +260,10 @@ class _CampoTexto extends StatelessWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: BaileSulColors.cardBorder.withValues(alpha: 0.6)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),

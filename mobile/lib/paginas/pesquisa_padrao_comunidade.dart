@@ -22,6 +22,7 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
 
   List<ComunidadeApi> _todasComunidades = <ComunidadeApi>[];
   List<ComunidadeApi> _comunidadesFiltradas = <ComunidadeApi>[];
+  List<String> _sugestoes = <String>[];
   bool _carregando = true;
   String? _erro;
   String _cidadeSelecionada = '';
@@ -98,7 +99,32 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
     return <dynamic>[];
   }
 
-  void _onSearchChanged() => setState(_aplicarFiltros);
+  void _onSearchChanged() {
+    final String query = _searchController.text.toLowerCase().trim();
+    setState(() {
+      if (query.isEmpty) {
+        _sugestoes = <String>[];
+      } else {
+        _sugestoes = _todasComunidades
+            .where((ComunidadeApi c) => c.nomeEntidade.toLowerCase().contains(query))
+            .take(8)
+            .map((ComunidadeApi c) => c.nomeEntidade)
+            .toList();
+      }
+      _aplicarFiltros();
+    });
+  }
+
+  void _selecionarSugestao(String texto) {
+    _searchController.removeListener(_onSearchChanged);
+    _searchController.text = texto;
+    _searchController.selection = TextSelection.collapsed(offset: texto.length);
+    _searchController.addListener(_onSearchChanged);
+    setState(() {
+      _sugestoes = <String>[];
+      _aplicarFiltros();
+    });
+  }
 
   void _aplicarFiltros() {
     final String query = _searchController.text.toLowerCase().trim();
@@ -149,70 +175,165 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                 child: CustomScrollView(
                   physics: const BouncingScrollPhysics(),
                   slivers: [
-                    // Search Header Section
+                    // Hero escuro — espelha .listing-hero de listings.module.css
+                    // (comunidades.jsx): título + subtítulo sobre fundo em gradiente.
+                    SliverToBoxAdapter(
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(20, 32, 20, 32),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topRight,
+                            end: Alignment.bottomLeft,
+                            colors: [Color(0xFF0D2535), BaileSulColors.dark],
+                          ),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Explore comunidades locais',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w700,
+                                height: 1.15,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              'Descubra as melhores comunidades de dança da sua região.',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.75),
+                                fontSize: 14,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Cabeçalho da seção + busca + filtros
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Comunidades',
-                              style: TextStyle(
-                                color: BaileSulColors.headerText,
-                                fontSize: 28,
-                                fontWeight: FontWeight.w800,
-                                height: 1.1,
-                              ),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Comunidades Disponíveis',
+                                        style: TextStyle(
+                                          color: BaileSulColors.headerText,
+                                          fontSize: 19,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      const Text(
+                                        'Encontre a comunidade perfeita para você.',
+                                        style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: BaileSulColors.accent.withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    '${_comunidadesFiltradas.length} comunidade${_comunidadesFiltradas.length == 1 ? '' : 's'}',
+                                    style: const TextStyle(
+                                      color: BaileSulColors.accent,
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Pesquise comunidades cadastradas na plataforma.',
-                              style: TextStyle(
-                                color: BaileSulColors.mutedText,
-                                fontSize: 15,
-                                height: 1.35,
-                              ),
-                            ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 16),
 
-                            // Search bar input
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: BaileSulColors.cardBorder),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
+                            // Search bar input + sugestões
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: BaileSulColors.cardBorder),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.03),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                                  ),
+                                  child: TextField(
+                                    controller: _searchController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Buscar por nome, cidade ou estado...',
+                                      hintStyle: TextStyle(
+                                        color: BaileSulColors.mutedText.withValues(alpha: 0.7),
+                                        fontSize: 14,
+                                      ),
+                                      prefixIcon: const Icon(
+                                        Icons.search_rounded,
+                                        color: BaileSulColors.accent,
+                                      ),
+                                      suffixIcon: _searchController.text.isNotEmpty
+                                          ? IconButton(
+                                              icon: const Icon(Icons.clear, size: 20),
+                                              onPressed: () => _searchController.clear(),
+                                            )
+                                          : null,
+                                      border: InputBorder.none,
+                                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                                    ),
+                                  ),
+                                ),
+                                if (_sugestoes.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: BaileSulColors.cardBorder),
+                                    ),
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: _sugestoes.map((s) {
+                                        return InkWell(
+                                          onTap: () => _selecionarSugestao(s),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 11),
+                                            child: Text(
+                                              s,
+                                              style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+                                            ),
+                                          ),
+                                        );
+                                      }).toList(),
+                                    ),
                                   ),
                                 ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                decoration: InputDecoration(
-                                  hintText: 'Buscar por nome, cidade ou estado...',
-                                  hintStyle: TextStyle(
-                                    color: BaileSulColors.mutedText.withValues(alpha: 0.7),
-                                    fontSize: 14,
-                                  ),
-                                  prefixIcon: const Icon(
-                                    Icons.search_rounded,
-                                    color: BaileSulColors.accent,
-                                  ),
-                                  suffixIcon: _searchController.text.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear, size: 20),
-                                          onPressed: () => _searchController.clear(),
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                                ),
-                              ),
+                              ],
                             ),
+
                             if (_cidadesDisponiveis.isNotEmpty) ...[
                               const SizedBox(height: 10),
                               Container(
@@ -246,15 +367,6 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                                 ),
                               ),
                             ],
-                            const SizedBox(height: 12),
-                            Text(
-                              '${_comunidadesFiltradas.length} comunidades',
-                              style: TextStyle(
-                                color: BaileSulColors.mutedText,
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                           ],
                         ),
                       ),

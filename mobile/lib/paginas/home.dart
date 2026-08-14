@@ -101,10 +101,15 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  // Mesmos estilos exibidos na home do site (frontend/src/paginas/home/home.jsx).
+  // Mesmos tipos de evento exibidos na home do site (TIPOS_EVENTO em
+  // frontend/src/paginas/home/home.jsx), com rótulos de
+  // frontend/src/utils/events.js (TIPO_EVENTO_LABELS).
   static const List<_StyleItem> _styles = [
-    _StyleItem('Gaúcha', 'Chamamé e ginga', Icons.nightlife_rounded, 1),
-    _StyleItem('Vanera', 'Ritmo do sul', Icons.graphic_eq_rounded, 0),
+    _StyleItem('musical', 'Musical', 'Bailes e música ao vivo', '🪗'),
+    _StyleItem('almoco', 'Almoço', 'Almoços comunitários', '🍽️'),
+    _StyleItem('bingo', 'Bingo', 'Bingos e sorteios', '🎱'),
+    _StyleItem('expos', 'Expos', 'Exposições e feiras', '🎪'),
+    _StyleItem('futebol', 'Futebol', 'Jogos e torneios', '⚽'),
   ];
 
   List<EventoApi> _eventosApi = <EventoApi>[];
@@ -259,11 +264,11 @@ class _HeroBlock extends StatelessWidget {
                       shaderCallback: (Rect bounds) =>
                           BaileSulColors.accentGradient.createShader(bounds),
                       child: const Text(
-                        'melhores bailes',
+                        'Melhores Bailes',
                         style: _HomeTypography.heroTitle,
                       ),
                     ),
-                    const Text('da região', style: _HomeTypography.heroTitle),
+                    const Text('da Região', style: _HomeTypography.heroTitle),
                     const SizedBox(height: 16),
                     Text(
                       'Encontre eventos, bandas e comunidades. Seu hub completo para a vida noturna da AMAUC.',
@@ -427,10 +432,8 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({
     required this.title,
     required this.subtitle,
-    this.eyebrow,
   });
 
-  final String? eyebrow;
   final String title;
   final String subtitle;
 
@@ -439,18 +442,6 @@ class _SectionHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (eyebrow != null) ...[
-          Text(
-            eyebrow!.toUpperCase(),
-            style: TextStyle(
-              color: BaileSulColors.accent,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
         Text(title, style: _HomeTypography.sectionTitle),
         const SizedBox(height: 6),
         Text(subtitle, style: _HomeTypography.sectionSubtitle),
@@ -469,6 +460,14 @@ class _UpcomingEventsSection extends StatelessWidget {
       'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=600&q=80';
 
   EventItem _paraEventItem(EventoApi evento) {
+    String dia = '';
+    String mes = '';
+    final DateTime? inicio = DateTime.tryParse(evento.dataInicio);
+    if (inicio != null) {
+      dia = inicio.day.toString().padLeft(2, '0');
+      mes = _mesesAbreviados[inicio.month - 1];
+    }
+
     return EventItem(
       id: evento.id,
       title: evento.titulo,
@@ -477,16 +476,15 @@ class _UpcomingEventsSection extends StatelessWidget {
       dateTime: evento.dataFormatada,
       price: evento.valorFormatado,
       imageUrl: evento.fotoCapaUrl ?? _imagemPadrao,
+      day: dia,
+      month: mes,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
-        color: BaileSulColors.pageBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      color: BaileSulColors.pageBackground,
       padding: const EdgeInsets.fromLTRB(20, 36, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -654,23 +652,12 @@ class _EventCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.black.withValues(alpha: 0.05),
-                            Colors.black.withValues(alpha: 0.55),
-                          ],
-                        ),
+                    if (event.day.isNotEmpty)
+                      Positioned(
+                        top: 12,
+                        left: 12,
+                        child: _DateBadge(day: event.day, month: event.month),
                       ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: _Badge(label: event.genre, filled: true),
-                    ),
                     Positioned(
                       bottom: 12,
                       right: 12,
@@ -684,6 +671,17 @@ class _EventCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (event.genre.isNotEmpty)
+                      Text(
+                        event.genre.toUpperCase(),
+                        style: const TextStyle(
+                          color: BaileSulColors.accent,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.9,
+                        ),
+                      ),
+                    const SizedBox(height: 2),
                     Text(
                       event.title,
                       style: const TextStyle(
@@ -693,15 +691,66 @@ class _EventCard extends StatelessWidget {
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     _MetaRow(icon: Icons.location_on_rounded, text: event.location),
-                    const SizedBox(height: 6),
-                    _MetaRow(icon: Icons.calendar_month_rounded, text: event.dateTime),
                   ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Selo com dia/mês sobre a imagem do card, espelhando `.eventCardDateBadge`
+/// (frontend/src/styles/shared.module.css).
+class _DateBadge extends StatelessWidget {
+  const _DateBadge({required this.day, required this.month});
+
+  final String day;
+  final String month;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BaileSulColors.accent,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: BaileSulColors.accent.withValues(alpha: 0.4),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              day,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                height: 1.15,
+              ),
+            ),
+            Text(
+              month.toUpperCase(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+                height: 1.1,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -800,6 +849,9 @@ class _MetaRow extends StatelessWidget {
   }
 }
 
+/// Seção "Busque por Tipo de Evento" — espelha `.stylesSection` do site
+/// (frontend/src/paginas/home/home.module.css), que usa fundo escuro
+/// (`--dark`), diferente da seção de eventos acima que é clara.
 class _StylesSection extends StatelessWidget {
   const _StylesSection({required this.styles});
 
@@ -808,119 +860,131 @@ class _StylesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: BaileSulColors.pageBackground,
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+      color: BaileSulColors.dark,
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 48),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            height: 1,
-            margin: const EdgeInsets.only(bottom: 32),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Colors.transparent,
-                  BaileSulColors.accent.withValues(alpha: 0.35),
-                  BaileSulColors.accentLight.withValues(alpha: 0.6),
-                  BaileSulColors.accent.withValues(alpha: 0.35),
-                  Colors.transparent,
-                ],
-              ),
+          _DecoLine(),
+          const SizedBox(height: 32),
+          Text(
+            'FILTRE PELO QUE VOCÊ PROCURA',
+            style: TextStyle(
+              color: BaileSulColors.accentLight,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.6,
             ),
           ),
-          const _SectionHeader(
-            eyebrow: 'Filtre pelo seu ritmo',
-            title: 'Busque por Estilo',
-            subtitle: 'Cada ritmo tem sua alma. Encontre o evento que faz seu corpo mexer.',
+          const SizedBox(height: 6),
+          const Text(
+            'Busque por Tipo de Evento',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'De bailes a bingos. Encontre o evento certo pra sua próxima saída.',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.52),
+              fontSize: 13.5,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 22),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.95,
-            ),
-            itemCount: styles.length,
-            itemBuilder: (context, index) => _StyleTile(style: styles[index]),
-          ),
+          for (int i = 0; i < styles.length; i++) ...[
+            if (i > 0) const SizedBox(height: 10),
+            _StylePill(style: styles[i]),
+          ],
+          const SizedBox(height: 32),
+          _DecoLine(),
         ],
       ),
     );
   }
 }
 
-class _StyleTile extends StatelessWidget {
-  const _StyleTile({required this.style});
+/// Linha decorativa em gradiente, espelhando `.stylesDecoLine`.
+class _DecoLine extends StatelessWidget {
+  const _DecoLine();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 1,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.transparent,
+            BaileSulColors.accent.withValues(alpha: 0.7),
+            BaileSulColors.accentLight,
+            BaileSulColors.accent.withValues(alpha: 0.7),
+            Colors.transparent,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Item de tipo de evento em formato de "pill", espelhando `.stylePill`.
+class _StylePill extends StatelessWidget {
+  const _StylePill({required this.style});
 
   final _StyleItem style;
 
   @override
   Widget build(BuildContext context) {
-    final Color surface = style.variant == 0
-        ? BaileSulColors.styleSurfaceA
-        : BaileSulColors.styleSurfaceB;
-
     return DecoratedBox(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: BaileSulColors.accent.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: Colors.white.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.11)),
       ),
       child: Material(
-        color: surface,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           onTap: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
-          splashColor: BaileSulColors.accent.withValues(alpha: 0.12),
+          splashColor: BaileSulColors.accent.withValues(alpha: 0.2),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
               children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.65),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.8),
-                    ),
-                  ),
-                  child: Icon(
-                    style.icon,
-                    size: 26,
-                    color: BaileSulColors.headerText.withValues(alpha: 0.85),
+                Text(style.emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        style.label,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        style.desc,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.52),
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  style.label,
-                  style: const TextStyle(
-                    color: BaileSulColors.headerText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.2,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  style.desc,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: BaileSulColors.mutedText.withValues(alpha: 0.8),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  size: 16,
+                  color: Colors.white.withValues(alpha: 0.2),
                 ),
               ],
             ),
@@ -946,6 +1010,8 @@ class EventItem {
     this.organizer = '',
     this.startDateTime = '',
     this.endDateTime = '',
+    this.day = '',
+    this.month = '',
   });
 
   final int id;
@@ -961,13 +1027,26 @@ class EventItem {
   final String organizer;
   final String startDateTime;
   final String endDateTime;
+
+  /// Dia (2 dígitos) e mês abreviado (3 letras minúsculas) usados no selo de
+  /// data sobre a imagem do card, espelhando o `eventCardDateBadge` do site
+  /// (frontend/src/styles/shared.module.css).
+  final String day;
+  final String month;
 }
 
-class _StyleItem {
-  const _StyleItem(this.label, this.desc, this.icon, this.variant);
+/// Meses abreviados em pt-BR (minúsculos, sem ponto) — mesmo formato que
+/// `toLocaleDateString('pt-BR', { month: 'short' })` produz no site.
+const List<String> _mesesAbreviados = <String>[
+  'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
+  'jul', 'ago', 'set', 'out', 'nov', 'dez',
+];
 
+class _StyleItem {
+  const _StyleItem(this.value, this.label, this.desc, this.emoji);
+
+  final String value;
   final String label;
   final String desc;
-  final IconData icon;
-  final int variant;
+  final String emoji;
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/dialogo_alterar_senha.dart';
+import '../widgets/dialogo_comunidades_vinculadas.dart';
 import '../widgets/dialogo_editar_perfil_pessoal.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
@@ -10,6 +11,7 @@ import 'home.dart';
 
 const String _acaoAlterarSenha = 'alterar-senha';
 const String _acaoEditarPerfilPessoal = 'editar-perfil-pessoal';
+const String _acaoComunidadesVinculadas = 'comunidades-vinculadas';
 
 class ConfiguracoesPage extends StatelessWidget {
   const ConfiguracoesPage({super.key});
@@ -32,26 +34,28 @@ class ConfiguracoesPage extends StatelessWidget {
     }
   }
 
-  List<_ConfiguracaoItem> _itensPorTipo(TipoConta tipo) {
+  List<_ConfiguracaoItem> _itensPorTipo(TipoConta tipo, bool ehVendedor) {
     switch (tipo) {
       case TipoConta.pessoal:
-        return const [
-          _ConfiguracaoItem(
+        return [
+          const _ConfiguracaoItem(
             icon: Icons.person_outline,
-            titulo: 'Editar perfil',
-            subtitulo: 'Nome, cidade e estado',
+            titulo: 'Perfil',
+            subtitulo: 'Nome e email',
             acao: _acaoEditarPerfilPessoal,
           ),
-          _ConfiguracaoItem(
+          if (ehVendedor)
+            const _ConfiguracaoItem(
+              icon: Icons.apartment_outlined,
+              titulo: 'Comunidades vinculadas',
+              subtitulo: 'CTGs que você representa como vendedor',
+              acao: _acaoComunidadesVinculadas,
+            ),
+          const _ConfiguracaoItem(
             icon: Icons.lock_outline,
             titulo: 'Alterar senha',
             subtitulo: 'Atualize sua senha de acesso',
             acao: _acaoAlterarSenha,
-          ),
-          _ConfiguracaoItem(
-            icon: Icons.notifications_outlined,
-            titulo: 'Notificações',
-            subtitulo: 'Alertas de reservas e eventos',
           ),
         ];
       case TipoConta.banda:
@@ -59,7 +63,7 @@ class ConfiguracoesPage extends StatelessWidget {
           _ConfiguracaoItem(
             icon: Icons.music_note_outlined,
             titulo: 'Perfil da banda',
-            subtitulo: 'Nome artístico, estilo e descrição',
+            subtitulo: 'Nome artístico, estilo, foto e mídias',
             rota: '/perfil-banda',
           ),
           _ConfiguracaoItem(
@@ -73,8 +77,8 @@ class ConfiguracoesPage extends StatelessWidget {
         return const [
           _ConfiguracaoItem(
             icon: Icons.apartment_outlined,
-            titulo: 'Perfil da comunidade',
-            subtitulo: 'Nome, endereço e descrição',
+            titulo: 'Perfil da Comunidade',
+            subtitulo: 'Editar dados, foto de perfil e galeria de mídias',
             rota: '/perfil-comunidade',
           ),
           _ConfiguracaoItem(
@@ -129,7 +133,7 @@ class ConfiguracoesPage extends StatelessWidget {
       );
     }
 
-    final List<_ConfiguracaoItem> itens = _itensPorTipo(tipo);
+    final List<_ConfiguracaoItem> itens = _itensPorTipo(tipo, sessao.ehVendedor);
 
     return Scaffold(
       backgroundColor: BaileSulColors.pageBackground,
@@ -319,6 +323,8 @@ class _ConfiguracaoTile extends StatelessWidget {
             mostrarDialogoAlterarSenha(context);
           } else if (item.acao == _acaoEditarPerfilPessoal) {
             mostrarDialogoEditarPerfilPessoal(context);
+          } else if (item.acao == _acaoComunidadesVinculadas) {
+            mostrarDialogoComunidadesVinculadas(context);
           } else if (item.rota != null) {
             Navigator.pushNamed(context, item.rota!);
           } else {
