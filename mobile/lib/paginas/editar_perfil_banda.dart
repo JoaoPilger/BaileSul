@@ -198,31 +198,43 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
     }
   }
 
-  MediaType _mediaTypeFromFilename(String filename) {
+  MediaType _mediaTypeFromFilename(String filename, {bool video = false}) {
     final String lower = filename.toLowerCase();
+    if (video) {
+      if (lower.endsWith('.mov')) return MediaType('video', 'quicktime');
+      if (lower.endsWith('.webm')) return MediaType('video', 'webm');
+      if (lower.endsWith('.mkv')) return MediaType('video', 'x-matroska');
+      if (lower.endsWith('.avi')) return MediaType('video', 'x-msvideo');
+      return MediaType('video', 'mp4');
+    }
     if (lower.endsWith('.png')) return MediaType('image', 'png');
     if (lower.endsWith('.webp')) return MediaType('image', 'webp');
     if (lower.endsWith('.gif')) return MediaType('image', 'gif');
     return MediaType('image', 'jpeg');
   }
 
-  Future<void> _escolherEEnviarFoto(ImageSource source) async {
+  // Envia uma nova mídia (foto ou vídeo) para a galeria da banda — espelha o
+  // dropzone único do site, que aceita "image/*,video/*" num só input
+  // (frontend/src/paginas/editar_perfil/editar_perfil.jsx).
+  Future<void> _escolherEEnviarMidia(ImageSource source, {bool video = false}) async {
     final int? id = _bandaId;
     final String? token = SessaoUsuario.instance.token;
     if (id == null || token == null || token.isEmpty) return;
 
     XFile? picked;
     try {
-      picked = await _picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
+      picked = video
+          ? await _picker.pickVideo(source: source)
+          : await _picker.pickImage(
+              source: source,
+              maxWidth: 1920,
+              maxHeight: 1920,
+              imageQuality: 85,
+            );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível selecionar a imagem.')),
+        SnackBar(content: Text('Não foi possível selecionar ${video ? 'o vídeo' : 'a imagem'}.')),
       );
       return;
     }
@@ -243,16 +255,16 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
           'arquivo',
           bytes,
           filename: picked.name,
-          contentType: _mediaTypeFromFilename(picked.name),
+          contentType: _mediaTypeFromFilename(picked.name, video: video),
         ),
       );
 
       final http.StreamedResponse streamed =
-          await request.send().timeout(const Duration(seconds: 30));
+          await request.send().timeout(const Duration(seconds: 60));
       final http.Response response = await http.Response.fromStream(streamed);
 
       if (response.statusCode != 201) {
-        throw Exception('Falha ao enviar foto (${response.statusCode})');
+        throw Exception('Falha ao enviar mídia (${response.statusCode})');
       }
 
       final Map<String, dynamic> midia =
@@ -265,14 +277,14 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível enviar a foto.')),
+        SnackBar(content: Text('Não foi possível enviar ${video ? 'o vídeo' : 'a foto'}.')),
       );
     } finally {
       if (mounted) setState(() => _enviandoFoto = false);
     }
   }
 
-  void _abrirSeletorDeFoto() {
+  void _abrirSeletorDeMidia() {
     showModalBottomSheet<void>(
       context: context,
       builder: (BuildContext sheetContext) {
@@ -281,10 +293,10 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
             children: [
               ListTile(
                 leading: const Icon(Icons.photo_library_outlined),
-                title: const Text('Escolher da galeria'),
+                title: const Text('Escolher foto da galeria'),
                 onTap: () {
                   Navigator.pop(sheetContext);
-                  _escolherEEnviarFoto(ImageSource.gallery);
+                  _escolherEEnviarMidia(ImageSource.gallery);
                 },
               ),
               if (!kIsWeb)
@@ -293,7 +305,24 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
                   title: const Text('Tirar foto'),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _escolherEEnviarFoto(ImageSource.camera);
+                    _escolherEEnviarMidia(ImageSource.camera);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.video_library_outlined),
+                title: const Text('Escolher vídeo da galeria'),
+                onTap: () {
+                  Navigator.pop(sheetContext);
+                  _escolherEEnviarMidia(ImageSource.gallery, video: true);
+                },
+              ),
+              if (!kIsWeb)
+                ListTile(
+                  leading: const Icon(Icons.videocam_outlined),
+                  title: const Text('Gravar vídeo'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _escolherEEnviarMidia(ImageSource.camera, video: true);
                   },
                 ),
             ],
@@ -460,31 +489,28 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            MobileHeader(
-              logoHeight: 58,
-              horizontalPadding: 16,
-              onMenuPressed: _abrirMenu,
+      backgroundColor: BaileSulColors.pageBackground,
+      body: Column(
+        children: [
+          MobileHeader(
+            logoHeight: 58,
+            horizontalPadding: 16,
+            onMenuPressed: _abrirMenu,
+          ),
+          Expanded(
+            child: Container(
+              color: BaileSulColors.pageBackground,
+              child: _buildBody(),
             ),
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                child: _buildBody(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: BaileSulColors.accent));
     }
 
     if (_erroCarregar != null) {
@@ -494,12 +520,12 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
           child: Column(
             children: [
-              const Icon(Icons.music_note_outlined, size: 56, color: Colors.black26),
+              Icon(Icons.music_note_outlined, size: 56, color: BaileSulColors.mutedText.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               Text(
                 _erroCarregar!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                style: const TextStyle(color: BaileSulColors.mutedText, fontSize: 15),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -507,6 +533,8 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: BaileSulColors.accent,
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: const Text('Tentar novamente'),
               ),
@@ -520,133 +548,187 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       child: Form(
         key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Editar perfil da banda',
-                style: TextStyle(
-                  color: BaileSulColors.headerText,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              const _SectionTitle('Informações gerais'),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'Nome artístico *',
-                controller: _nomeController,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Informe o nome artístico.' : null,
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(label: 'Estilo musical', controller: _estiloController),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'Descrição',
-                controller: _descricaoController,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'WhatsApp',
-                controller: _whatsappController,
-                keyboardType: TextInputType.phone,
-                validator: _validarWhatsapp,
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'Vídeo de apresentação (URL)',
-                controller: _videoUrlController,
-                keyboardType: TextInputType.url,
-                validator: _validarVideoUrl,
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionTitle('Foto de perfil'),
-              const SizedBox(height: 10),
-              _AvatarUpload(
-                fotoUrl: _fotoPerfilUrl,
-                enviando: _enviandoFotoPerfil,
-                onTap: _abrirSeletorDeFotoPerfil,
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionTitle('Fotos da banda'),
-              const SizedBox(height: 4),
-              const Text(
-                'A primeira foto é usada como capa da vitrine.',
-                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              _GaleriaFotos(
-                midias: _midias,
-                enviando: _enviandoFoto,
-                removendoMidiaId: _removendoMidiaId,
-                onAdicionar: _abrirSeletorDeFoto,
-                onRemover: _removerFoto,
-              ),
-              const SizedBox(height: 26),
-
-              if (_erroSalvar != null) ...[
-                Text(
-                  _erroSalvar!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFB42318),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-
-              Row(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _salvando ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: BaileSulColors.headerText,
-                        side: const BorderSide(color: BaileSulColors.cardBorder),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: const Text('Cancelar'),
+                  const Text(
+                    'Editar Perfil da Banda',
+                    style: TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _salvando ? null : _salvar,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: BaileSulColors.accent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Atualize as informações públicas da sua vitrine e sua galeria de mídias.',
+                    style: TextStyle(color: BaileSulColors.headerText.withValues(alpha: 0.6), fontSize: 13),
+                  ),
+                  const SizedBox(height: 18),
+
+                  // Card: foto de perfil
+                  _EditCard(
+                    icon: Icons.photo_camera_outlined,
+                    title: 'Foto de Perfil (Avatar)',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AvatarUpload(
+                          fotoUrl: _fotoPerfilUrl,
+                          enviando: _enviandoFotoPerfil,
+                          onTap: _abrirSeletorDeFotoPerfil,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Formatos recomendados: JPG, PNG ou WEBP (Max 5MB).',
+                          style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Card: informações gerais
+                  _EditCard(
+                    icon: Icons.music_note_outlined,
+                    title: 'Informações Gerais',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _CampoTexto(
+                          label: 'Nome Artístico da Banda *',
+                          controller: _nomeController,
+                          placeholder: 'Ex: Banda Sul Som',
+                          validator: (v) =>
+                              (v == null || v.trim().isEmpty) ? 'Informe o nome artístico.' : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'Estilo Musical',
+                          controller: _estiloController,
+                          placeholder: 'Ex: Gaúcha, Bandinha, Sertanejo',
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'WhatsApp de Contato',
+                          controller: _whatsappController,
+                          keyboardType: TextInputType.phone,
+                          validator: _validarWhatsapp,
+                          placeholder: '(48) 9 0000-0000',
+                          hint: 'Utilizado para direcionar mensagens dos clientes/contratantes.',
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'Link do Vídeo em Destaque (YouTube/Vimeo)',
+                          controller: _videoUrlController,
+                          keyboardType: TextInputType.url,
+                          validator: _validarVideoUrl,
+                          placeholder: 'Ex: https://www.youtube.com/watch?v=...',
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'Descrição / Biografia',
+                          controller: _descricaoController,
+                          maxLines: 4,
+                          placeholder: 'Conte a história da banda, anos de estrada, '
+                              'estrutura de som, repertório...',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Card: galeria
+                  _EditCard(
+                    icon: Icons.image_outlined,
+                    title: 'Galeria de Fotos e Vídeos',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Fotos e vídeos exibidos na galeria pública da vitrine.',
+                          style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        _GaleriaMidias(
+                          midias: _midias,
+                          enviando: _enviandoFoto,
+                          removendoMidiaId: _removendoMidiaId,
+                          onAdicionar: _abrirSeletorDeMidia,
+                          onRemover: _removerFoto,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (_erroSalvar != null) ...[
+                    Text(
+                      _erroSalvar!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFB42318),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _salvando ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: BaileSulColors.headerText,
+                            side: const BorderSide(color: BaileSulColors.cardBorder),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Cancelar'),
                         ),
                       ),
-                      child: _salvando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text('Salvar alterações'),
-                    ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _salvando ? null : _salvar,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: BaileSulColors.accent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          icon: _salvando
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined, size: 18),
+                          label: Text(_salvando ? 'Salvando...' : 'Salvar Alterações'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-            ],
+            ),
           ),
         ),
       ),
@@ -654,19 +736,51 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+/// Card branco padrão das seções de edição, espelhando `.card`/`.cardTitle`
+/// de editar_perfil.module.css (radius 18px, título com ícone accent).
+class _EditCard extends StatelessWidget {
+  const _EditCard({required this.icon, required this.title, required this.child});
 
+  final IconData icon;
   final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: BaileSulColors.headerText,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BaileSulColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: BaileSulColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: BaileSulColors.headerText,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
       ),
     );
   }
@@ -679,6 +793,8 @@ class _CampoTexto extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.maxLines = 1,
     this.validator,
+    this.placeholder,
+    this.hint,
   });
 
   final String label;
@@ -686,34 +802,54 @@ class _CampoTexto extends StatelessWidget {
   final TextInputType keyboardType;
   final int maxLines;
   final String? Function(String?)? validator;
+  final String? placeholder;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-      style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
-        filled: true,
-        fillColor: const Color(0xFFF4F6F8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: BaileSulColors.headerText,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          validator: validator,
+          style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+          decoration: InputDecoration(
+            hintText: placeholder,
+            hintStyle: TextStyle(color: BaileSulColors.mutedText.withValues(alpha: 0.7), fontSize: 13),
+            filled: true,
+            fillColor: const Color(0xFFFAFAFA),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
-        ),
-      ),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(hint!, style: TextStyle(color: BaileSulColors.mutedText, fontSize: 11.5)),
+        ],
+      ],
     );
   }
 }
@@ -733,59 +869,56 @@ class _AvatarUpload extends StatelessWidget {
   Widget build(BuildContext context) {
     final String url = ApiConfig.resolveMediaUrl(fotoUrl);
 
-    return InkWell(
-      onTap: enviando ? null : onTap,
-      borderRadius: BorderRadius.circular(50),
-      child: Stack(
-        children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: BaileSulColors.accent,
-              shape: BoxShape.circle,
-              border: Border.all(color: BaileSulColors.cardBorder, width: 1),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: enviando
-                ? const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    ),
-                  )
-                : (url.isNotEmpty
-                    ? Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.music_note, color: Colors.white70, size: 36),
-                      )
-                    : const Icon(Icons.music_note, color: Colors.white70, size: 36)),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 150,
+          height: 92,
+          decoration: BoxDecoration(
+            color: BaileSulColors.accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: BaileSulColors.accent, width: 3),
           ),
-          if (!enviando)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                ),
-                child: const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.black87),
-              ),
+          clipBehavior: Clip.antiAlias,
+          child: enviando
+              ? const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: BaileSulColors.accent),
+                  ),
+                )
+              : (url.isNotEmpty
+                  ? Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.music_note, color: BaileSulColors.accent, size: 30),
+                    )
+                  : const Icon(Icons.music_note, color: BaileSulColors.accent, size: 30)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: enviando ? null : onTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: BaileSulColors.headerText,
+              side: const BorderSide(color: BaileSulColors.cardBorder),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-        ],
-      ),
+            icon: const Icon(Icons.upload_outlined, size: 16),
+            label: Text(enviando ? 'Enviando foto...' : 'Alterar Foto'),
+          ),
+        ),
+      ],
     );
   }
 }
 
-class _GaleriaFotos extends StatelessWidget {
-  const _GaleriaFotos({
+class _GaleriaMidias extends StatelessWidget {
+  const _GaleriaMidias({
     required this.midias,
     required this.enviando,
     required this.removendoMidiaId,
@@ -801,16 +934,14 @@ class _GaleriaFotos extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> fotos =
-        midias.where((m) => (m['tipo']?.toString() ?? 'imagem') == 'imagem').toList();
-
     return Wrap(
       spacing: 10,
       runSpacing: 10,
       children: [
-        ...fotos.map((foto) {
-          final int? id = int.tryParse('${foto['id'] ?? ''}');
-          final String url = ApiConfig.resolveMediaUrl(foto['url']?.toString());
+        ...midias.map((midia) {
+          final int? id = int.tryParse('${midia['id'] ?? ''}');
+          final bool isVideo = (midia['tipo']?.toString() ?? 'imagem') == 'video';
+          final String url = ApiConfig.resolveMediaUrl(midia['url']?.toString());
           final bool removendo = removendoMidiaId != null && removendoMidiaId == id;
 
           return ClipRRect(
@@ -820,15 +951,20 @@ class _GaleriaFotos extends StatelessWidget {
                 Container(
                   width: 96,
                   height: 96,
-                  color: Colors.grey.shade200,
-                  child: url.isNotEmpty
-                      ? Image.network(
-                          url,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(Icons.image, color: Colors.white70),
-                        )
-                      : const Icon(Icons.image, color: Colors.white70),
+                  color: isVideo ? Colors.black : Colors.grey.shade200,
+                  alignment: Alignment.center,
+                  child: isVideo
+                      ? const Icon(Icons.play_circle_outline, color: Colors.white70, size: 28)
+                      : (url.isNotEmpty
+                          ? Image.network(
+                              url,
+                              width: 96,
+                              height: 96,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) =>
+                                  const Icon(Icons.image, color: Colors.white70),
+                            )
+                          : const Icon(Icons.image, color: Colors.white70)),
                 ),
                 if (removendo)
                   Container(
@@ -848,7 +984,7 @@ class _GaleriaFotos extends StatelessWidget {
                     right: 4,
                     top: 4,
                     child: GestureDetector(
-                      onTap: () => onRemover(foto),
+                      onTap: () => onRemover(midia),
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(

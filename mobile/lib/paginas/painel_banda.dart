@@ -121,6 +121,11 @@ class _PainelBandaPageState extends State<PainelBandaPage> {
   List<Map<String, dynamic>> get _aceitos =>
       _agenda.where((a) => a['status_aceite'] == 'aceito').toList();
 
+  // "agendado" já exclui cancelados e finalizados — sobra só o que ainda vai
+  // acontecer ou está acontecendo agora (espelha painel_banda.jsx).
+  List<Map<String, dynamic>> get _marcados =>
+      _agenda.where((a) => a['status_evento'] == 'agendado').toList();
+
   List<Map<String, dynamic>> get _proximos {
     final DateTime hoje = DateTime.now();
     final DateTime hojeBase = DateTime(hoje.year, hoje.month, hoje.day);
@@ -147,7 +152,7 @@ class _PainelBandaPageState extends State<PainelBandaPage> {
   Widget build(BuildContext context) {
     final String? email = SessaoUsuario.instance.email;
     final List<Map<String, dynamic>> pendentes = _pendentes;
-    final List<Map<String, dynamic>> aceitos = _aceitos;
+    final List<Map<String, dynamic>> marcados = _marcados;
     final List<Map<String, dynamic>> proximos = _proximos;
 
     return Scaffold(
@@ -201,8 +206,7 @@ class _PainelBandaPageState extends State<PainelBandaPage> {
                                   else ...[
                                     _StatsGrid(
                                       pendentes: pendentes.length,
-                                      confirmados: aceitos.length,
-                                      total: _agenda.length,
+                                      marcados: marcados.length,
                                     ),
                                     const SizedBox(height: 28),
                                     const _SectionTitle('Atalhos'),
@@ -268,19 +272,19 @@ class _SectionTitle extends StatelessWidget {
 class _StatsGrid extends StatelessWidget {
   const _StatsGrid({
     required this.pendentes,
-    required this.confirmados,
-    required this.total,
+    required this.marcados,
   });
 
   final int pendentes;
-  final int confirmados;
-  final int total;
+  final int marcados;
 
   @override
   Widget build(BuildContext context) {
+    // Painel da banda tem só 2 cards (espelha painel.module.css
+    // .pn-stats-grid--duplo), cada um ocupando metade da largura.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final bool duasColunas = constraints.maxWidth >= 420;
+        final bool duasColunas = constraints.maxWidth >= 380;
         final double largura = duasColunas ? (constraints.maxWidth - 12) / 2 : constraints.maxWidth;
 
         return Wrap(
@@ -293,28 +297,18 @@ class _StatsGrid extends StatelessWidget {
                 label: 'Contratos Pendentes',
                 value: pendentes,
                 icon: Icons.warning_amber_rounded,
-                iconBg: const Color(0xFFFCEFD8),
-                iconColor: const Color(0xFFB4780A),
+                iconBg: const Color(0xFFB8862B).withValues(alpha: 0.12),
+                iconColor: const Color(0xFFB8862B),
               ),
             ),
             SizedBox(
               width: largura,
               child: _StatCard(
-                label: 'Confirmados',
-                value: confirmados,
-                icon: Icons.check_circle_rounded,
-                iconBg: const Color(0xFFDCF3E4),
-                iconColor: const Color(0xFF1C8A4B),
-              ),
-            ),
-            SizedBox(
-              width: largura,
-              child: _StatCard(
-                label: 'Total na Agenda',
-                value: total,
+                label: 'Eventos Marcados',
+                value: marcados,
                 icon: Icons.calendar_month_rounded,
-                iconBg: const Color(0xFFE1EBF5),
-                iconColor: BaileSulColors.accent,
+                iconBg: const Color(0xFF185FA5).withValues(alpha: 0.12),
+                iconColor: const Color(0xFF185FA5),
               ),
             ),
           ],
@@ -427,7 +421,7 @@ class _AtalhosGrid extends StatelessWidget {
               child: _AtalhoCard(
                 icon: Icons.settings_outlined,
                 titulo: 'Editar Vitrine',
-                subtitulo: 'Nome, estilo, foto, vídeo',
+                subtitulo: 'Nome, estilo, foto, biografia',
                 onTap: onEditarVitrine,
               ),
             ),

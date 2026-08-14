@@ -21,15 +21,19 @@ class ContratosPage extends StatefulWidget {
   State<ContratosPage> createState() => _ContratosPageState();
 }
 
+/// Cores auxiliares desta tela — reaproveita os tokens de BaileSulColors
+/// onde já existe um equivalente e usa os mesmos tons de sucesso/perigo
+/// (`--success`/`--danger` de shared.module.css) usados nas demais telas
+/// deste lote (contratos.dart, meusEventos_bandas.dart).
 class _ContratosMuted {
-  static const Color texto = Color(0xFF6B7280);
-  static const Color textoClaro = Color(0xFF9CA3AF);
-  static const Color borda = Color(0xFFE5E7EB);
+  static const Color texto = BaileSulColors.mutedText;
+  static const Color textoClaro = Color(0xFF8A94A6);
+  static const Color borda = BaileSulColors.cardBorder;
   static const Color fundoAba = Color(0xFFF9FAFB);
-  static const Color verde = Color(0xFF16A34A);
-  static const Color verdeClaro = Color(0xFFDCFCE7);
-  static const Color vermelho = Color(0xFFEF4444);
-  static const Color vermelhoClaro = Color(0xFFFEE2E2);
+  static const Color verde = Color(0xFF0F6E56);
+  static const Color verdeClaro = Color(0x1F0F6E56);
+  static const Color vermelho = Color(0xFFC24545);
+  static const Color vermelhoClaro = Color(0x1AC24545);
 }
 
 const List<Map<String, String>> _kAbas = [
@@ -173,7 +177,7 @@ class _ContratosPageState extends State<ContratosPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFD9D9D9),
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(onMenuPressed: _abrirMenu, logoHeight: 58, horizontalPadding: 16),

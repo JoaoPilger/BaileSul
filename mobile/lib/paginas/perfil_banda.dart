@@ -10,11 +10,17 @@ import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
-/// Perfil (vitrine) de uma banda.
+/// Perfil (vitrine) de uma banda — espelha a estrutura em "cards" empilhados
+/// do site (frontend/src/paginas/vitrine/VitrinePerfil.jsx, ramo
+/// `tipo === 'banda'`): card de perfil (capa + ações), card "Sobre", card de
+/// avaliações, card de estatísticas, card de galeria e card de próximos
+/// eventos. Estrutura idêntica à de [PerfilComunidadePage] (mesmo componente
+/// web compartilhado), só trocando os campos/ações específicos de banda
+/// (estilo musical, vídeo de destaque, sem cidade/endereço).
 ///
 /// Se [bandaId] não for informado, a página assume que o usuário logado é
-/// uma conta de banda e carrega o perfil dela mesma (usuario_id da sessão
-/// == id da banda no backend).
+/// uma conta de banda e carrega o perfil dela mesma (usuario_id da sessão ==
+/// id da banda no backend).
 class PerfilBandaPage extends StatefulWidget {
   const PerfilBandaPage({super.key, this.bandaId});
 
@@ -28,18 +34,13 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
   final ScrollController _scrollController = ScrollController();
   bool _expandedBio = false;
   bool _seguindo = false;
+  int _seguidoresCount = 0;
 
   bool _loading = true;
   String? _error;
   Map<String, dynamic>? _banda;
   List<Map<String, dynamic>> _eventos = [];
   List<Map<String, dynamic>> _midias = [];
-
-  // GlobalKeys to enable scrolling to sections
-  final GlobalKey _keySobre = GlobalKey();
-  final GlobalKey _keyEventos = GlobalKey();
-  final GlobalKey _keyGaleria = GlobalKey();
-  final GlobalKey _keyAvaliacoes = GlobalKey();
 
   int? get _perfilId {
     if (widget.bandaId != null) return widget.bandaId;
@@ -104,6 +105,8 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
         _banda = decoded;
         _eventos = eventosRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
         _midias = midiasRaw.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        _seguindo = decoded['seguindo'] == true;
+        _seguidoresCount = int.tryParse('${decoded['seguidores'] ?? 0}') ?? 0;
         _loading = false;
       });
     } catch (err) {
@@ -112,17 +115,6 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
         _error = 'Não foi possível carregar o perfil da banda.';
         _loading = false;
       });
-    }
-  }
-
-  void _scrollToSection(GlobalKey key) {
-    final BuildContext? context = key.currentContext;
-    if (context != null) {
-      Scrollable.ensureVisible(
-        context,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
     }
   }
 
@@ -142,31 +134,28 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            MobileHeader(
-              logoHeight: 58,
-              horizontalPadding: 16,
-              onMenuPressed: _abrirMenu,
+      backgroundColor: BaileSulColors.pageBackground,
+      body: Column(
+        children: [
+          MobileHeader(
+            logoHeight: 58,
+            horizontalPadding: 16,
+            onMenuPressed: _abrirMenu,
+          ),
+          Expanded(
+            child: Container(
+              color: BaileSulColors.pageBackground,
+              child: _buildBody(),
             ),
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                child: _buildBody(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: BaileSulColors.accent));
     }
 
     if (_error != null || _banda == null) {
@@ -175,62 +164,34 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
 
     return RefreshIndicator(
       onRefresh: _carregarPerfil,
+      color: BaileSulColors.accent,
       child: SingleChildScrollView(
         controller: _scrollController,
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Banner and Profile image section
-            _buildHeaderBanner(),
-
-            // Band Title and Action buttons
-            _buildHeaderInfo(),
-
-            // Tab Bar navigation
-            _buildTabBarNav(),
-
-            // "Sobre a Banda" section
-            Container(
-              key: _keySobre,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: _buildSobreSection(),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 16, 14, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildProfileCard(),
+                  const SizedBox(height: 14),
+                  _buildAboutCard(),
+                  const SizedBox(height: 14),
+                  _buildRatingsCard(),
+                  const SizedBox(height: 14),
+                  _buildStatsCard(),
+                  const SizedBox(height: 14),
+                  _buildGalleryCard(),
+                  const SizedBox(height: 14),
+                  _buildEventsCard(),
+                ],
+              ),
             ),
-
-            const Divider(height: 1, color: BaileSulColors.cardBorder),
-
-            // Stats Row
-            _buildStatsRow(),
-
-            const Divider(height: 1, color: BaileSulColors.cardBorder),
-
-            // Galeria Section
-            Container(
-              key: _keyGaleria,
-              color: BaileSulColors.pageBackground.withValues(alpha: 0.3),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: _buildGaleriaSection(),
-            ),
-
-            const Divider(height: 1, color: BaileSulColors.cardBorder),
-
-            // Próximos Eventos Section
-            Container(
-              key: _keyEventos,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: _buildEventosSection(),
-            ),
-
-            const Divider(height: 1, color: BaileSulColors.cardBorder),
-
-            // Avaliações da Banda Section
-            Container(
-              key: _keyAvaliacoes,
-              color: BaileSulColors.pageBackground.withValues(alpha: 0.3),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-              child: _buildAvaliacoesSection(),
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -243,19 +204,21 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
         child: Column(
           children: [
-            const Icon(Icons.music_note_outlined, size: 56, color: Colors.black26),
+            Icon(Icons.music_note_outlined, size: 56, color: BaileSulColors.mutedText.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               _error ?? 'Não foi possível carregar este perfil.',
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54, fontSize: 15),
+              style: const TextStyle(color: BaileSulColors.mutedText, fontSize: 15),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _carregarPerfil,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D496B),
+                backgroundColor: BaileSulColors.accent,
                 foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
               child: const Text('Tentar novamente'),
             ),
@@ -273,80 +236,159 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
   }
 
   String get _nome => _campo('nome_artistico', 'Banda');
-  bool get _verificado => _banda?['cnpj_validado'] == true;
+  String get _estilo => _campo('estilo_musical');
+  String get _videoUrl => _campo('video_url');
 
-  Widget _buildHeaderBanner() {
-    final String? bannerUrl = _midias.isNotEmpty
-        ? ApiConfig.resolveMediaUrl(_midias.first['url']?.toString())
-        : null;
+  double get _mediaAvaliacao =>
+      double.tryParse('${_banda?['media_avaliacao'] ?? 0}') ?? 0;
+  int get _totalAvaliacoes =>
+      int.tryParse('${_banda?['total_avaliacoes'] ?? 0}') ?? 0;
+  double get _minhaAvaliacao =>
+      double.tryParse('${_banda?['minha_avaliacao'] ?? 0}') ?? 0;
+
+  // ── card: perfil ────────────────────────────────────────────
+
+  Widget _card({required Widget child, EdgeInsetsGeometry? padding}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: BaileSulColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      padding: padding,
+      child: child,
+    );
+  }
+
+  Widget _buildProfileCard() {
     final String fotoPerfilUrl =
         ApiConfig.resolveMediaUrl(_banda?['foto_perfil_url']?.toString());
+    final String estilo = _estilo;
+    final String whatsapp = _campo('whatsapp');
+    final bool temVideo = _videoUrl.isNotEmpty;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // Background banner image
-        (bannerUrl != null && bannerUrl.isNotEmpty)
-            ? Image.network(
-                bannerUrl,
-                height: 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _bannerFallback(),
-              )
-            : _bannerFallback(),
-        // Overlay for dark visual touch at the bottom
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: Container(
-            height: 40,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.4)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-            ),
-          ),
-        ),
-        // Profile picture overlapping
-        Positioned(
-          bottom: -45,
-          left: 16,
-          child: Container(
-            width: 90,
-            height: 90,
-            decoration: BoxDecoration(
-              color: Colors.black,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
+    return _card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Capa (mesma imagem usada como foto de perfil no site).
+          SizedBox(
+            height: 180,
+            width: double.infinity,
             child: fotoPerfilUrl.isNotEmpty
                 ? Image.network(
                     fotoPerfilUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => _avatarFallback(),
+                    errorBuilder: (context, error, stackTrace) => _coverFallback(),
                   )
-                : _avatarFallback(),
+                : _coverFallback(),
           ),
-        ),
-      ],
+          Padding(
+            padding: const EdgeInsets.fromLTRB(0, 8, 16, 0),
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                '$_seguidoresCount Seguidores',
+                style: TextStyle(
+                  color: BaileSulColors.mutedText,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _nome,
+                  style: const TextStyle(
+                    color: BaileSulColors.headerText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                if (estilo.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.place_outlined, size: 13, color: BaileSulColors.mutedText),
+                      const SizedBox(width: 5),
+                      Text(
+                        estilo,
+                        style: const TextStyle(color: BaileSulColors.mutedText, fontSize: 12.5),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _TagChip(label: 'Banda'),
+                    if (temVideo) _TagChip(label: 'Ao vivo'),
+                    if (_isMinhaConta)
+                      _FilledPillButton(
+                        label: 'Editar Perfil',
+                        onPressed: () async {
+                          final bool? atualizado = await Navigator.pushNamed(
+                            context,
+                            '/editar-perfil-banda',
+                          ) as bool?;
+                          if (atualizado == true) {
+                            _carregarPerfil();
+                          }
+                        },
+                      )
+                    else
+                      _FilledPillButton(
+                        label: _seguindo ? '✓ Seguindo' : 'Seguir',
+                        tonal: _seguindo,
+                        onPressed: () {
+                          setState(() {
+                            _seguindo = !_seguindo;
+                            _seguidoresCount += _seguindo ? 1 : -1;
+                            if (_seguidoresCount < 0) _seguidoresCount = 0;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                _seguindo
+                                    ? 'Você começou a seguir esta banda.'
+                                    : 'Você deixou de seguir esta banda.',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    _OutlinePillButton(
+                      label: 'Contato',
+                      enabled: whatsapp.isNotEmpty,
+                      onPressed: () => _abrirContato(whatsapp),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _bannerFallback() {
+  Widget _coverFallback() {
     return Container(
-      height: 180,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [BaileSulColors.accent, BaileSulColors.dark],
@@ -354,163 +396,11 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
           end: Alignment.bottomRight,
         ),
       ),
-      child: const Icon(Icons.music_note, color: Colors.white24, size: 64),
+      child: const Icon(Icons.music_note, color: Colors.white24, size: 56),
     );
   }
 
-  Widget _avatarFallback() {
-    return const Center(
-      child: Text(
-        'Banda',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeaderInfo() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 54, 16, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Band Name
-          Text(
-            _nome,
-            style: const TextStyle(
-              color: BaileSulColors.headerText,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // Estilo musical (usado como subtítulo, já que a banda não tem cidade fixa)
-          if (_campo('estilo_musical').isNotEmpty)
-            Row(
-              children: [
-                Icon(Icons.music_note_outlined, size: 16, color: Colors.grey.shade600),
-                const SizedBox(width: 4),
-                Text(
-                  _campo('estilo_musical'),
-                  style: TextStyle(
-                    color: Colors.grey.shade600,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          const SizedBox(height: 12),
-
-          // Chips
-          Row(
-            children: [
-              _buildTagChip('Banda'),
-              if (_verificado) ...[
-                const SizedBox(width: 8),
-                _buildTagChip('Verificado'),
-              ],
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Buttons
-          Row(
-            children: [
-              if (!_isMinhaConta) ...[
-                Expanded(
-                  child: SizedBox(
-                    height: 40,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _seguindo = !_seguindo;
-                        });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              _seguindo
-                                  ? 'Você começou a seguir a banda.'
-                                  : 'Você deixou de seguir a banda.',
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0D496B),
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      child: Text(
-                        _seguindo ? 'Seguindo' : 'Seguir',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: SizedBox(
-                  height: 40,
-                  child: _isMinhaConta
-                      ? OutlinedButton.icon(
-                          onPressed: () async {
-                            final bool? atualizado = await Navigator.pushNamed(
-                              context,
-                              '/editar-perfil-banda',
-                            ) as bool?;
-                            if (atualizado == true) {
-                              _carregarPerfil();
-                            }
-                          },
-                          icon: const Icon(Icons.edit_outlined, size: 18),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: const BorderSide(color: Colors.black38, width: 1),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            backgroundColor: Colors.white,
-                          ),
-                          label: const Text(
-                            'Editar perfil',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : OutlinedButton(
-                          onPressed: () => _abrirContato(),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.black87,
-                            side: const BorderSide(color: Colors.black38, width: 1),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            backgroundColor: Colors.white,
-                          ),
-                          child: const Text(
-                            'Contato',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _abrirContato() {
-    final String whatsapp = _campo('whatsapp');
+  void _abrirContato(String whatsapp) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -522,594 +412,708 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
     );
   }
 
-  Widget _buildTagChip(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade400, width: 1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.black87,
-          fontSize: 13,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
+  // ── card: sobre ─────────────────────────────────────────────
 
-  Widget _buildTabBarNav() {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border.symmetric(
-          horizontal: BorderSide(color: Colors.grey.shade300, width: 1),
-        ),
-      ),
-      child: Row(
-        children: [
-          _buildTabButton('Sobre', () => _scrollToSection(_keySobre)),
-          _buildTabButton('Eventos', () => _scrollToSection(_keyEventos)),
-          _buildTabButton('Galeria', () => _scrollToSection(_keyGaleria)),
-          _buildTabButton('Avaliações', () => _scrollToSection(_keyAvaliacoes)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabButton(String text, VoidCallback onTap) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          alignment: Alignment.center,
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSobreSection() {
-    final String descricaoCompleta =
-        _campo('descricao', 'Esta banda ainda não adicionou uma descrição.');
-    final bool descricaoLonga = descricaoCompleta.length > 180;
+  Widget _buildAboutCard() {
+    final String descricaoCompleta = _campo('descricao');
+    final bool temDescricao = descricaoCompleta.isNotEmpty;
+    final bool descricaoLonga = descricaoCompleta.length > 160;
     final String descricaoExibida = !descricaoLonga || _expandedBio
         ? descricaoCompleta
-        : '${descricaoCompleta.substring(0, 180)}...';
-    final String videoUrl = _campo('video_url');
+        : '${descricaoCompleta.substring(0, 160)}...';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Sobre a banda',
-          style: TextStyle(
-            color: BaileSulColors.headerText,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
+    final String estilo = _estilo;
+    final String whatsapp = _campo('whatsapp');
+    final String videoUrl = _videoUrl;
+
+    return _card(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Sobre a banda',
+            style: TextStyle(
+              color: BaileSulColors.headerText,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-        const SizedBox(height: 8),
-
-        // Collapsible Text description
-        Text(
-          descricaoExibida,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-            height: 1.45,
+          const SizedBox(height: 10),
+          Text(
+            temDescricao ? descricaoExibida : 'Nenhuma descrição cadastrada.',
+            style: TextStyle(
+              color: BaileSulColors.mutedText,
+              fontSize: 13.5,
+              height: 1.55,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-
-        // Toggle button
-        if (descricaoLonga)
-          InkWell(
-            onTap: () {
-              setState(() {
-                _expandedBio = !_expandedBio;
-              });
-            },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  _expandedBio ? 'Ver menos' : 'Ver mais',
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+          if (descricaoLonga) ...[
+            const SizedBox(height: 10),
+            InkWell(
+              onTap: () => setState(() => _expandedBio = !_expandedBio),
+              borderRadius: BorderRadius.circular(6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  border: Border.all(color: BaileSulColors.cardBorder),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _expandedBio ? 'Ver menos ▲' : 'Ver mais ▼',
+                  style: TextStyle(
+                    color: BaileSulColors.mutedText,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                Icon(
-                  _expandedBio ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  size: 20,
-                  color: Colors.black87,
-                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.only(top: 14),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: BaileSulColors.cardBorder)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (estilo.isNotEmpty)
+                  _MetaItem(icon: Icons.music_note_outlined, text: 'Estilo musical: $estilo'),
+                if (whatsapp.isNotEmpty)
+                  _MetaItem(icon: Icons.chat_bubble_outline, text: 'Contato: $whatsapp'),
+                if (videoUrl.isNotEmpty)
+                  InkWell(
+                    onTap: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Abrindo: $videoUrl')),
+                      );
+                    },
+                    child: _MetaItem(
+                      icon: Icons.smart_display_outlined,
+                      text: 'Assistir vídeo',
+                      textColor: BaileSulColors.accent,
+                      textWeight: FontWeight.w600,
+                    ),
+                  ),
               ],
             ),
           ),
-        const SizedBox(height: 20),
-
-        // Info List Row Items
-        _buildSobreInfoRow(
-          Icons.music_note_outlined,
-          'Estilo musical',
-          _campo('estilo_musical', 'Não informado'),
-        ),
-        const SizedBox(height: 12),
-        _buildSobreInfoRow(
-          Icons.phone_outlined,
-          'WhatsApp',
-          _campo('whatsapp', 'Não informado'),
-        ),
-        const SizedBox(height: 12),
-        _buildSobreInfoRow(
-          Icons.verified_outlined,
-          'Verificação de CNPJ',
-          _verificado ? 'Banda verificada' : 'Ainda não verificada',
-        ),
-
-        if (videoUrl.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.play_circle_outline, size: 20, color: Colors.black87),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Vídeo de apresentação',
-                      style: TextStyle(
-                        color: Colors.black45,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    InkWell(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Abrindo: $videoUrl')),
-                        );
-                      },
-                      child: Text(
-                        videoUrl,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Color(0xFF0D496B),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildSobreInfoRow(IconData icon, String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, size: 20, color: Colors.black87),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  color: Colors.black45,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.black87,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsRow() {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      child: Row(
-        children: [
-          _buildStatCol(Icons.event_available_outlined, '${_eventos.length}', 'Próximos\neventos'),
-          _buildVerticalDivider(),
-          _buildStatCol(Icons.photo_library_outlined, '${_midias.length}', 'Fotos na\ngaleria'),
-          _buildVerticalDivider(),
-          _buildStatCol(
-            _verificado ? Icons.verified_outlined : Icons.hourglass_empty,
-            _verificado ? 'Sim' : 'Não',
-            'Verificado',
-          ),
-          _buildVerticalDivider(),
-          _buildStatCol(Icons.music_note_outlined, _campo('estilo_musical', '-'), 'Estilo'),
         ],
       ),
     );
   }
 
-  Widget _buildVerticalDivider() {
-    return Container(
-      width: 1,
-      height: 48,
-      color: Colors.grey.shade300,
-    );
-  }
+  // ── card: avaliações ────────────────────────────────────────
 
-  Widget _buildStatCol(IconData icon, String value, String label) {
-    return Expanded(
+  Widget _buildRatingsCard() {
+    final bool logado = SessaoUsuario.instance.autenticado;
+
+    String promptLabel;
+    if (_isMinhaConta) {
+      promptLabel = 'Você não pode avaliar seu próprio perfil';
+    } else if (logado) {
+      promptLabel = _minhaAvaliacao > 0
+          ? 'Sua avaliação enviada:'
+          : 'Avalie esta banda:';
+    } else {
+      promptLabel = 'Faça login para avaliar esta banda';
+    }
+
+    return _card(
+      padding: const EdgeInsets.all(18),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 22, color: Colors.black54),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w800,
-              color: Colors.black87,
+          const Text(
+            'Avaliações da banda',
+            style: TextStyle(
+              color: BaileSulColors.headerText,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 10,
-              color: Colors.black45,
-              fontWeight: FontWeight.w600,
-              height: 1.1,
-            ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                _mediaAvaliacao.toStringAsFixed(_mediaAvaliacao % 1 == 0 ? 0 : 1),
+                style: const TextStyle(
+                  color: BaileSulColors.headerText,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _StarsDisplay(value: _mediaAvaliacao),
+                  const SizedBox(height: 4),
+                  Text(
+                    _totalAvaliacoes == 0
+                        ? 'Nenhuma avaliação ainda'
+                        : 'Baseado em $_totalAvaliacoes avaliações',
+                    style: TextStyle(color: BaileSulColors.mutedText, fontSize: 11.5),
+                  ),
+                ],
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGaleriaSection() {
-    final List<String> imageUrls = _midias
-        .where((m) => (m['tipo']?.toString() ?? 'imagem') == 'imagem')
-        .map((m) => ApiConfig.resolveMediaUrl(m['url']?.toString()))
-        .where((u) => u.isNotEmpty)
-        .toList();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Galeria',
-          style: TextStyle(
-            color: BaileSulColors.headerText,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        const SizedBox(height: 8),
-
-        if (imageUrls.isEmpty)
+          const SizedBox(height: 16),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            alignment: Alignment.center,
-            child: const Text(
-              'Nenhuma foto adicionada ainda.',
-              style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
+            padding: const EdgeInsets.only(top: 14),
+            decoration: BoxDecoration(
+              border: Border(top: BorderSide(color: BaileSulColors.cardBorder)),
             ),
-          )
-        else
-          SizedBox(
-            height: 110,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: imageUrls.length,
-              itemBuilder: (context, index) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: Image.network(
-                      imageUrls[index],
-                      width: 170,
-                      height: 110,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          width: 170,
-                          height: 110,
-                          color: Colors.grey.shade300,
-                          child: const Icon(Icons.image, color: Colors.white),
-                        );
-                      },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    promptLabel,
+                    style: const TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
+                ),
+                if (!logado && !_isMinhaConta)
+                  _OutlinePillButton(
+                    label: 'Entrar',
+                    onPressed: () => Navigator.pushNamed(context, '/login'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── card: estatísticas ──────────────────────────────────────
+
+  Widget _buildStatsCard() {
+    final List<_StatData> stats = [
+      _StatData(icon: Icons.calendar_month_outlined, value: '${_eventos.length}', label: 'Apresentações em eventos'),
+      _StatData(icon: Icons.groups_outlined, value: '$_seguidoresCount', label: 'Seguidores'),
+      _StatData(
+        icon: Icons.star_border_rounded,
+        value: _mediaAvaliacao.toStringAsFixed(_mediaAvaliacao % 1 == 0 ? 0 : 1),
+        label: _totalAvaliacoes == 0 ? 'Sem avaliações' : '$_totalAvaliacoes avaliações',
+      ),
+      _StatData(icon: Icons.event_available_outlined, value: '${_eventos.length}', label: 'Próximos eventos'),
+    ];
+
+    return _card(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 18),
+      child: GridView.count(
+        crossAxisCount: 2,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 2.1,
+        children: stats.map((s) => _StatItem(data: s)).toList(),
+      ),
+    );
+  }
+
+  // ── card: galeria ───────────────────────────────────────────
+
+  Widget _buildGalleryCard() {
+    return _card(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.only(bottom: 10),
+            decoration: BoxDecoration(
+              border: Border(bottom: BorderSide(color: BaileSulColors.accent.withValues(alpha: 0.12))),
+            ),
+            child: Text(
+              'GALERIA',
+              style: TextStyle(
+                color: BaileSulColors.accent,
+                fontSize: 11.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          if (_midias.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Nenhuma imagem ou vídeo na galeria',
+                  style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.15,
+              ),
+              itemCount: _midias.length,
+              itemBuilder: (context, index) {
+                final Map<String, dynamic> m = _midias[index];
+                final bool isVideo = (m['tipo']?.toString() ?? 'imagem') == 'video';
+                final String url = ApiConfig.resolveMediaUrl(m['url']?.toString());
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: isVideo
+                      ? Container(
+                          color: Colors.black,
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.play_circle_outline, color: Colors.white, size: 30),
+                        )
+                      : Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            color: BaileSulColors.pageBackground,
+                            child: const Icon(Icons.image_outlined, color: BaileSulColors.mutedText),
+                          ),
+                        ),
                 );
               },
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
+
+  // ── card: próximos eventos ──────────────────────────────────
 
   String _formatarData(String? raw) {
     if (raw == null || raw.isEmpty) return '';
-    final DateTime? d = DateTime.tryParse(raw);
-    if (d == null) return raw;
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+    final String s = raw.length >= 10 ? raw.substring(0, 10) : raw;
+    final List<String> p = s.split('-');
+    if (p.length != 3) return raw;
+    final int? y = int.tryParse(p[0]);
+    final int? m = int.tryParse(p[1]);
+    final int? d = int.tryParse(p[2]);
+    if (y == null || m == null || d == null) return raw;
+    return '${d.toString().padLeft(2, '0')}/${m.toString().padLeft(2, '0')}/$y';
   }
 
-  String _formatarHora(String? raw) {
-    if (raw == null || raw.isEmpty) return '';
-    final DateTime? d = DateTime.tryParse(raw);
-    if (d == null) return '';
-    return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-  }
-
-  Widget _buildEventosSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Próximos eventos confirmados',
-              style: TextStyle(
-                color: BaileSulColors.headerText,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/pesquisa-eventos');
-              },
-              child: const Text(
-                'Ver todos',
+  Widget _buildEventsCard() {
+    return _card(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'PRÓXIMOS EVENTOS',
                 style: TextStyle(
-                  color: Color(0xFF0D496B),
-                  fontWeight: FontWeight.bold,
+                  color: BaileSulColors.accent,
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-
-        if (_eventos.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 20),
-            alignment: Alignment.center,
-            child: const Text(
-              'Nenhum evento confirmado no momento.',
-              style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
-            ),
-          )
-        else ...[
-          ..._eventos.map((ev) => _buildEventCard(ev)),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 42,
-            child: OutlinedButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/pesquisa-eventos');
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: Colors.black87,
-                side: const BorderSide(color: Colors.black38, width: 1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(4),
+              InkWell(
+                onTap: () => Navigator.pushNamed(context, '/pesquisa-eventos'),
+                child: Text(
+                  'Ver todos os eventos',
+                  style: TextStyle(
+                    color: BaileSulColors.accentLight,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
-              child: const Text(
-                'Ver todos os eventos',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+            ],
           ),
+          const SizedBox(height: 14),
+          if (_eventos.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Center(
+                child: Text(
+                  'Nenhum evento agendado',
+                  style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: _eventos.map((ev) => _buildEventItem(ev)).toList(),
+            ),
         ],
-      ],
+      ),
     );
   }
 
-  Widget _buildEventCard(Map<String, dynamic> ev) {
+  Widget _buildEventItem(Map<String, dynamic> ev) {
+    final String capa = ApiConfig.resolveMediaUrl(ev['foto_capa_url']?.toString());
     final String cidade = ev['cidade']?.toString() ?? '';
     final String estado = ev['estado']?.toString() ?? '';
-    final String local = [
-      if ((ev['local_nome']?.toString() ?? '').isNotEmpty) ev['local_nome'].toString(),
-      if (cidade.isNotEmpty || estado.isNotEmpty) [cidade, estado].where((s) => s.isNotEmpty).join(', '),
-    ].join(' • ');
+    final String cidadeEstado = [cidade, estado].where((s) => s.isNotEmpty).join(', ');
+    final String local = cidadeEstado.isNotEmpty ? cidadeEstado : (ev['local']?.toString() ?? '');
+    final String comunidade = ev['comunidade']?.toString() ?? '';
+    final String status = (ev['status']?.toString() ?? 'agendado');
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: BaileSulColors.cardBorder, width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: IntrinsicHeight(
+    return InkWell(
+      onTap: () => Navigator.pushNamed(context, '/evento', arguments: ev['id']),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: BaileSulColors.cardBorder),
+          borderRadius: BorderRadius.circular(10),
+        ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Left Image (a banda não recebe capa de evento na API, usamos ícone)
-            Container(
-              width: 100,
-              height: 100,
-              color: Colors.grey.shade200,
-              child: const Icon(Icons.music_video, color: Colors.black26),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: capa.isNotEmpty
+                  ? Image.network(
+                      capa,
+                      width: 62,
+                      height: 62,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => _eventThumbFallback(),
+                    )
+                  : _eventThumbFallback(),
             ),
             const SizedBox(width: 12),
-
-            // Content
             Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      ev['titulo']?.toString() ?? 'Evento',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: BaileSulColors.headerText,
-                      ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    ev['titulo']?.toString() ?? 'Evento',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(height: 6),
-
-                    // Date & Time
-                    Row(
-                      children: [
-                        const Icon(Icons.calendar_month_outlined, size: 13, color: Colors.black54),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatarData(ev['data_inicio']?.toString()),
-                          style: const TextStyle(fontSize: 11, color: Colors.black87),
-                        ),
-                        const SizedBox(width: 8),
-                        const Icon(Icons.access_time, size: 13, color: Colors.black54),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatarHora(ev['data_inicio']?.toString()),
-                          style: const TextStyle(fontSize: 11, color: Colors.black87),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Location / community
-                    Row(
-                      children: [
-                        const Icon(Icons.location_on_outlined, size: 13, color: Colors.black54),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            local.isNotEmpty ? local : 'Local a confirmar',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 11, color: Colors.black87),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-
-                    // Comunidade contratante
-                    if ((ev['comunidade']?.toString() ?? '').isNotEmpty)
-                      Row(
-                        children: [
-                          const Icon(Icons.apartment_outlined, size: 13, color: Colors.black54),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              ev['comunidade'].toString(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                color: Colors.black87,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                  ),
+                  const SizedBox(height: 5),
+                  _EventMetaRow(icon: Icons.calendar_month_outlined, text: _formatarData(ev['data_inicio']?.toString())),
+                  if (local.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    _EventMetaRow(icon: Icons.place_outlined, text: local),
                   ],
-                ),
+                  if (comunidade.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    _EventMetaRow(icon: Icons.apartment_outlined, text: comunidade),
+                  ],
+                ],
               ),
             ),
-
-            // Right Chevron
-            const Icon(Icons.chevron_right, color: Colors.black45),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Icon(Icons.chevron_right, size: 18, color: BaileSulColors.mutedText),
+                const SizedBox(height: 6),
+                _EventStatusBadge(status: status),
+              ],
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAvaliacoesSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Avaliações da banda',
-          style: TextStyle(
-            color: BaileSulColors.headerText,
-            fontSize: 18,
-            fontWeight: FontWeight.w800,
-          ),
+  Widget _eventThumbFallback() {
+    return Container(
+      width: 62,
+      height: 62,
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [BaileSulColors.accent, BaileSulColors.dark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        const SizedBox(height: 16),
+      ),
+      child: const Icon(Icons.image_outlined, color: Colors.white24, size: 22),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Componentes auxiliares
+// ─────────────────────────────────────────────────────────────
+
+class _TagChip extends StatelessWidget {
+  const _TagChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        border: Border.all(color: BaileSulColors.cardBorder, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: BaileSulColors.mutedText,
+          fontSize: 12.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+class _FilledPillButton extends StatelessWidget {
+  const _FilledPillButton({required this.label, required this.onPressed, this.tonal = false});
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool tonal;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              tonal ? BaileSulColors.accent.withValues(alpha: 0.1) : BaileSulColors.accent,
+          foregroundColor: tonal ? BaileSulColors.accent : Colors.white,
+          elevation: 0,
+          side: tonal ? BorderSide(color: BaileSulColors.accent.withValues(alpha: 0.3)) : null,
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class _OutlinePillButton extends StatelessWidget {
+  const _OutlinePillButton({required this.label, required this.onPressed, this.enabled = true});
+
+  final String label;
+  final VoidCallback onPressed;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 36,
+      child: OutlinedButton(
+        onPressed: enabled ? onPressed : null,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: BaileSulColors.mutedText,
+          side: BorderSide(color: BaileSulColors.cardBorder, width: 1.5),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+}
+
+class _MetaItem extends StatelessWidget {
+  const _MetaItem({
+    required this.icon,
+    required this.text,
+    this.textColor,
+    this.textWeight,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color? textColor;
+  final FontWeight? textWeight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 15, color: BaileSulColors.accent),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: textColor ?? BaileSulColors.mutedText,
+                fontSize: 12.5,
+                height: 1.4,
+                fontWeight: textWeight ?? FontWeight.normal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StarsDisplay extends StatelessWidget {
+  const _StarsDisplay({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final int cheias = value.round();
+    return Row(
+      children: List.generate(5, (i) {
+        return Icon(
+          i < cheias ? Icons.star_rounded : Icons.star_border_rounded,
+          size: 16,
+          color: const Color(0xFFF5A623),
+        );
+      }),
+    );
+  }
+}
+
+class _StatData {
+  const _StatData({required this.icon, required this.value, required this.label});
+
+  final IconData icon;
+  final String value;
+  final String label;
+}
+
+class _StatItem extends StatelessWidget {
+  const _StatItem({required this.data});
+
+  final _StatData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          alignment: Alignment.center,
-          child: const Text(
-            'As avaliações de bandas ainda não estão disponíveis nesta versão do app.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: BaileSulColors.accent.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(data.icon, size: 17, color: BaileSulColors.accent),
+        ),
+        const SizedBox(width: 10),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                data.value,
+                style: const TextStyle(
+                  color: BaileSulColors.headerText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text(
+                data.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 10.5),
+              ),
+            ],
           ),
         ),
       ],
+    );
+  }
+}
+
+class _EventMetaRow extends StatelessWidget {
+  const _EventMetaRow({required this.icon, required this.text});
+
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    if (text.isEmpty) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: BaileSulColors.mutedText),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: BaileSulColors.mutedText, fontSize: 11),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EventStatusBadge extends StatelessWidget {
+  const _EventStatusBadge({required this.status});
+
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    late final Color bg;
+    late final Color fg;
+    late final String label;
+    switch (status) {
+      case 'andamento':
+        bg = const Color(0x1A0F6E56);
+        fg = const Color(0xFF0F6E56);
+        label = 'Em andamento';
+        break;
+      case 'realizado':
+      case 'finalizado':
+        bg = BaileSulColors.mutedText.withValues(alpha: 0.1);
+        fg = BaileSulColors.mutedText;
+        label = 'Realizado';
+        break;
+      default:
+        bg = BaileSulColors.accent.withValues(alpha: 0.1);
+        fg = BaileSulColors.accent;
+        label = 'Agendado';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(5)),
+      child: Text(
+        label,
+        style: TextStyle(color: fg, fontSize: 10, fontWeight: FontWeight.w700),
+      ),
     );
   }
 }
