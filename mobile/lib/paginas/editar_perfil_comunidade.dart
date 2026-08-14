@@ -12,7 +12,6 @@ import '../services/sessao_usuario.dart';
 import '../utils/formatadores.dart';
 import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -518,31 +517,28 @@ class _EditarPerfilComunidadePageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            MobileHeader(
-              logoHeight: 58,
-              horizontalPadding: 16,
-              onMenuPressed: _abrirMenu,
+      backgroundColor: BaileSulColors.pageBackground,
+      body: Column(
+        children: [
+          MobileHeader(
+            logoHeight: 58,
+            horizontalPadding: 16,
+            onMenuPressed: _abrirMenu,
+          ),
+          Expanded(
+            child: Container(
+              color: BaileSulColors.pageBackground,
+              child: _buildBody(),
             ),
-            Expanded(
-              child: Container(
-                color: Colors.white,
-                child: _buildBody(),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: BaileSulColors.accent));
     }
 
     if (_erroCarregar != null) {
@@ -552,12 +548,12 @@ class _EditarPerfilComunidadePageState
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 60),
           child: Column(
             children: [
-              const Icon(Icons.apartment_outlined, size: 56, color: Colors.black26),
+              Icon(Icons.apartment_outlined, size: 56, color: BaileSulColors.mutedText.withValues(alpha: 0.5)),
               const SizedBox(height: 16),
               Text(
                 _erroCarregar!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54, fontSize: 15),
+                style: const TextStyle(color: BaileSulColors.mutedText, fontSize: 15),
               ),
               const SizedBox(height: 20),
               ElevatedButton(
@@ -565,6 +561,8 @@ class _EditarPerfilComunidadePageState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: BaileSulColors.accent,
                   foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
                 child: const Text('Tentar novamente'),
               ),
@@ -578,189 +576,232 @@ class _EditarPerfilComunidadePageState
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       child: Form(
         key: _formKey,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'Editar perfil da comunidade',
-                style: TextStyle(
-                  color: BaileSulColors.headerText,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              const _SectionTitle('Informações gerais'),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'Nome da comunidade *',
-                controller: _nomeController,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Informe o nome da comunidade.' : null,
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'Descrição',
-                controller: _descricaoController,
-                maxLines: 4,
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'WhatsApp',
-                controller: _whatsappController,
-                keyboardType: TextInputType.phone,
-                validator: _validarWhatsapp,
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionTitle('Foto de perfil'),
-              const SizedBox(height: 10),
-              _AvatarUpload(
-                fotoUrl: _fotoPerfilUrl,
-                enviando: _enviandoFotoPerfil,
-                onTap: _abrirSeletorDeFotoPerfil,
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionTitle('Fotos da comunidade'),
-              const SizedBox(height: 4),
-              const Text(
-                'A primeira foto é usada como capa da vitrine.',
-                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
-              ),
-              const SizedBox(height: 10),
-              _GaleriaFotos(
-                midias: _midias,
-                enviando: _enviandoFoto,
-                removendoMidiaId: _removendoMidiaId,
-                onAdicionar: _abrirSeletorDeFoto,
-                onRemover: _removerFoto,
-              ),
-              const SizedBox(height: 24),
-
-              const _SectionTitle('Localização'),
-              const SizedBox(height: 12),
-              _CampoTexto(
-                label: 'CEP',
-                controller: _cepController,
-                focusNode: _cepFocusNode,
-                keyboardType: TextInputType.number,
-                inputFormatters: const [CepTextInputFormatter()],
-                suffixIcon: _buscandoCep
-                    ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : null,
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Preenche endereço, cidade e estado automaticamente.',
-                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              _CampoTexto(label: 'Endereço', controller: _enderecoController),
-              const SizedBox(height: 12),
-              Row(
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 700),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    flex: 2,
-                    child: _CampoTexto(label: 'Cidade', controller: _cidadeController),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _CampoTexto(
-                      label: 'Estado (UF)',
-                      controller: _estadoController,
-                      maxLength: 2,
-                      validator: _validarEstado,
+                  const Text(
+                    'Editar Perfil da Comunidade',
+                    style: TextStyle(
+                      color: BaileSulColors.headerText,
+                      fontSize: 21,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Toque no mapa para marcar o ponto exato da comunidade. Se você não '
-                'marcar manualmente, a localização é calculada automaticamente a '
-                'partir do endereço informado ao salvar.',
-                style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
-              ),
-              const SizedBox(height: 12),
-              MapLocationPicker(
-                height: 180,
-                selectedLocation: _localizacaoSelecionada,
-                onLocationChanged: (MapLocation location) {
-                  setState(() {
-                    _localizacaoSelecionada = location;
-                    _localizacaoAlterada = true;
-                  });
-                },
-              ),
-              const SizedBox(height: 26),
-
-              if (_erroSalvar != null) ...[
-                Text(
-                  _erroSalvar!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Color(0xFFB42318),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  const SizedBox(height: 4),
+                  Text(
+                    'Atualize as informações públicas da sua vitrine e sua galeria de mídias.',
+                    style: TextStyle(color: BaileSulColors.headerText.withValues(alpha: 0.6), fontSize: 13),
                   ),
-                ),
-                const SizedBox(height: 12),
-              ],
+                  const SizedBox(height: 18),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _salvando ? null : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: BaileSulColors.headerText,
-                        side: const BorderSide(color: BaileSulColors.cardBorder),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                  // Card: foto de perfil
+                  _EditCard(
+                    icon: Icons.photo_camera_outlined,
+                    title: 'Foto de Perfil (Avatar)',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _AvatarUpload(
+                          fotoUrl: _fotoPerfilUrl,
+                          enviando: _enviandoFotoPerfil,
+                          onTap: _abrirSeletorDeFotoPerfil,
                         ),
-                      ),
-                      child: const Text('Cancelar'),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Formatos recomendados: JPG, PNG ou WEBP (Max 5MB).',
+                          style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _salvando ? null : _salvar,
-                      style: FilledButton.styleFrom(
-                        backgroundColor: BaileSulColors.accent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(4),
+                  const SizedBox(height: 16),
+
+                  // Card: informações gerais
+                  _EditCard(
+                    icon: Icons.apartment_outlined,
+                    title: 'Informações Gerais',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _CampoTexto(
+                          label: 'Nome da Entidade / Comunidade *',
+                          controller: _nomeController,
+                          validator: (v) => (v == null || v.trim().isEmpty)
+                              ? 'Informe o nome da comunidade.'
+                              : null,
                         ),
-                      ),
-                      child: _salvando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'WhatsApp de Contato',
+                          controller: _whatsappController,
+                          keyboardType: TextInputType.phone,
+                          validator: _validarWhatsapp,
+                          hint: 'Utilizado para direcionar mensagens dos clientes/contratantes.',
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'CEP',
+                          controller: _cepController,
+                          focusNode: _cepFocusNode,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: const [CepTextInputFormatter()],
+                          hint: _buscandoCep
+                              ? 'Buscando endereço...'
+                              : 'Preenche cidade e estado automaticamente.',
+                          suffixIcon: _buscandoCep
+                              ? const Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                  ),
+                                )
+                              : null,
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(label: 'Endereço Completo', controller: _enderecoController),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: _CampoTexto(label: 'Cidade', controller: _cidadeController),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _CampoTexto(
+                                label: 'Estado (UF)',
+                                controller: _estadoController,
+                                maxLength: 2,
+                                validator: _validarEstado,
                               ),
-                            )
-                          : const Text('Salvar alterações'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Toque no mapa para marcar o ponto exato da comunidade. Se você não '
+                          'marcar manualmente, a localização é calculada automaticamente a '
+                          'partir do endereço informado ao salvar.',
+                          style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12, height: 1.4),
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: MapLocationPicker(
+                            height: 180,
+                            selectedLocation: _localizacaoSelecionada,
+                            onLocationChanged: (MapLocation location) {
+                              setState(() {
+                                _localizacaoSelecionada = location;
+                                _localizacaoAlterada = true;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        _CampoTexto(
+                          label: 'Descrição / Biografia',
+                          controller: _descricaoController,
+                          maxLines: 4,
+                        ),
+                      ],
                     ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Card: galeria
+                  _EditCard(
+                    icon: Icons.image_outlined,
+                    title: 'Galeria de Fotos e Vídeos',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'A primeira foto é usada como capa da vitrine.',
+                          style: TextStyle(color: BaileSulColors.mutedText, fontSize: 12),
+                        ),
+                        const SizedBox(height: 12),
+                        _GaleriaFotos(
+                          midias: _midias,
+                          enviando: _enviandoFoto,
+                          removendoMidiaId: _removendoMidiaId,
+                          onAdicionar: _abrirSeletorDeFoto,
+                          onRemover: _removerFoto,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  if (_erroSalvar != null) ...[
+                    Text(
+                      _erroSalvar!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFFB42318),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _salvando ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: BaileSulColors.headerText,
+                            side: const BorderSide(color: BaileSulColors.cardBorder),
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text('Cancelar'),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _salvando ? null : _salvar,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: BaileSulColors.accent,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          icon: _salvando
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.save_outlined, size: 18),
+                          label: Text(_salvando ? 'Salvando...' : 'Salvar Alterações'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
-              const MobileFooter(logoHeight: 52, horizontalPadding: 24),
-            ],
+            ),
           ),
         ),
       ),
@@ -768,19 +809,51 @@ class _EditarPerfilComunidadePageState
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.title);
+/// Card branco padrão das seções de edição, espelhando `.card`/`.cardTitle`
+/// de editar_perfil.module.css (radius 18px, título com ícone accent).
+class _EditCard extends StatelessWidget {
+  const _EditCard({required this.icon, required this.title, required this.child});
 
+  final IconData icon;
   final String title;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: BaileSulColors.headerText,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: BaileSulColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: BaileSulColors.accent),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: BaileSulColors.headerText,
+                  fontSize: 15.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          child,
+        ],
       ),
     );
   }
@@ -797,6 +870,7 @@ class _CampoTexto extends StatelessWidget {
     this.focusNode,
     this.inputFormatters,
     this.suffixIcon,
+    this.hint,
   });
 
   final String label;
@@ -808,39 +882,56 @@ class _CampoTexto extends StatelessWidget {
   final FocusNode? focusNode;
   final List<TextInputFormatter>? inputFormatters;
   final Widget? suffixIcon;
+  final String? hint;
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      focusNode: focusNode,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      maxLength: maxLength,
-      validator: validator,
-      inputFormatters: inputFormatters,
-      style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: BaileSulColors.mutedText, fontSize: 13),
-        counterText: maxLength != null ? '' : null,
-        suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: const Color(0xFFF4F6F8),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: BaileSulColors.headerText,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          maxLength: maxLength,
+          validator: validator,
+          inputFormatters: inputFormatters,
+          style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+          decoration: InputDecoration(
+            counterText: maxLength != null ? '' : null,
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: const Color(0xFFFAFAFA),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
+            ),
+          ),
         ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
-        ),
-      ),
+        if (hint != null) ...[
+          const SizedBox(height: 4),
+          Text(hint!, style: TextStyle(color: BaileSulColors.mutedText, fontSize: 11.5)),
+        ],
+      ],
     );
   }
 }
@@ -860,53 +951,50 @@ class _AvatarUpload extends StatelessWidget {
   Widget build(BuildContext context) {
     final String url = ApiConfig.resolveMediaUrl(fotoUrl);
 
-    return InkWell(
-      onTap: enviando ? null : onTap,
-      borderRadius: BorderRadius.circular(50),
-      child: Stack(
-        children: [
-          Container(
-            width: 96,
-            height: 96,
-            decoration: BoxDecoration(
-              color: BaileSulColors.accent,
-              shape: BoxShape.circle,
-              border: Border.all(color: BaileSulColors.cardBorder, width: 1),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: enviando
-                ? const Center(
-                    child: SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    ),
-                  )
-                : (url.isNotEmpty
-                    ? Image.network(
-                        url,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.apartment, color: Colors.white70, size: 36),
-                      )
-                    : const Icon(Icons.apartment, color: Colors.white70, size: 36)),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 150,
+          height: 92,
+          decoration: BoxDecoration(
+            color: BaileSulColors.accent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: BaileSulColors.accent, width: 3),
           ),
-          if (!enviando)
-            Positioned(
-              right: 0,
-              bottom: 0,
-              child: Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey.shade300, width: 1),
-                ),
-                child: const Icon(Icons.camera_alt_outlined, size: 16, color: Colors.black87),
-              ),
+          clipBehavior: Clip.antiAlias,
+          child: enviando
+              ? const Center(
+                  child: SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: BaileSulColors.accent),
+                  ),
+                )
+              : (url.isNotEmpty
+                  ? Image.network(
+                      url,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.apartment, color: BaileSulColors.accent, size: 30),
+                    )
+                  : const Icon(Icons.apartment, color: BaileSulColors.accent, size: 30)),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: enviando ? null : onTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: BaileSulColors.headerText,
+              side: const BorderSide(color: BaileSulColors.cardBorder),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             ),
-        ],
-      ),
+            icon: const Icon(Icons.upload_outlined, size: 16),
+            label: Text(enviando ? 'Enviando foto...' : 'Alterar Foto'),
+          ),
+        ),
+      ],
     );
   }
 }

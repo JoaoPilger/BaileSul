@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'paginas/criar_editar_evento.dart';
 import 'paginas/editar_perfil_banda.dart';
@@ -18,7 +19,6 @@ import 'paginas/pesquisa_padrao_eventos.dart';
 import 'models/tipo_conta.dart';
 import 'navigation/app_navigator.dart';
 import 'services/sessao_usuario.dart';
-import 'widgets/mobile_footer.dart';
 import 'paginas/notificacoes.dart';
 import 'paginas/perfil_banda.dart';
 import 'paginas/perfil_comunidade.dart';
@@ -72,6 +72,7 @@ class MyApp extends StatelessWidget {
           seedColor: const Color(0xFF6A4CFF),
           brightness: Brightness.light,
         ),
+        textTheme: GoogleFonts.plusJakartaSansTextTheme(),
         useMaterial3: true,
       ),
       home: const RootGate(),
@@ -96,7 +97,6 @@ class MyApp extends StatelessWidget {
             return const MeusEventosBandasPage();
           }
           return const Scaffold(
-            bottomNavigationBar: MobileFooter(),
             body: Center(
               child: Text('Apenas contas de banda podem acessar esta página.'),
             ),

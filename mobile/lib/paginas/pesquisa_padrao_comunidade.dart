@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 import 'perfil_comunidade.dart';
@@ -25,6 +24,16 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
   List<ComunidadeApi> _comunidadesFiltradas = <ComunidadeApi>[];
   bool _carregando = true;
   String? _erro;
+  String _cidadeSelecionada = '';
+
+  List<String> get _cidadesDisponiveis {
+    final Set<String> cidades = _todasComunidades
+        .map((c) => c.cidade)
+        .where((c) => c.isNotEmpty)
+        .toSet();
+    final List<String> lista = cidades.toList()..sort();
+    return lista;
+  }
 
   @override
   void initState() {
@@ -62,7 +71,7 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
         if (!mounted) return;
         setState(() {
           _todasComunidades = comunidades;
-          _comunidadesFiltradas = List<ComunidadeApi>.from(comunidades);
+          _aplicarFiltros();
           _carregando = false;
         });
       } else {
@@ -89,19 +98,26 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
     return <dynamic>[];
   }
 
-  void _onSearchChanged() {
+  void _onSearchChanged() => setState(_aplicarFiltros);
+
+  void _aplicarFiltros() {
     final String query = _searchController.text.toLowerCase().trim();
+    _comunidadesFiltradas = _todasComunidades.where((ComunidadeApi comunidade) {
+      final bool matchBusca = query.isEmpty ||
+          comunidade.nomeEntidade.toLowerCase().contains(query) ||
+          comunidade.cidade.toLowerCase().contains(query) ||
+          comunidade.estado.toLowerCase().contains(query) ||
+          comunidade.descricao.toLowerCase().contains(query);
+      final bool matchCidade =
+          _cidadeSelecionada.isEmpty || comunidade.cidade == _cidadeSelecionada;
+      return matchBusca && matchCidade;
+    }).toList();
+  }
+
+  void _onCidadeChanged(String? cidade) {
     setState(() {
-      if (query.isEmpty) {
-        _comunidadesFiltradas = List<ComunidadeApi>.from(_todasComunidades);
-      } else {
-        _comunidadesFiltradas = _todasComunidades.where((ComunidadeApi comunidade) {
-          return comunidade.nomeEntidade.toLowerCase().contains(query) ||
-              comunidade.cidade.toLowerCase().contains(query) ||
-              comunidade.estado.toLowerCase().contains(query) ||
-              comunidade.descricao.toLowerCase().contains(query);
-        }).toList();
-      }
+      _cidadeSelecionada = cidade ?? '';
+      _aplicarFiltros();
     });
   }
 
@@ -197,6 +213,48 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                                 ),
                               ),
                             ),
+                            if (_cidadesDisponiveis.isNotEmpty) ...[
+                              const SizedBox(height: 10),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: BaileSulColors.cardBorder),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    isExpanded: true,
+                                    value: _cidadeSelecionada.isEmpty ? null : _cidadeSelecionada,
+                                    hint: Text(
+                                      'Todas as cidades',
+                                      style: TextStyle(color: BaileSulColors.mutedText, fontSize: 14),
+                                    ),
+                                    icon: const Icon(Icons.expand_more_rounded, color: BaileSulColors.mutedText),
+                                    style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+                                    items: <DropdownMenuItem<String>>[
+                                      const DropdownMenuItem<String>(
+                                        value: '',
+                                        child: Text('Todas as cidades'),
+                                      ),
+                                      ..._cidadesDisponiveis.map(
+                                        (c) => DropdownMenuItem<String>(value: c, child: Text(c)),
+                                      ),
+                                    ],
+                                    onChanged: (value) => _onCidadeChanged(value == '' ? null : value),
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 12),
+                            Text(
+                              '${_comunidadesFiltradas.length} comunidades',
+                              style: TextStyle(
+                                color: BaileSulColors.mutedText,
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -262,14 +320,9 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                         ),
                       ),
 
-                    // Space before footer
+                    // Bottom spacing
                     const SliverToBoxAdapter(
                       child: SizedBox(height: 24),
-                    ),
-
-                    // Footer
-                    const SliverToBoxAdapter(
-                      child: MobileFooter(),
                     ),
                   ],
                 ),
@@ -328,6 +381,16 @@ class _PesquisaPadraoComunidadeState extends State<PesquisaPadraoComunidade> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const Text(
+                        'COMUNIDADE',
+                        style: TextStyle(
+                          color: BaileSulColors.accent,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
                       Row(
                         children: [
                           Expanded(

@@ -7,7 +7,6 @@ import '../config/api_config.dart';
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -230,12 +229,6 @@ class _PerfilBandaPageState extends State<PerfilBandaPage> {
               color: BaileSulColors.pageBackground.withValues(alpha: 0.3),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: _buildAvaliacoesSection(),
-            ),
-
-            // Footer
-            const MobileFooter(
-              logoHeight: 52,
-              horizontalPadding: 24,
             ),
           ],
         ),

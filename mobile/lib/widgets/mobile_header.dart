@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import '../paginas/home.dart' show BaileSulColors;
 import '../services/notificacoes_service.dart';
 
 /// Cabeçalho mobile com fundo escuro, logo à esquerda e menu à direita.
@@ -12,7 +13,7 @@ class MobileHeader extends StatelessWidget {
     this.horizontalPadding = 20,
   });
 
-  static const Color backgroundColor = Color(0xFF0A0C12);
+  static const Color backgroundColor = BaileSulColors.dark;
 
   final VoidCallback? onMenuPressed;
   final double logoHeight;

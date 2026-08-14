@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 import 'perfil_banda.dart';
@@ -267,7 +266,6 @@ class _PesquisaPadraoBandasState extends State<PesquisaPadraoBandas> {
                                 ),
                               ),
                             ),
-                            const MobileFooter(),
                           ],
                         ),
                       ),

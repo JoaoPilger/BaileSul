@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../services/notificacoes_service.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -25,7 +24,6 @@ class _NotificacoesPageState extends State<NotificacoesPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BaileSulColors.dark,
-      bottomNavigationBar: const MobileFooter(),
       body: Column(
         children: [
           MobileHeader(

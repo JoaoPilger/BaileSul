@@ -12,7 +12,6 @@ import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/map_location_picker.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -26,20 +25,30 @@ class CriarEditarEventoPage extends StatefulWidget {
 }
 
 class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
-  final List<String> _vendedores = <String>['Banda Beta', 'Dj Aurora'];
+  static const Map<String, String> _tipoEventoLabels = <String, String>{
+    'musical': 'Musical',
+    'almoco': 'Almoço',
+    'bingo': 'Bingo',
+    'expos': 'Expos',
+    'futebol': 'Futebol',
+  };
+
   final TextEditingController _tituloController = TextEditingController();
+  final TextEditingController _descricaoController = TextEditingController();
   final TextEditingController _bandaController = TextEditingController();
-  final TextEditingController _estiloController = TextEditingController();
+  final TextEditingController _precoController = TextEditingController();
+  final TextEditingController _capacidadeController = TextEditingController();
   final TextEditingController _dataInicioController = TextEditingController();
   final TextEditingController _dataFimController = TextEditingController();
   final TextEditingController _horaInicioController = TextEditingController();
   final TextEditingController _horaFimController = TextEditingController();
-  final TextEditingController _vendedorController = TextEditingController();
   final TextEditingController _cepController = TextEditingController();
   final TextEditingController _cidadeController = TextEditingController();
   final TextEditingController _bairroController = TextEditingController();
   final TextEditingController _ruaController = TextEditingController();
   final TextEditingController _referenciaController = TextEditingController();
+
+  String _tipoEvento = 'musical';
 
   MapLocation? _localizacaoSelecionada;
   Uint8List? _capaBytes;
@@ -75,15 +84,16 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
   @override
   void dispose() {
     _tituloController.dispose();
+    _descricaoController.dispose();
     _bandaController.dispose();
     _bandaFocusNode.dispose();
     _bandaDebounce?.cancel();
-    _estiloController.dispose();
+    _precoController.dispose();
+    _capacidadeController.dispose();
     _dataInicioController.dispose();
     _dataFimController.dispose();
     _horaInicioController.dispose();
     _horaFimController.dispose();
-    _vendedorController.dispose();
     _cepController.dispose();
     _cepFocusNode.dispose();
     _cidadeController.dispose();
@@ -246,11 +256,11 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     ].where((String value) => value.isNotEmpty).join(', ');
 
     final String descricao = <String>[
-      if (_bandaController.text.trim().isNotEmpty)
+      if (_descricaoController.text.trim().isNotEmpty)
+        _descricaoController.text.trim(),
+      if (_tipoEvento == 'musical' && _bandaId == null && _bandaController.text.trim().isNotEmpty)
         'Banda/Artista: ${_bandaController.text.trim()}',
-      if (_estiloController.text.trim().isNotEmpty)
-        'Estilo musical: ${_estiloController.text.trim()}',
-    ].join('\n');
+    ].join('\n\n');
 
     final List<Map<String, String>> dias = <Map<String, String>>[];
     if (_horaInicioController.text.trim().isNotEmpty ||
@@ -276,12 +286,25 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
       );
       request.headers['Authorization'] = 'Bearer $token';
       request.fields['titulo'] = titulo;
+      request.fields['tipo_evento'] = _tipoEvento;
       request.fields['data_inicio'] = dataInicio;
       request.fields['data_fim'] = dataFim;
       if (descricao.isNotEmpty) request.fields['descricao'] = descricao;
       if (endereco.isNotEmpty) request.fields['local_endereco'] = endereco;
       if (_cidadeController.text.trim().isNotEmpty) {
         request.fields['local_nome'] = _cidadeController.text.trim();
+      }
+      final String precoTexto = _precoController.text.trim();
+      if (precoTexto.isNotEmpty && !RegExp(r'^gr[aá]tis$', caseSensitive: false).hasMatch(precoTexto)) {
+        final double? valor = double.tryParse(
+          precoTexto.replaceAll(RegExp(r'^R\$\s*', caseSensitive: false), '').replaceAll(',', '.'),
+        );
+        if (valor != null && valor >= 0) {
+          request.fields['valor_ingresso'] = valor.toString();
+        }
+      }
+      if (_capacidadeController.text.trim().isNotEmpty) {
+        request.fields['capacidade_maxima'] = _capacidadeController.text.trim();
       }
 
       if (_capaBytes != null) {
@@ -362,22 +385,6 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
     );
   }
 
-  void _addVendedor() {
-    if (_vendedores.contains('Novo vendedor')) {
-      return;
-    }
-
-    setState(() {
-      _vendedores.add('Novo vendedor');
-    });
-  }
-
-  void _removeVendedor(String vendedor) {
-    setState(() {
-      _vendedores.remove(vendedor);
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     if (!SessaoUsuario.instance.podeCriarEvento) {
@@ -402,7 +409,6 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                   ),
                 ),
               ),
-              const MobileFooter(),
             ],
           ),
         ),
@@ -420,15 +426,29 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
             onMenuPressed: _showMenu,
           ),
           Expanded(
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
-                    child: Center(
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 420),
+            child: Container(
+              color: BaileSulColors.pageBackground,
+              child: SingleChildScrollView(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 620),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: BaileSulColors.cardBorder),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.05),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -436,77 +456,105 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                               'Criar Evento',
                               style: TextStyle(
                                 color: BaileSulColors.headerText,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w500,
+                                fontSize: 21,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.3,
                               ),
                             ),
-                            const SizedBox(height: 16),
-                            Container(height: 1, color: BaileSulColors.cardBorder),
                             const SizedBox(height: 18),
-                            const _SectionTitle('Informacoes Basicas'),
+                            const _SectionTitle('Informações Básicas'),
                             const SizedBox(height: 12),
                             _FormField(
-                              label: 'Titulo do Evento *',
+                              label: 'Título do Evento *',
                               controller: _tituloController,
+                            ),
+                            const SizedBox(height: 12),
+                            _FormField(
+                              label: 'Descrição do Evento',
+                              controller: _descricaoController,
+                              maxLines: 4,
                             ),
                             const SizedBox(height: 12),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                                    children: [
-                                      _FormField(
-                                        label: 'Banda/Artista *',
-                                        controller: _bandaController,
-                                        focusNode: _bandaFocusNode,
-                                        suffixIcon: _bandaBuscando
-                                            ? const Padding(
-                                                padding: EdgeInsets.all(6),
-                                                child: SizedBox(
-                                                  width: 12,
-                                                  height: 12,
-                                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                                ),
-                                              )
-                                            : null,
-                                      ),
-                                      if (_bandaSugestoesOpen && _bandaSugestoes.isNotEmpty)
-                                        _BandaSugestoesList(
-                                          sugestoes: _bandaSugestoes,
-                                          onSelecionar: _selecionarBanda,
+                                if (_tipoEvento == 'musical')
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        _FormField(
+                                          label: 'Banda/Artista *',
+                                          controller: _bandaController,
+                                          focusNode: _bandaFocusNode,
+                                          suffixIcon: _bandaBuscando
+                                              ? const Padding(
+                                                  padding: EdgeInsets.all(6),
+                                                  child: SizedBox(
+                                                    width: 12,
+                                                    height: 12,
+                                                    child: CircularProgressIndicator(strokeWidth: 2),
+                                                  ),
+                                                )
+                                              : null,
                                         ),
-                                    ],
+                                        if (_bandaSugestoesOpen && _bandaSugestoes.isNotEmpty)
+                                          _BandaSugestoesList(
+                                            sugestoes: _bandaSugestoes,
+                                            onSelecionar: _selecionarBanda,
+                                          ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                SizedBox(width: 12),
+                                if (_tipoEvento == 'musical') const SizedBox(width: 12),
                                 Expanded(
-                                  child: _FormField(
-                                    label: 'Estilo Musical *',
-                                    controller: _estiloController,
+                                  child: _TipoEventoField(
+                                    value: _tipoEvento,
+                                    labels: _tipoEventoLabels,
+                                    onChanged: (value) => setState(() => _tipoEvento = value),
                                   ),
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 24),
-                            const _SectionTitle('Data e Horarios'),
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Data de Inicio *',
+                                    label: 'Ingresso / Entrada',
+                                    controller: _precoController,
+                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Capacidade Máxima',
+                                    controller: _capacidadeController,
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                            const _SectionTitle('Data e Horários'),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _FormField(
+                                    label: 'Data de Início *',
                                     controller: _dataInicioController,
                                     keyboardType: TextInputType.number,
                                     maxLength: 10,
                                     inputFormatters: [_DateTextInputFormatter()],
                                   ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Data de Termino *',
+                                    label: 'Data de Término *',
                                     controller: _dataFimController,
                                     keyboardType: TextInputType.number,
                                     maxLength: 10,
@@ -520,17 +568,17 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                               children: [
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Horario de Inicio *',
+                                    label: 'Horário de Início',
                                     controller: _horaInicioController,
                                     keyboardType: TextInputType.number,
                                     maxLength: 5,
                                     inputFormatters: [_TimeTextInputFormatter()],
                                   ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Horario de Termino *',
+                                    label: 'Horário de Término',
                                     controller: _horaFimController,
                                     keyboardType: TextInputType.number,
                                     maxLength: 5,
@@ -544,54 +592,13 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                             const SizedBox(height: 10),
                             _CoverUploadBox(onChanged: _onCapaChanged),
                             const SizedBox(height: 24),
-                            const _SectionTitle('Vendedores'),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _FormField(
-                                    label: 'nome do vendedor',
-                                    controller: _vendedorController,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                SizedBox(
-                                  height: 34,
-                                  child: FilledButton(
-                                    onPressed: _addVendedor,
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: BaileSulColors.accent,
-                                      foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                    ),
-                                    child: const Text('Adicionar'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ..._vendedores.map(
-                              (String vendedor) => Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: _VendorItem(
-                                  label: vendedor,
-                                  onRemove: () => _removeVendedor(vendedor),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            const _SectionTitle('Localizacao'),
+                            const _SectionTitle('Localização'),
                             const SizedBox(height: 12),
                             Row(
                               children: [
                                 Expanded(
                                   child: _FormField(
-                                    label: 'CEP *',
+                                    label: 'CEP',
                                     controller: _cepController,
                                     focusNode: _cepFocusNode,
                                     keyboardType: TextInputType.number,
@@ -625,14 +632,14 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                               children: [
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Bairro *',
+                                    label: 'Bairro',
                                     controller: _bairroController,
                                   ),
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: _FormField(
-                                    label: 'Rua *',
+                                    label: 'Rua',
                                     controller: _ruaController,
                                   ),
                                 ),
@@ -640,16 +647,19 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                             ),
                             const SizedBox(height: 12),
                             _FormField(
-                              label: 'Referencia',
+                              label: 'Referência',
                               controller: _referenciaController,
                             ),
                             const SizedBox(height: 14),
-                            MapLocationPicker(
-                              height: 170,
-                              selectedLocation: _localizacaoSelecionada,
-                              onLocationChanged: (MapLocation location) {
-                                setState(() => _localizacaoSelecionada = location);
-                              },
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: MapLocationPicker(
+                                height: 170,
+                                selectedLocation: _localizacaoSelecionada,
+                                onLocationChanged: (MapLocation location) {
+                                  setState(() => _localizacaoSelecionada = location);
+                                },
+                              ),
                             ),
                             const SizedBox(height: 22),
                             if (_erroSalvar != null) ...[
@@ -675,8 +685,9 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                                         color: BaileSulColors.cardBorder,
                                       ),
                                       backgroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 13),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
                                     child: const Text('Cancelar'),
@@ -689,8 +700,10 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                                     style: FilledButton.styleFrom(
                                       backgroundColor: BaileSulColors.accent,
                                       foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      padding: const EdgeInsets.symmetric(vertical: 13),
                                       shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
+                                        borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
                                     child: _salvando
@@ -707,14 +720,12 @@ class _CriarEditarEventoPageState extends State<CriarEditarEventoPage> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const MobileFooter(),
-                ],
+                ),
               ),
             ),
           ),
@@ -799,6 +810,7 @@ class _FormField extends StatelessWidget {
     this.keyboardType = TextInputType.text,
     this.inputFormatters,
     this.maxLength,
+    this.maxLines = 1,
     this.focusNode,
     this.suffixIcon,
   });
@@ -808,42 +820,117 @@ class _FormField extends StatelessWidget {
   final TextInputType keyboardType;
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
+  final int maxLines;
   final FocusNode? focusNode;
   final Widget? suffixIcon;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 30,
-      child: TextFormField(
-        controller: controller,
-        focusNode: focusNode,
-        keyboardType: keyboardType,
-        inputFormatters: inputFormatters,
-        maxLength: maxLength,
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: const TextStyle(
-            color: Colors.black,
-            fontSize: 11,
-          ),
-          counterText: '',
-          floatingLabelBehavior: FloatingLabelBehavior.never,
-          filled: true,
-          fillColor: BaileSulColors.inputFill,
-          suffixIcon: suffixIcon,
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 6,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(3),
-            borderSide: BorderSide.none,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            color: BaileSulColors.headerText,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        style: const TextStyle(color: Colors.black, fontSize: 13),
-        cursorColor: Colors.black,
-      ),
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          focusNode: focusNode,
+          keyboardType: keyboardType,
+          inputFormatters: inputFormatters,
+          maxLength: maxLength,
+          maxLines: maxLines,
+          decoration: InputDecoration(
+            counterText: '',
+            filled: true,
+            fillColor: const Color(0xFFFAFAFA),
+            suffixIcon: suffixIcon,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
+            ),
+          ),
+          style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+        ),
+      ],
+    );
+  }
+}
+
+/// Seletor de "Tipo de Evento", espelhando o `<select>` de criar_evento.jsx.
+class _TipoEventoField extends StatelessWidget {
+  const _TipoEventoField({
+    required this.value,
+    required this.labels,
+    required this.onChanged,
+  });
+
+  final String value;
+  final Map<String, String> labels;
+  final ValueChanged<String> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Tipo de Evento *',
+          style: TextStyle(
+            color: BaileSulColors.headerText,
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 6),
+        DropdownButtonFormField<String>(
+          initialValue: value,
+          decoration: InputDecoration(
+            filled: true,
+            fillColor: const Color(0xFFFAFAFA),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.cardBorder),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: BaileSulColors.accent, width: 2),
+            ),
+          ),
+          style: const TextStyle(color: BaileSulColors.headerText, fontSize: 14),
+          items: labels.entries
+              .map((entry) => DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Text(entry.value),
+                  ))
+              .toList(),
+          onChanged: (String? novoValor) {
+            if (novoValor != null) onChanged(novoValor);
+          },
+        ),
+      ],
     );
   }
 }
@@ -1053,45 +1140,3 @@ class _CoverUploadBoxState extends State<_CoverUploadBox> {
   }
 }
 
-class _VendorItem extends StatelessWidget {
-  const _VendorItem({required this.label, required this.onRemove});
-
-  final String label;
-  final VoidCallback onRemove;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: BaileSulColors.inputFill,
-        borderRadius: BorderRadius.circular(2),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.person_rounded, color: Color(0xFF24313F), size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
-          IconButton(
-            onPressed: onRemove,
-            iconSize: 16,
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 24, height: 24),
-            icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-            tooltip: 'Remover vendedor',
-          ),
-        ],
-      ),
-    );
-  }
-}

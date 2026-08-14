@@ -4,8 +4,8 @@ import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../services/vendedor_service.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
+import 'home.dart';
 
 class PagamentosPage extends StatefulWidget {
   const PagamentosPage({super.key});
@@ -308,7 +308,7 @@ class _PagamentosPageState extends State<PagamentosPage> {
     final bool isPessoal = sessao.tipoConta == TipoConta.pessoal;
 
     return Scaffold(
-      backgroundColor: MobileFooter.backgroundColor,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(

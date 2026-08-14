@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -647,7 +646,6 @@ class _EditarPerfilBandaPageState extends State<EditarPerfilBandaPage> {
                 ],
               ),
               const SizedBox(height: 24),
-              const MobileFooter(logoHeight: 52, horizontalPadding: 24),
             ],
           ),
         ),

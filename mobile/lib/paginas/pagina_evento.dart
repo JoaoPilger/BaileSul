@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -122,7 +121,7 @@ class _PaginaEventoState extends State<PaginaEvento> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(
@@ -145,12 +144,6 @@ class _PaginaEventoState extends State<PaginaEvento> {
                       reservado: _reservado,
                       onReservar: _abrirModalReserva,
                     ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: MobileFooter(
-                    logoHeight: 52,
-                    horizontalPadding: 24,
                   ),
                 ),
               ],

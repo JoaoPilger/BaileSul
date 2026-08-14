@@ -7,7 +7,6 @@ import '../config/api_config.dart';
 import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart' show BaileSulColors;
 
@@ -226,16 +225,6 @@ class _ContratosPageState extends State<ContratosPage> {
                             ),
                           ),
                         ),
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              MobileFooter(logoHeight: 44, horizontalPadding: 20),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),
@@ -251,22 +240,15 @@ class _AcessoNegado extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Expanded(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Text(
-                'Esta página é exclusiva para bandas. Faça login com uma conta de banda.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: BaileSulColors.headerText.withValues(alpha: 0.6), fontSize: 14),
-              ),
-            ),
-          ),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text(
+          'Esta página é exclusiva para bandas. Faça login com uma conta de banda.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: BaileSulColors.headerText.withValues(alpha: 0.6), fontSize: 14),
         ),
-        const MobileFooter(),
-      ],
+      ),
     );
   }
 }

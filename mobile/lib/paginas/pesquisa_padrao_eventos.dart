@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -118,7 +117,7 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MobileFooter.backgroundColor,
+      backgroundColor: BaileSulColors.dark,
       body: Column(
         children: [
           MobileHeader(
@@ -231,10 +230,6 @@ class _PesquisaPadraoEventosState extends State<PesquisaPadraoEventos> {
                                 ],
                               ),
                             ),
-                          ),
-                          MobileFooter(
-                            logoHeight: 52,
-                            horizontalPadding: 24,
                           ),
                         ],
                       ),

@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'pesquisa_padrao_eventos.dart' show EventoApi;
 
@@ -23,7 +22,6 @@ class BaileSulColors {
   static const Color headerText = Color(0xFF111111);
   static const Color mutedText = Color(0xFF546173);
   static const Color inputFill = Color(0xFF7C9AB1);
-  static const Color footerBg = Color(0xFF0A0C12);
   static const Color styleSurfaceA = Color(0xFFD4E0EB);
   static const Color styleSurfaceB = Color(0xFFB8CAD8);
 
@@ -199,12 +197,6 @@ class _HomePageState extends State<HomePage> {
                     ),
                     SliverToBoxAdapter(
                       child: _StylesSection(styles: _styles),
-                    ),
-                    SliverToBoxAdapter(
-                      child: MobileFooter(
-                        logoHeight: 52,
-                        horizontalPadding: 24,
-                      ),
                     ),
                   ],
                 ),

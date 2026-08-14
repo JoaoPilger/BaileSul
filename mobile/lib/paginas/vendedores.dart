@@ -7,7 +7,6 @@ import '../models/tipo_conta.dart';
 import '../services/sessao_usuario.dart';
 import '../services/vendedor_service.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -140,7 +139,7 @@ class _VendedoresPageState extends State<VendedoresPage> {
 
     if (!sessao.autenticado || sessao.tipoConta != TipoConta.comunidade) {
       return Scaffold(
-        backgroundColor: MobileFooter.backgroundColor,
+        backgroundColor: BaileSulColors.pageBackground,
         body: Column(
           children: [
             MobileHeader(logoHeight: 58, horizontalPadding: 16, onMenuPressed: _abrirMenu),
@@ -160,14 +159,6 @@ class _VendedoresPageState extends State<VendedoresPage> {
                       ),
                     ),
                   ),
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: const [MobileFooter()],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -179,7 +170,7 @@ class _VendedoresPageState extends State<VendedoresPage> {
     final List<Map<String, dynamic>> lista = _vendedoresFiltrados;
 
     return Scaffold(
-      backgroundColor: MobileFooter.backgroundColor,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(logoHeight: 58, horizontalPadding: 16, onMenuPressed: _abrirMenu),
@@ -325,14 +316,6 @@ class _VendedoresPageState extends State<VendedoresPage> {
                           ),
                         ],
                       ),
-                    ),
-                  ),
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: const [MobileFooter()],
                     ),
                   ),
                 ],

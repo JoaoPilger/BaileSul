@@ -7,7 +7,6 @@ import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
 import '../widgets/mobile_header.dart';
-import '../widgets/mobile_footer.dart';
 import 'home.dart';
 
 class MeusEventosBandasPage extends StatefulWidget {
@@ -143,7 +142,7 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
     }).toList();
 
     return Scaffold(
-      backgroundColor: MobileFooter.backgroundColor,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(onMenuPressed: _abrirMenu, logoHeight: 58, horizontalPadding: 16),
@@ -192,7 +191,6 @@ class _MeusEventosBandasPageState extends State<MeusEventosBandasPage> {
                       ),
                     ),
                   ),
-                  const MobileFooter(),
                 ],
               ),
             ),

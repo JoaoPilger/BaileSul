@@ -5,7 +5,6 @@ import '../services/sessao_usuario.dart';
 import '../widgets/dialogo_alterar_senha.dart';
 import '../widgets/dialogo_editar_perfil_pessoal.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -95,7 +94,7 @@ class ConfiguracoesPage extends StatelessWidget {
 
     if (!sessao.autenticado || tipo == null) {
       return Scaffold(
-        backgroundColor: MobileFooter.backgroundColor,
+        backgroundColor: BaileSulColors.pageBackground,
         body: Column(
           children: [
             MobileHeader(
@@ -121,7 +120,6 @@ class ConfiguracoesPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const MobileFooter(),
                   ],
                 ),
               ),
@@ -134,7 +132,7 @@ class ConfiguracoesPage extends StatelessWidget {
     final List<_ConfiguracaoItem> itens = _itensPorTipo(tipo);
 
     return Scaffold(
-      backgroundColor: MobileFooter.backgroundColor,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(
@@ -219,7 +217,6 @@ class ConfiguracoesPage extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const MobileFooter(),
                 ],
               ),
             ),

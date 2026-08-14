@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart' show BaileSulColors;
 
@@ -300,6 +299,10 @@ class _PainelComunidadePageState extends State<PainelComunidadePage> {
                                   child: Center(child: CircularProgressIndicator()),
                                 )
                               else ...[
+                                if (_vendedoresAtivos < 2) ...[
+                                  _VendorAlert(vendedoresAtivos: _vendedoresAtivos),
+                                  const SizedBox(height: 20),
+                                ],
                                 _StatsGrid(
                                   total: _totalEventos,
                                   agendados: _agendados,
@@ -315,7 +318,7 @@ class _PainelComunidadePageState extends State<PainelComunidadePage> {
                                       Navigator.pushNamed(context, '/meus-eventos-comunidade'),
                                   onVendedores: () => Navigator.pushNamed(context, '/vendedores'),
                                   onConfiguracoes: () =>
-                                      Navigator.pushNamed(context, '/configuracoes'),
+                                      Navigator.pushNamed(context, '/editar-perfil-comunidade'),
                                 ),
                                 const SizedBox(height: 28),
                                 const _SectionTitle('Calendário'),
@@ -358,7 +361,6 @@ class _PainelComunidadePageState extends State<PainelComunidadePage> {
                         ),
                       ),
                     ),
-                    MobileFooter(logoHeight: 44, horizontalPadding: 20),
                   ],
                 ),
               ),
@@ -388,6 +390,84 @@ class _SectionTitle extends StatelessWidget {
         fontSize: 17,
         fontWeight: FontWeight.w800,
         letterSpacing: -0.2,
+      ),
+    );
+  }
+}
+
+/// Aviso exibido quando há menos de 2 vendedores ativos, espelhando o
+/// `.pn-vendor-alert` do painel web.
+class _VendorAlert extends StatelessWidget {
+  const _VendorAlert({required this.vendedoresAtivos});
+
+  final int vendedoresAtivos;
+
+  static const Color _warning = Color(0xFFB8862B);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: _warning.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _warning.withValues(alpha: 0.3)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.warning_amber_rounded, size: 22, color: _warning),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      vendedoresAtivos == 0
+                          ? 'Nenhum vendedor cadastrado'
+                          : 'Só 1 vendedor cadastrado',
+                      style: const TextStyle(
+                        color: BaileSulColors.headerText,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'O ideal são pelo menos 2 vendedores ativos — sem isso, se o único '
+                      'vendedor ficar indisponível, ninguém consegue confirmar pagamento '
+                      'dos compradores.',
+                      style: TextStyle(
+                        color: BaileSulColors.headerText.withValues(alpha: 0.55),
+                        fontSize: 12,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pushNamed(context, '/vendedores'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: BaileSulColors.accent,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Cadastrar vendedores'),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -565,8 +645,8 @@ class _AtalhosGrid extends StatelessWidget {
           ),
           _AtalhoCard(
             icon: Icons.settings_outlined,
-            titulo: 'Configurações',
-            subtitulo: 'Dados da comunidade',
+            titulo: 'Editar Vitrine',
+            subtitulo: 'Dados e perfil da comunidade',
             onTap: onConfiguracoes,
           ),
         ];

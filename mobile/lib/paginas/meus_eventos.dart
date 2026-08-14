@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 import 'home.dart';
 
@@ -18,7 +17,7 @@ class MeusEventosPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BaileSulColors.dark,
+      backgroundColor: BaileSulColors.pageBackground,
       body: Column(
         children: [
           MobileHeader(
@@ -58,7 +57,6 @@ class MeusEventosPage extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const MobileFooter(),
                 ],
               ),
             ),

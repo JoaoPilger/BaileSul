@@ -6,7 +6,6 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../services/sessao_usuario.dart';
 import '../widgets/mobile_app_menu.dart';
-import '../widgets/mobile_footer.dart';
 import '../widgets/mobile_header.dart';
 
 class CalendarioPage extends StatefulWidget {
@@ -397,7 +396,6 @@ class _CalendarioPageState extends State<CalendarioPage> {
               ),
             ),
           ),
-          const MobileFooter(),
         ],
       ),
     );
