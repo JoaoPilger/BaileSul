@@ -1,22 +1,44 @@
 const pool = require('../config/database');
+const { parsePaginacao, respostaPaginada } = require('../utils/pagination');
+
+const STATUS_VALIDOS = ['todas', 'lidas', 'nao_lidas'];
 
 /**
- * GET /api/notificacoes
- * Lista as notificações do usuário autenticado (mais recentes primeiro).
+ * GET /api/notificacoes?status=todas|lidas|nao_lidas&pagina=&limite=
+ * Lista (paginado) o histórico de notificações do usuário autenticado,
+ * mais recentes primeiro. `status` filtra por lidas/não lidas; sem o
+ * parâmetro, traz todas.
  */
 const listar = async (req, res) => {
   const usuario_id = req.usuario.id;
+  const { status } = req.query;
+  const { pagina, limite, offset } = parsePaginacao(req.query);
+
+  if (status && !STATUS_VALIDOS.includes(status)) {
+    return res.status(400).json({ error: `status inválido. Use: ${STATUS_VALIDOS.join(', ')}` });
+  }
+
+  let where = 'WHERE usuario_id = $1';
+  if (status === 'lidas') where += ' AND lida = TRUE';
+  else if (status === 'nao_lidas') where += ' AND lida = FALSE';
 
   try {
+    const countRes = await pool.query(
+      `SELECT COUNT(*)::int AS total FROM notificacoes ${where}`,
+      [usuario_id]
+    );
+    const total = countRes.rows[0].total;
+
     const { rows } = await pool.query(
       `SELECT id, tipo, titulo, mensagem, lida, payload, criado_em
        FROM notificacoes
-       WHERE usuario_id = $1
+       ${where}
        ORDER BY criado_em DESC
-       LIMIT 50`,
-      [usuario_id]
+       LIMIT $2 OFFSET $3`,
+      [usuario_id, limite, offset]
     );
-    return res.json(rows);
+
+    return res.json(respostaPaginada(rows, pagina, limite, total));
   } catch (err) {
     console.error('Erro ao listar notificações:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });

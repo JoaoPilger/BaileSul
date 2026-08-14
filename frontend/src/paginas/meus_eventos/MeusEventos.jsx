@@ -70,10 +70,17 @@ function mapDataLocal(ev, fallbackCidadeEstado) {
   const city = localParts[3] || ev.local_nome || fallbackCidadeEstado
   const cidade = ((localParts[3] || ev.local_nome || String(fallbackCidadeEstado).split(',')[0]) || '').trim()
 
-  const dataInicioDate = new Date(ev.data_inicio + 'T00:00:00')
+  // data_inicio vem como TIMESTAMPTZ (string ISO completa, ex: "2026-07-10T00:00:00.000Z")
+  // — concatenar 'T00:00:00' aqui gerava string inválida (ex: "...000ZT00:00:00"), o que
+  // fazia `diasFaltando` virar NaN (e ser zerado pelo clamp abaixo) pra todo evento.
+  let dataInicioDate = null
+  if (ev.data_inicio) {
+    const [y, m, d] = String(ev.data_inicio).slice(0, 10).split('-').map(Number)
+    dataInicioDate = new Date(y, m - 1, d)
+  }
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
-  const diasFaltando = Math.ceil((dataInicioDate - hoje) / (1000 * 60 * 60 * 24))
+  const diasFaltando = dataInicioDate ? Math.ceil((dataInicioDate - hoje) / (1000 * 60 * 60 * 24)) : 0
 
   let image = ev.foto_capa_url || ''
   if (image && image.includes('/media/')) {
@@ -222,9 +229,12 @@ export default function MeusEventos({ tipo }) {
   })
 
   const total = mappedEvents.length
+  // diasFaltando >= 0 inclui o evento de hoje — mesmo critério já usado no
+  // filtro de período abaixo (matchPeriodo). Com > 0 estrito, um evento
+  // acontecendo hoje mesmo (diasFaltando === 0) ficava fora da contagem.
   const proximos = tipo === 'banda'
-    ? mappedEvents.filter((e) => e.status === 'agendado' && e.status_aceite === 'aceito' && e.diasFaltando <= 30 && e.diasFaltando > 0).length
-    : mappedEvents.filter((e) => e.status === 'agendado' && e.diasFaltando <= 30 && e.diasFaltando > 0).length
+    ? mappedEvents.filter((e) => e.status === 'agendado' && e.status_aceite === 'aceito' && e.diasFaltando <= 30 && e.diasFaltando >= 0).length
+    : mappedEvents.filter((e) => e.status === 'agendado' && e.diasFaltando <= 30 && e.diasFaltando >= 0).length
   const realizados = mappedEvents.filter((e) => e.status === 'finalizado').length
   const cancelados = tipo === 'banda'
     ? mappedEvents.filter((e) => e.status === 'cancelado' || e.status_aceite === 'recusado').length

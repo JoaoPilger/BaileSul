@@ -5,7 +5,11 @@ const { geocodificarEndereco } = require('../services/external.service');
 const { criarNotificacao } = require('../services/notificacao.service');
 
 // Tipos de evento aceitos (coluna eventos.tipo_evento)
-const TIPOS_EVENTO = ['musical_gaucha', 'musical_bandinha', 'almoco', 'bingo', 'expos', 'futebol'];
+const TIPOS_EVENTO = ['musical', 'almoco', 'bingo', 'expos', 'futebol'];
+
+// Mínimo de vendedores ativos pra criar evento — com só 1, se ele ficar
+// indisponível ninguém mais consegue confirmar pagamento dos compradores.
+const VENDEDORES_MINIMO = 2;
 
 // ─────────────────────────────────────────────────────────────
 //  Helpers internos
@@ -57,7 +61,7 @@ const listar = async (req, res) => {
     let where = `
       WHERE e.status = 'agendado'
         AND (
-          e.tipo_evento NOT LIKE 'musical_%'
+          e.tipo_evento != 'musical'
           OR EXISTS (
             SELECT 1 FROM contratos c
             WHERE c.evento_id = e.id AND c.status_aceite = 'aceito'
@@ -102,9 +106,17 @@ const listar = async (req, res) => {
               e.latitude, e.longitude,
               e.valor_ingresso, e.foto_capa_url, e.status, e.tipo_evento,
               pc.nome_entidade AS comunidade,
-              pc.cidade, pc.estado
+              pc.cidade, pc.estado,
+              banda.nome_artistico AS banda
        FROM eventos e
        JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
+       LEFT JOIN LATERAL (
+         SELECT pb.nome_artistico
+         FROM contratos c
+         JOIN perfis_bandas pb ON pb.usuario_id = c.banda_id
+         WHERE c.evento_id = e.id AND c.status_aceite = 'aceito'
+         LIMIT 1
+       ) banda ON true
        ${where}
        ORDER BY e.data_inicio ASC
        LIMIT $${i++} OFFSET $${i++}`,
@@ -151,7 +163,7 @@ const buscarPorId = async (req, res) => {
       && Number(req.usuario.id) === Number(evento.comunidade_id);
 
     if (!souDono) {
-      const precisaConfirmacao = evento.tipo_evento?.startsWith('musical_');
+      const precisaConfirmacao = evento.tipo_evento === 'musical';
       if (precisaConfirmacao) {
         const contratoAceito = await pool.query(
           `SELECT 1 FROM contratos WHERE evento_id = $1 AND status_aceite = 'aceito' LIMIT 1`,
@@ -243,6 +255,16 @@ const criar = async (req, res) => {
     return res.status(400).json({ error: 'data_fim não pode ser anterior a data_inicio' });
   }
 
+  const vendedoresRes = await pool.query(
+    `SELECT COUNT(*)::int AS total FROM vendedores WHERE comunidade_id = $1 AND ativo = true`,
+    [comunidade_id]
+  );
+  if (vendedoresRes.rows[0].total < VENDEDORES_MINIMO) {
+    return res.status(422).json({
+      error: `É preciso ter pelo menos ${VENDEDORES_MINIMO} vendedores ativos cadastrados para criar um evento.`,
+    });
+  }
+
   const foto_capa_url = resolverFotoCapa(req) ?? null;
 
   let latitude = null;
@@ -264,7 +286,7 @@ const criar = async (req, res) => {
       `INSERT INTO eventos
           (comunidade_id, titulo, descricao, data_inicio, data_fim,
            local_nome, local_endereco, valor_ingresso, foto_capa_url, latitude, longitude, tipo_evento, capacidade_maxima)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical_gaucha'),$13)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,COALESCE($12,'musical'),$13)
         RETURNING id, titulo, data_inicio, data_fim, foto_capa_url, status, latitude, longitude, tipo_evento, capacidade_maxima`,
       [
         comunidade_id,
@@ -329,11 +351,26 @@ const atualizar = async (req, res) => {
 
   // Verifica ownership antes de montar o UPDATE
   const dono = await pool.query(
-    'SELECT id FROM eventos WHERE id = $1 AND comunidade_id = $2',
+    'SELECT id, status FROM eventos WHERE id = $1 AND comunidade_id = $2',
     [id, comunidade_id]
   );
   if (dono.rows.length === 0) {
     return res.status(404).json({ error: 'Evento não encontrado ou sem permissão' });
+  }
+
+  // Transições de status válidas: só saindo de "agendado", pra cancelado ou
+  // finalizado. "cancelado" e "finalizado" são estados terminais — não dá
+  // pra "reviver" um evento cancelado/finalizado nem pular direto pra eles
+  // sem ter passado por "agendado".
+  const statusAtual = dono.rows[0].status;
+  if (status && status !== statusAtual) {
+    const transicoesValidas = { agendado: ['cancelado', 'finalizado'] };
+    const permitido = (transicoesValidas[statusAtual] || []).includes(status);
+    if (!permitido) {
+      return res.status(409).json({
+        error: `Não é possível mudar o status de "${statusAtual}" para "${status}"`,
+      });
+    }
   }
 
   const foto_capa_url = resolverFotoCapa(req); // undefined = não alterar
@@ -783,7 +820,8 @@ const calendario = async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT e.id, e.titulo, e.data_inicio, e.data_fim, e.status,
-              pc.nome_entidade AS comunidade, pc.cidade, pc.estado
+              pc.usuario_id AS comunidade_id, pc.nome_entidade AS comunidade,
+              pc.cidade, pc.estado
        FROM eventos e
        JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
        WHERE e.status != 'cancelado'

@@ -9,6 +9,20 @@ const whatsappValido = (whatsapp) => {
 };
 
 /**
+ * Normaliza um WhatsApp para os dígitos completos (com DDI) esperados por
+ * links wa.me. Números cadastrados no formato nacional (10-11 dígitos,
+ * DDD + telefone, sem DDI) ganham o prefixo do Brasil "55" — sem isso o
+ * wa.me abre um número inválido/errado.
+ */
+const normalizarWhatsapp = (whatsapp) => {
+  const digits = String(whatsapp || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.length >= 12 && digits.startsWith('55')) return digits;
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
+};
+
+/**
  * Valida URL http(s) com hostname mínimo (evita "https://..." placeholder).
  */
 const urlHttpValida = (url) => {
@@ -28,4 +42,4 @@ const urlHttpValida = (url) => {
 const cnpjFormatoValido = (cnpj) =>
   /^\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}$/.test(cnpj);
 
-module.exports = { whatsappValido, urlHttpValida, cnpjFormatoValido };
+module.exports = { whatsappValido, normalizarWhatsapp, urlHttpValida, cnpjFormatoValido };

@@ -60,7 +60,7 @@ const buscarPorId = async (req, res) => {
   try {
     const comRes = await pool.query(
       `SELECT pc.usuario_id, pc.nome_entidade, pc.descricao,
-              pc.whatsapp, pc.cidade, pc.estado, pc.endereco,
+              pc.whatsapp, pc.cep, pc.cidade, pc.estado, pc.endereco,
               pc.latitude, pc.longitude, pc.cnpj_validado, pc.foto_perfil_url
        FROM perfis_comunidades pc
        WHERE pc.usuario_id = $1`,
@@ -70,6 +70,9 @@ const buscarPorId = async (req, res) => {
       return res.status(404).json({ error: 'Comunidade não encontrada' });
     }
 
+    // data_inicio é DATE (sem hora). Comparar com NOW() força um cast pra
+    // timestamp de hoje às 00:00, o que excluía eventos do próprio dia assim
+    // que passava da meia-noite. CURRENT_DATE compara data com data.
     const eventosRes = await pool.query(
       `SELECT id, titulo, data_inicio, data_fim, local_nome,
               valor_ingresso, foto_capa_url, status,
@@ -77,7 +80,7 @@ const buscarPorId = async (req, res) => {
        FROM eventos
        WHERE comunidade_id = $1
          AND status = 'agendado'
-         AND data_inicio >= NOW()
+         AND data_inicio >= CURRENT_DATE
        ORDER BY data_inicio ASC`,
       [id]
     );
@@ -263,7 +266,7 @@ const listarMeusEventos = async (req, res) => {
  */
 const atualizarPerfil = async (req, res) => {
   const usuario_id = req.usuario.id;
-  const { nome_entidade, descricao, whatsapp, endereco, cidade, estado, latitude, longitude } = req.body;
+  const { nome_entidade, descricao, whatsapp, cep, endereco, cidade, estado, latitude, longitude } = req.body;
 
   if (whatsapp && !whatsappValido(whatsapp)) {
     return res.status(400).json({
@@ -276,6 +279,7 @@ const atualizarPerfil = async (req, res) => {
       nome_entidade || null,
       descricao || null,
       whatsapp || null,
+      cep || null,
       endereco || null,
       cidade || null,
       estado || null,
@@ -307,9 +311,10 @@ const atualizarPerfil = async (req, res) => {
          nome_entidade = COALESCE($1, nome_entidade),
          descricao     = COALESCE($2, descricao),
          whatsapp      = COALESCE($3, whatsapp),
-         endereco      = COALESCE($4, endereco),
-         cidade        = COALESCE($5, cidade),
-         estado        = COALESCE($6, estado)
+         cep           = COALESCE($4, cep),
+         endereco      = COALESCE($5, endereco),
+         cidade        = COALESCE($6, cidade),
+         estado        = COALESCE($7, estado)
          ${coordsUpdate}
        WHERE usuario_id = $${whereIdx}`,
       params

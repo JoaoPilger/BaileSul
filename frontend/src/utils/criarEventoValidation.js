@@ -146,13 +146,6 @@ export function validateField(name, value, form = {}) {
   }
 }
 
-export function validateVendorName(value) {
-  const text = value.trim()
-  if (!text) return 'Informe o nome do vendedor.'
-  if (text.length < 2) return 'Mínimo de 2 caracteres.'
-  return ''
-}
-
 export function validateForm(form) {
   const fields = [
     'title',

@@ -98,7 +98,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
   useEffect(() => {
     let cancelado = false
     const t = setTimeout(async () => {
-      if (!tipoEvento.startsWith('musical_')) {
+      if (tipoEvento !== 'musical') {
         if (!cancelado) { setBandaSugestoes([]); setBandaSugestoesOpen(false) }
         return
       }
@@ -258,7 +258,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
       return
     }
 
-    if (tipoEvento.startsWith('musical_')) {
+    if (tipoEvento === 'musical') {
       const bandaLimpa = bandaTexto.trim() === '' && bandaId == null
       try {
         if (bandaId && bandaId !== bandaOriginalId) {
@@ -282,7 +282,7 @@ export default function EditarEventoModal({ evento, onFechar, onSalvo }) {
     onFechar()
   }
 
-  const ehMusical = tipoEvento.startsWith('musical_')
+  const ehMusical = tipoEvento === 'musical'
 
   return (
     <div className={styles.overlay} onClick={onFechar}>

@@ -151,7 +151,6 @@ export default function Login() {
                   )}
                 </button>
               </div>
-              <a href="/esqueci-senha" className={styles['forgot-link']}>Esqueci minha senha</a>
             </div>
 
             {erro && <p className={styles['error-msg']}>{erro}</p>}

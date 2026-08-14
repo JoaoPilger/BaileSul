@@ -3,14 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, ArrowRight, Calendar } from 'lucide-react';
 import Header from '../../components/header/Header';
 import Footer from '../../components/footer/Footer';
-import { loadEvents } from '../../utils/events';
+import { loadEvents, formatTipoEvento } from '../../utils/events';
 import { cn } from '../../utils/cn';
 import shared from '../../styles/shared.module.css';
 import styles from './home.module.css';
 
-const STYLES = [
-  { value: 'gaucha', label: 'Gaúcha', desc: 'Chamamé e ginga', emoji: '🪗' },
-  { value: 'vanera',  label: 'Vanera', desc: 'Ritmo do sul',    emoji: '💃' },
+const TIPOS_EVENTO = [
+  { value: 'musical', desc: 'Bailes e música ao vivo', emoji: '🪗' },
+  { value: 'almoco',  desc: 'Almoços comunitários',     emoji: '🍽️' },
+  { value: 'bingo',   desc: 'Bingos e sorteios',        emoji: '🎱' },
+  { value: 'expos',   desc: 'Exposições e feiras',      emoji: '🎪' },
+  { value: 'futebol', desc: 'Jogos e torneios',         emoji: '⚽' },
 ];
 
 function HeroSection() {
@@ -88,7 +91,7 @@ function EventCard({ event, index }) {
         <div className={shared.eventCardPrice}>{event.price}</div>
       </div>
       <div className={shared.eventCardBody}>
-        <span className={shared.eventCardStyle}>{event.style}</span>
+        <span className={shared.eventCardStyle}>{formatTipoEvento(event.style)}</span>
         <h3 className={shared.eventCardTitle}>{event.title}</h3>
         <div className={shared.eventCardLocation}>
           <MapPin size={12} />
@@ -158,26 +161,26 @@ function StylesSection() {
       <div className={shared.container}>
         <div className={styles.stylesHeader}>
           <div className={styles.stylesHeaderLeft}>
-            <span className={styles.stylesEyebrow}>Filtre pelo seu ritmo</span>
-            <h2 className={styles.stylesTitle}>Busque por Estilo</h2>
+            <span className={styles.stylesEyebrow}>Filtre pelo que você procura</span>
+            <h2 className={styles.stylesTitle}>Busque por Tipo de Evento</h2>
           </div>
           <p className={styles.stylesSubtitle}>
-            Cada ritmo tem sua alma.<br />Encontre o evento que faz seu corpo mexer.
+            De bailes a bingos.<br />Encontre o evento certo pra sua próxima saída.
           </p>
         </div>
 
         <div className={styles.stylesRow}>
-          {STYLES.map((style, i) => (
+          {TIPOS_EVENTO.map((tipo, i) => (
             <Link
-              key={style.value}
-              to={`/eventos?style=${style.value}`}
+              key={tipo.value}
+              to={`/eventos?style=${tipo.value}`}
               className={styles.stylePill}
               style={{ animationDelay: `${i * 45}ms` }}
             >
-              <span className={styles.stylePillEmoji}>{style.emoji}</span>
+              <span className={styles.stylePillEmoji}>{tipo.emoji}</span>
               <div className={styles.stylePillText}>
-                <span className={styles.stylePillLabel}>{style.label}</span>
-                <span className={styles.stylePillDesc}>{style.desc}</span>
+                <span className={styles.stylePillLabel}>{formatTipoEvento(tipo.value)}</span>
+                <span className={styles.stylePillDesc}>{tipo.desc}</span>
               </div>
               <ArrowRight size={14} className={styles.stylePillArrow} />
             </Link>

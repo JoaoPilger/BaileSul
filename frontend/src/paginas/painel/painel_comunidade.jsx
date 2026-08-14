@@ -55,6 +55,7 @@ export default function PainelComunidade() {
   const { usuario } = useAuth()
   const navigate = useNavigate()
   const [eventos, setEventos] = useState([])
+  const [eventosCalendario, setEventosCalendario] = useState([])
   const [vendedoresAtivos, setVendedoresAtivos] = useState(0)
   const [carregando, setCarregando] = useState(true)
   const [midiasModalOpen, setMidiasModalOpen] = useState(false)
@@ -80,9 +81,13 @@ export default function PainelComunidade() {
     Promise.all([
       api.get('/comunidades/me/eventos').then((r) => r.data.eventos || []).catch(() => []),
       api.get('/vendedores').then((r) => r.data || []).catch(() => []),
-    ]).then(([eventosData, vendedoresData]) => {
+      // Calendário compartilhado (RF06): eventos de TODAS as comunidades,
+      // pra saber quais dias já estão marcados antes de criar um evento novo.
+      api.get('/eventos/calendario').then((r) => r.data || []).catch(() => []),
+    ]).then(([eventosData, vendedoresData, calendarioData]) => {
       setEventos(eventosData)
       setVendedoresAtivos(vendedoresData.filter((v) => v.ativo).length)
+      setEventosCalendario(calendarioData)
       setCarregando(false)
     })
   }, [])
@@ -131,9 +136,9 @@ export default function PainelComunidade() {
     })
   }
 
-  /** Conjunto de dias (número) com evento no mês visualizado */
+  /** Conjunto de dias (número) com evento no mês visualizado — de QUALQUER comunidade (calendário compartilhado) */
   const diasComEvento = new Set(
-    eventos
+    eventosCalendario
       .filter((e) => {
         const s = extrairData(e.data_inicio)
         if (!s) return false
@@ -149,8 +154,8 @@ export default function PainelComunidade() {
   const isSelecionado = (d) =>
     d === calSelected.day && viewMonth === calSelected.month && viewYear === calSelected.year
 
-  /** Eventos do dia selecionado */
-  const eventosDoDia = eventos.filter((e) => {
+  /** Eventos do dia selecionado — de QUALQUER comunidade (calendário compartilhado) */
+  const eventosDoDia = eventosCalendario.filter((e) => {
     const s = extrairData(e.data_inicio)
     if (!s) return false
     const [y, m, d] = s.split('-').map(Number)
@@ -182,6 +187,28 @@ export default function PainelComunidade() {
           <div className={styles['pn-empty']}>Carregando seu painel...</div>
         ) : (
           <>
+            {vendedoresAtivos < 2 && (
+              <div className={styles['pn-vendor-alert']}>
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                <div className={styles['pn-vendor-alert-text']}>
+                  <strong>
+                    {vendedoresAtivos === 0
+                      ? 'Nenhum vendedor cadastrado'
+                      : 'Só 1 vendedor cadastrado'}
+                  </strong>
+                  <span>
+                    O ideal são pelo menos 2 vendedores ativos — sem isso, se o único vendedor
+                    ficar indisponível, ninguém consegue confirmar pagamento dos compradores.
+                  </span>
+                </div>
+                <Link to="/vendedores" className={styles['pn-btn-solid']}>Cadastrar vendedores</Link>
+              </div>
+            )}
+
             <div className={styles['pn-stats-grid']}>
               {stats.map((s) => (
                 <div key={s.label} className={styles['pn-stat-card']}>
@@ -303,24 +330,29 @@ export default function PainelComunidade() {
                   </div>
                 ) : (
                   <ul className={styles['pn-cal-event-list']}>
-                    {eventosDoDia.map((e) => (
+                    {eventosDoDia.map((e) => {
+                      const souDono = Number(e.comunidade_id) === Number(usuario?.id)
+                      return (
                       <li key={e.id} className={styles['pn-cal-event-item']}>
                         <div className={styles['pn-cal-event-dot']} />
                         <div className={styles['pn-cal-event-info']}>
                           <span className={styles['pn-cal-event-title']}>{e.titulo}</span>
                           <span className={styles['pn-cal-event-status']} data-status={e.status}>
+                            {souDono ? 'Seu evento' : e.comunidade}
+                            {' · '}
                             {e.status === 'agendado' ? 'Agendado' : e.status === 'finalizado' ? 'Realizado' : e.status}
                           </span>
                         </div>
                         <button
                           type="button"
                           className={styles['pn-btn-solid']}
-                          onClick={() => navigate(`/eventos/${e.id}/dashboard`)}
+                          onClick={() => navigate(souDono ? `/eventos/${e.id}/dashboard` : `/eventos/${e.id}`)}
                         >
                           Ver
                         </button>
                       </li>
-                    ))}
+                      )
+                    })}
                   </ul>
                 )}
               </div>

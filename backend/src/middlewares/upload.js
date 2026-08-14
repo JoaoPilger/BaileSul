@@ -44,7 +44,13 @@ const extDeMime = (mime) => {
     'video/ogg':     '.ogv',
     'video/quicktime': '.mov',
   };
-  return mapa[mime] ?? path.extname(mime);
+  // O único jeito de chegar aqui com um mime fora do mapa é a exceção de
+  // application/octet-stream em filtroMime (alguns clientes mobile mandam
+  // imagens assim). path.extname(mime) nesse caso dava string vazia — o
+  // arquivo ficava salvo sem extensão nenhuma, o que também abria brecha
+  // pra upload de qualquer tipo de arquivo disfarçado de imagem. Fixar em
+  // ".jpg" garante um content-type de imagem quando o arquivo for servido.
+  return mapa[mime] ?? '.jpg';
 };
 
 /**

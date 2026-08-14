@@ -125,6 +125,7 @@ CREATE TABLE perfis_comunidades (
   cnpj            VARCHAR(18) UNIQUE,
   cnpj_validado   BOOLEAN     NOT NULL DEFAULT FALSE,
   whatsapp        VARCHAR(20),
+  cep             VARCHAR(9),
   endereco        VARCHAR(255),
   cidade          VARCHAR(100),
   estado          VARCHAR(2),
@@ -249,7 +250,7 @@ CREATE TABLE eventos (
   foto_capa_url     VARCHAR(500),
   capacidade_maxima INT,
   status            status_evento NOT NULL DEFAULT 'agendado',
-  tipo_evento       VARCHAR(20)   NOT NULL DEFAULT 'musical_gaucha',
+  tipo_evento       VARCHAR(20)   NOT NULL DEFAULT 'musical',
   criado_em       TIMESTAMPTZ DEFAULT NOW(),
   atualizado_em   TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_datas         CHECK (data_fim >= data_inicio),
@@ -260,10 +261,7 @@ CREATE TABLE eventos (
     OR foto_capa_url ~ '^https?://'
   ),
   CONSTRAINT chk_eventos_tipo_evento CHECK (
-    tipo_evento IN (
-      'musical_gaucha', 'musical_bandinha', 'almoco',
-      'bingo', 'expos', 'futebol'
-    )
+    tipo_evento IN ('musical', 'almoco', 'bingo', 'expos', 'futebol')
   )
 );
 

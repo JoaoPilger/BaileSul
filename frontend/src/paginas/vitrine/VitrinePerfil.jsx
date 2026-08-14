@@ -5,6 +5,7 @@ import { cn } from '../../utils/cn'
 import { loadBandById } from '../../utils/bands'
 import { loadCommunityById } from '../../utils/communities'
 import { formatPhone } from '../../utils/authFormValidation'
+import { toWhatsappLinkDigits } from '../../utils/inputMasks'
 import { useAuth } from '../../contexts/AuthContext'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
@@ -91,18 +92,18 @@ function normalizarMedia(url) {
   return url || ''
 }
 
+/**
+ * data_inicio vem como DATE (serializado tipo "2026-07-10T00:00:00.000Z", sem
+ * hora real) — usar `new Date()` direto desloca pro dia anterior em fusos
+ * negativos (ex.: America/Sao_Paulo). Extrai os componentes da data direto
+ * da string e monta um Date local, sem passar pelo parser UTC.
+ */
 function formatDate(isoStr) {
   if (!isoStr) return ''
-  const d = new Date(isoStr)
-  if (isNaN(d)) return isoStr
-  return d.toLocaleDateString('pt-BR')
-}
-
-function formatTime(isoStr) {
-  if (!isoStr) return ''
-  const d = new Date(isoStr)
-  if (isNaN(d)) return ''
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const s = String(isoStr).slice(0, 10)
+  const [y, m, d] = s.split('-').map(Number)
+  if (!y || !m || !d) return isoStr
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR')
 }
 
 function formatPrice(valor) {
@@ -160,7 +161,6 @@ function EventoItem({ ev }) {
               <line x1="3" y1="10" x2="21" y2="10" />
             </svg>
             {ev.data}
-            {ev.hora && ` · ${ev.hora}`}
           </div>
           {ev.local && (
             <div className={styles['vp-event-meta-row']}>
@@ -212,7 +212,6 @@ export default function VitrinePerfil({ tipo }) {
   const [perfil, setPerfil] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [erro, setErro] = useState(false)
-  const [abaAtiva, setAbaAtiva] = useState('sobre')
   const [textoExpandido, setTextoExpandido] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '' })
 
@@ -301,7 +300,7 @@ export default function VitrinePerfil({ tipo }) {
 
   function handleContato() {
     if (perfil?.whatsapp) {
-      window.open(`https://wa.me/${perfil.whatsapp}`, '_blank')
+      window.open(`https://wa.me/${toWhatsappLinkDigits(perfil.whatsapp)}`, '_blank')
     }
   }
 
@@ -464,14 +463,13 @@ export default function VitrinePerfil({ tipo }) {
     id: e.id,
     nome: e.titulo || '',
     data: formatDate(e.data_inicio),
-    hora: formatTime(e.data_inicio),
     local: tipo === 'banda'
       ? ([e.cidade, e.estado].filter(Boolean).join(', ') || e.local || '')
       : (e.local || ''),
     comunidade: tipo === 'banda' ? (e.comunidade || '') : '',
     preco: tipo === 'comunidade' ? formatPrice(e.valor_ingresso) : '',
     status: e.status || 'agendado',
-    image: tipo === 'comunidade' ? (e.foto_capa_url || '') : '',
+    image: e.foto_capa_url || '',
   }))
   const midias = (perfil.midias || []).filter((m) => m.url)
 
@@ -496,46 +494,42 @@ export default function VitrinePerfil({ tipo }) {
 
             <div className={cn(styles['vp-card'])}>
               <div className={styles['vp-cover']}>
-                <div className={styles['vp-cover-placeholder']}>
-                  <svg viewBox="0 0 24 24">
-                    <rect x="3" y="3" width="18" height="18" rx="2" />
-                    <circle cx="8.5" cy="8.5" r="1.5" />
-                    <polyline points="21 15 16 10 5 21" />
-                  </svg>
-                </div>
+                {perfil.foto_perfil_url ? (
+                  <img src={perfil.foto_perfil_url} alt={nome} className={styles['vp-cover-img']} />
+                ) : (
+                  <div className={styles['vp-cover-placeholder']}>
+                    <svg viewBox="0 0 24 24">
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <circle cx="8.5" cy="8.5" r="1.5" />
+                      <polyline points="21 15 16 10 5 21" />
+                    </svg>
+                  </div>
+                )}
+                {isDono && modoEdicao && (
+                  <>
+                    <input
+                      type="file"
+                      ref={fotoInputRef}
+                      onChange={handleFotoChange}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      className={styles['vp-cover-upload-btn']}
+                      onClick={() => fotoInputRef.current?.click()}
+                      disabled={enviandoFoto}
+                      aria-label="Alterar foto de perfil"
+                      title="Alterar foto de perfil"
+                    >
+                      <Upload size={14} />
+                      {enviandoFoto ? 'Enviando...' : 'Alterar foto'}
+                    </button>
+                  </>
+                )}
               </div>
 
-              <div className={styles['vp-avatar-row']}>
-                <div className={styles['vp-avatar-wrap']}>
-                  <div className={styles['vp-avatar']}>
-                    {perfil.foto_perfil_url ? (
-                      <img src={perfil.foto_perfil_url} alt={nome} />
-                    ) : (
-                      (editForm.nome || nome).slice(0, 3)
-                    )}
-                  </div>
-                  {isDono && modoEdicao && (
-                    <>
-                      <input
-                        type="file"
-                        ref={fotoInputRef}
-                        onChange={handleFotoChange}
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                      />
-                      <button
-                        type="button"
-                        className={styles['vp-avatar-upload-btn']}
-                        onClick={() => fotoInputRef.current?.click()}
-                        disabled={enviandoFoto}
-                        aria-label="Alterar foto de perfil"
-                        title="Alterar foto de perfil"
-                      >
-                        <Upload size={14} />
-                      </button>
-                    </>
-                  )}
-                </div>
+              <div className={styles['vp-header-row']}>
                 <span className={styles['vp-seguidores-badge']}>
                   {stats.seguidores} Seguidores
                 </span>
@@ -617,120 +611,94 @@ export default function VitrinePerfil({ tipo }) {
             </div>
 
             <div className={cn(styles['vp-card'], styles['vp-tabs-card'])}>
-              <div className={styles['vp-tabs']}>
-                {['sobre', 'eventos'].map((aba) => (
-                  <button
-                    key={aba}
-                    className={cn(styles['vp-tab'], abaAtiva === aba && styles.active)}
-                    onClick={() => setAbaAtiva(aba)}
-                  >
-                    {aba.charAt(0).toUpperCase() + aba.slice(1)}
-                  </button>
-                ))}
-              </div>
-
               <div className={styles['vp-tab-content']}>
-                {abaAtiva === 'sobre' && (
-                  <>
-                    <div className={styles['vp-section-title']}>Sobre {tipo === 'banda' ? 'a banda' : 'a comunidade'}</div>
-                    {modoEdicao ? (
-                      <div className={cn(styles['vp-edit-form'], styles['vp-edit-form--tab'])}>
-                        <textarea
-                          rows={4}
+                <div className={styles['vp-section-title']}>Sobre {tipo === 'banda' ? 'a banda' : 'a comunidade'}</div>
+                {modoEdicao ? (
+                  <div className={cn(styles['vp-edit-form'], styles['vp-edit-form--tab'])}>
+                    <textarea
+                      rows={4}
+                      className={styles['vp-edit-input']}
+                      value={editForm.descricao || ''}
+                      onChange={(e) => handleEditFieldChange('descricao', e.target.value)}
+                    />
+                    {cfg.editFieldsTab.filter((f) => f.name !== 'descricao').map((f) => (
+                      <div key={f.name}>
+                        <label className={styles['vp-edit-label']}>{f.label}</label>
+                        <input
                           className={styles['vp-edit-input']}
-                          value={editForm.descricao || ''}
-                          onChange={(e) => handleEditFieldChange('descricao', e.target.value)}
+                          value={editForm[f.name] || ''}
+                          placeholder={f.placeholder}
+                          onChange={(e) => handleEditFieldChange(
+                            f.name,
+                            f.type === 'phone' ? formatPhone(e.target.value) : e.target.value,
+                          )}
                         />
-                        {cfg.editFieldsTab.filter((f) => f.name !== 'descricao').map((f) => (
-                          <div key={f.name}>
-                            <label className={styles['vp-edit-label']}>{f.label}</label>
-                            <input
-                              className={styles['vp-edit-input']}
-                              value={editForm[f.name] || ''}
-                              placeholder={f.placeholder}
-                              onChange={(e) => handleEditFieldChange(
-                                f.name,
-                                f.type === 'phone' ? formatPhone(e.target.value) : e.target.value,
-                              )}
-                            />
-                          </div>
-                        ))}
                       </div>
-                    ) : (
-                      <>
-                        {sobre ? (
-                          <>
-                            <p className={styles['vp-about-text']}>
-                              {textoExpandido ? sobre : sobre.slice(0, 160) + (sobre.length > 160 ? '...' : '')}
-                            </p>
-                            {sobre.length > 160 && (
-                              <button className={styles['vp-ver-mais']} onClick={() => setTextoExpandido(!textoExpandido)}>
-                                {textoExpandido ? 'Ver menos ▲' : 'Ver mais ▼'}
-                              </button>
-                            )}
-                          </>
-                        ) : (
-                          <p className={cn(styles['vp-about-text'], styles['vp-about-text--empty'])}>
-                            Nenhuma descrição cadastrada.
-                          </p>
-                        )}
-
-                        <div className={styles['vp-meta-list']}>
-                          {tipo === 'banda' && subtitulo && (
-                            <div className={styles['vp-meta-item']}>
-                              <svg viewBox="0 0 24 24">
-                                <path d="M9 18V5l12-2v13" />
-                                <circle cx="6" cy="18" r="3" />
-                                <circle cx="18" cy="16" r="3" />
-                              </svg>
-                              Estilo musical: {subtitulo}
-                            </div>
-                          )}
-                          {tipo === 'comunidade' && localizacao && (
-                            <>
-                              <div className={styles['vp-meta-item']}>
-                                <svg viewBox="0 0 24 24">
-                                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
-                                  <circle cx="12" cy="10" r="3" />
-                                </svg>
-                                <span>Localização</span>
-                              </div>
-                              <div className={styles['vp-meta-sub']}>{localizacao}</div>
-                            </>
-                          )}
-                          {whatsapp && (
-                            <div className={styles['vp-meta-item']}>
-                              <svg viewBox="0 0 24 24">
-                                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
-                              </svg>
-                              Contato: {whatsapp}
-                            </div>
-                          )}
-                          {tipo === 'banda' && videoUrl && (
-                            <div className={styles['vp-meta-item']}>
-                              <svg viewBox="0 0 24 24">
-                                <polygon points="23 7 16 12 23 17 23 7" />
-                                <rect x="1" y="5" width="15" height="14" rx="2" />
-                              </svg>
-                              <a href={videoUrl} target="_blank" rel="noopener noreferrer" className={styles['vp-meta-link']}>
-                                Assistir vídeo
-                              </a>
-                            </div>
-                          )}
-                        </div>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {abaAtiva === 'eventos' && (
-                  <div className={styles['vp-events-list']}>
-                    {eventos.length === 0 ? (
-                      <div className={styles['vp-events-empty']}>Nenhum evento agendado</div>
-                    ) : (
-                      eventos.map((ev) => <EventoItem key={ev.id} ev={ev} />)
-                    )}
+                    ))}
                   </div>
+                ) : (
+                  <>
+                    {sobre ? (
+                      <>
+                        <p className={styles['vp-about-text']}>
+                          {textoExpandido ? sobre : sobre.slice(0, 160) + (sobre.length > 160 ? '...' : '')}
+                        </p>
+                        {sobre.length > 160 && (
+                          <button className={styles['vp-ver-mais']} onClick={() => setTextoExpandido(!textoExpandido)}>
+                            {textoExpandido ? 'Ver menos ▲' : 'Ver mais ▼'}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <p className={cn(styles['vp-about-text'], styles['vp-about-text--empty'])}>
+                        Nenhuma descrição cadastrada.
+                      </p>
+                    )}
+
+                    <div className={styles['vp-meta-list']}>
+                      {tipo === 'banda' && subtitulo && (
+                        <div className={styles['vp-meta-item']}>
+                          <svg viewBox="0 0 24 24">
+                            <path d="M9 18V5l12-2v13" />
+                            <circle cx="6" cy="18" r="3" />
+                            <circle cx="18" cy="16" r="3" />
+                          </svg>
+                          Estilo musical: {subtitulo}
+                        </div>
+                      )}
+                      {tipo === 'comunidade' && localizacao && (
+                        <>
+                          <div className={styles['vp-meta-item']}>
+                            <svg viewBox="0 0 24 24">
+                              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z" />
+                              <circle cx="12" cy="10" r="3" />
+                            </svg>
+                            <span>Localização</span>
+                          </div>
+                          <div className={styles['vp-meta-sub']}>{localizacao}</div>
+                        </>
+                      )}
+                      {whatsapp && (
+                        <div className={styles['vp-meta-item']}>
+                          <svg viewBox="0 0 24 24">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                          </svg>
+                          Contato: {whatsapp}
+                        </div>
+                      )}
+                      {tipo === 'banda' && videoUrl && (
+                        <div className={styles['vp-meta-item']}>
+                          <svg viewBox="0 0 24 24">
+                            <polygon points="23 7 16 12 23 17 23 7" />
+                            <rect x="1" y="5" width="15" height="14" rx="2" />
+                          </svg>
+                          <a href={videoUrl} target="_blank" rel="noopener noreferrer" className={styles['vp-meta-link']}>
+                            Assistir vídeo
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </>
                 )}
               </div>
             </div>

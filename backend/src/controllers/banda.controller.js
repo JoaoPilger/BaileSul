@@ -82,16 +82,19 @@ const buscarPorId = async (req, res) => {
       return res.status(404).json({ error: 'Banda não encontrada' });
     }
 
+    // data_inicio é DATE (sem hora). Comparar com NOW() força um cast pra
+    // timestamp de hoje às 00:00, o que excluía eventos do próprio dia assim
+    // que passava da meia-noite. CURRENT_DATE compara data com data.
     const eventosRes = await pool.query(
-      `SELECT e.id, e.titulo, e.data_inicio, e.data_fim,
-              e.local_nome, pc.nome_entidade AS comunidade,
+      `SELECT e.id, e.titulo, e.data_inicio, e.data_fim, e.status,
+              e.local_nome, e.foto_capa_url, pc.nome_entidade AS comunidade,
               pc.cidade, pc.estado
        FROM contratos c
        JOIN eventos e ON e.id = c.evento_id
        JOIN perfis_comunidades pc ON pc.usuario_id = e.comunidade_id
        WHERE c.banda_id = $1
          AND c.status_aceite = 'aceito'
-         AND e.data_inicio >= NOW()
+         AND e.data_inicio >= CURRENT_DATE
          AND e.status = 'agendado'
        ORDER BY e.data_inicio ASC`,
       [id]

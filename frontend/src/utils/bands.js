@@ -63,6 +63,8 @@ function mapBandaDetail(row) {
       comunidade: e.comunidade,
       cidade: e.cidade,
       estado: e.estado,
+      foto_capa_url: normalizarMedia(e.foto_capa_url),
+      status: e.status,
     })),
     midias: (row.midias || []).map((m) => ({ ...m, url: normalizarMedia(m.url) })),
     seguidores: row.seguidores || 0,

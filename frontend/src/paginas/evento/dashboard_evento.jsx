@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fetchEventoDashboard } from '../../utils/events'
+import { fetchEventoDashboard, formatTipoEvento } from '../../utils/events'
+import { toWhatsappLinkDigits } from '../../utils/inputMasks'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import EditarEventoModal from '../../components/evento/EditarEventoModal'
@@ -354,7 +355,7 @@ function AbaVendedores({ vendedores, onGerenciar }) {
                 </div>
               </div>
               <a
-                href={`https://wa.me/${(v.whatsapp || '').replace(/\D/g, '')}`}
+                href={`https://wa.me/${toWhatsappLinkDigits(v.whatsapp)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={styles['dash-btn-whatsapp']}
@@ -397,7 +398,7 @@ function AbaBandas({ bandas }) {
                   <td>{b.estilo_musical || '—'}</td>
                   <td>
                     {b.whatsapp
-                      ? <a href={`https://wa.me/${b.whatsapp.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className={styles['dash-link']}>{b.whatsapp}</a>
+                      ? <a href={`https://wa.me/${toWhatsappLinkDigits(b.whatsapp)}`} target="_blank" rel="noopener noreferrer" className={styles['dash-link']}>{b.whatsapp}</a>
                       : '—'}
                   </td>
                   <td><StatusBadge status={b.status_aceite} /></td>
@@ -545,7 +546,7 @@ export default function EventoDashboard({ eventoId: propEventoId }) {
             <div className={styles['dash-hero-badges']}>
               <StatusBadge status={evento.status} />
               {evento.tipo_evento && (
-                <span className={styles['dash-hero-type']}>{evento.tipo_evento.replace(/_/g, ' ')}</span>
+                <span className={styles['dash-hero-type']}>{formatTipoEvento(evento.tipo_evento)}</span>
               )}
             </div>
             <h1 className={styles['dash-hero-title']}>{evento.titulo}</h1>

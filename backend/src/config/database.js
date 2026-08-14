@@ -29,9 +29,27 @@ pool.query('SELECT 1')
       await pool.query(`
         ALTER TABLE perfis_bandas ADD COLUMN IF NOT EXISTS foto_perfil_url VARCHAR(500);
         ALTER TABLE perfis_comunidades ADD COLUMN IF NOT EXISTS foto_perfil_url VARCHAR(500);
+        ALTER TABLE perfis_comunidades ADD COLUMN IF NOT EXISTS cep VARCHAR(9);
       `);
     } catch (migErr) {
       console.error('⚠️  Erro ao atualizar schema foto_perfil_url:', migErr.message);
+    }
+    try {
+      // Migration v11: unifica musical_gaucha/musical_bandinha em "musical".
+      // A constraint antiga precisa cair ANTES do UPDATE — ela não permite
+      // o valor 'musical' sozinho, então rodar o UPDATE antes rejeitaria a
+      // própria migração.
+      await pool.query(`
+        ALTER TABLE eventos DROP CONSTRAINT IF EXISTS chk_eventos_tipo_evento;
+        UPDATE eventos SET tipo_evento = 'musical'
+        WHERE tipo_evento IN ('musical_gaucha', 'musical_bandinha');
+        ALTER TABLE eventos ALTER COLUMN tipo_evento SET DEFAULT 'musical';
+        ALTER TABLE eventos ADD CONSTRAINT chk_eventos_tipo_evento CHECK (
+          tipo_evento IN ('musical', 'almoco', 'bingo', 'expos', 'futebol')
+        );
+      `);
+    } catch (migErr) {
+      console.error('⚠️  Erro ao atualizar schema tipo_evento:', migErr.message);
     }
   })
   .catch((err) => console.error('❌ Erro ao conectar ao PostgreSQL:', err.message));

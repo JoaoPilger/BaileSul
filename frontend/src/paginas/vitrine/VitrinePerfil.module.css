@@ -94,10 +94,16 @@ body {
 
 .vp-cover {
   width: 100%;
-  height: 160px;
+  height: 220px;
   background: linear-gradient(135deg, #1a2a35 0%, #0d2030 50%, #0a1820 100%);
   position: relative;
   overflow: hidden;
+}
+
+.vp-cover-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .vp-cover-placeholder {
@@ -117,75 +123,46 @@ body {
   stroke-width: 1.5px;
 }
 
-.vp-avatar-row {
-  padding: 0 18px;
-  margin-top: -28px;
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.vp-avatar-wrap {
-  position: relative;
-}
-
-.vp-avatar {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(13, 73, 107, 0.15);
-  border: 3px solid var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-head);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent);
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-}
-
-.vp-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.vp-avatar-upload-btn {
+.vp-cover-upload-btn {
   position: absolute;
-  bottom: -2px;
-  right: -2px;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
+  bottom: 12px;
+  right: 12px;
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: var(--accent);
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
-  border: 2px solid var(--surface);
+  border: none;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
   transition: background 0.15s;
 }
-.vp-avatar-upload-btn:hover {
-  background: var(--accent-hover);
+.vp-cover-upload-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
 }
-.vp-avatar-upload-btn:disabled {
+.vp-cover-upload-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.vp-header-row {
+  padding: 10px 18px 0;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .vp-seguidores-badge {
   font-size: 0.78rem;
   color: var(--text-muted);
   font-weight: 500;
-  padding-bottom: 4px;
 }
 
 .vp-profile-info {
-  padding: 0 18px 18px;
+  padding: 6px 18px 18px;
 }
 
 .vp-entity-name {
@@ -296,33 +273,6 @@ body {
 
 .vp-tabs-card {
   overflow: visible;
-}
-
-.vp-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-}
-
-.vp-tab {
-  flex: 1;
-  height: 42px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-family: var(--font-body);
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-  margin-bottom: -1px;
-}
-
-.vp-tab:hover { color: var(--accent); }
-
-.vp-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
 }
 
 .vp-tab-content {

@@ -1,20 +1,43 @@
 import api from '../services/api'
 
 function parseDescricao(descricao) {
-  const info = { band: '', style: '' }
+  const info = { band: '' }
   if (!descricao) return info
 
   const bandMatch = descricao.match(/Banda\/Artista:\s*(.*)/i)
   if (bandMatch) info.band = bandMatch[1].trim()
 
-  const styleMatch = descricao.match(/Estilo musical:\s*(.*)/i)
-  if (styleMatch) info.style = styleMatch[1].trim().toLowerCase()
-
   return info
 }
 
+/** Rótulo em PT-BR pra cada tipo_evento aceito pela API — fonte única usada em
+ * formulários, filtros e exibições em toda a aplicação. */
+export const TIPO_EVENTO_LABELS = {
+  musical: 'Musical',
+  almoco: 'Almoço',
+  bingo: 'Bingo',
+  expos: 'Expos',
+  futebol: 'Futebol',
+}
+
+export function formatTipoEvento(tipoEvento) {
+  return TIPO_EVENTO_LABELS[tipoEvento] || tipoEvento || ''
+}
+
+/** Nome da banda contratada e aceita: listagem traz `banda` (string), detalhe traz `bandas` (array). */
+function deriveBandaContratada(row) {
+  if (row.banda) return row.banda
+  if (Array.isArray(row.bandas)) {
+    const aceita = row.bandas.find((b) => b.status_aceite === 'aceito')
+    if (aceita?.nome_artistico) return aceita.nome_artistico
+  }
+  return ''
+}
+
 function mapDatabaseEvent(row) {
-  const { band, style } = parseDescricao(row.descricao)
+  const { band: bandDigitada } = parseDescricao(row.descricao)
+  const style = row.tipo_evento || ''
+  const band = deriveBandaContratada(row) || bandDigitada
 
   let eventDate = ''
   if (row.data_inicio) {
@@ -80,7 +103,7 @@ function mapDatabaseEvent(row) {
     title: row.titulo,
     description: row.descricao || '',
     band: band || row.comunidade || 'Organização',
-    style: style || 'gaucha',
+    style,
     date: eventDate,
     date_end: eventDateEnd,
     image: image,

@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X, User, Plus, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getNavConfig } from '../layout/layoutHelpers';
 import { cn } from '../../utils/cn';
 import { useNotificacoes } from '../../hooks/useNotificacoes';
-import NotificacoesPanel from '../notificacoes/NotificacoesPanel';
 import styles from './Header.module.css';
 
 export default function Header() {
@@ -14,18 +13,7 @@ export default function Header() {
   const location = useLocation();
   const { usuario, isAuthenticated, isVendedor } = useAuth();
   const { links, podeCriarEvento } = getNavConfig(usuario?.tipo, isVendedor);
-  const sinoRef = useRef(null);
-  const {
-    open: notifOpen,
-    contagem: notifContagem,
-    notificacoes,
-    loading: notifLoading,
-    erro: notifErro,
-    toggleOpen: toggleNotif,
-    close: closeNotif,
-    marcarLida: marcarNotifLida,
-    marcarTodas: marcarNotifTodas,
-  } = useNotificacoes();
+  const { contagem: notifContagem } = useNotificacoes();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -80,18 +68,16 @@ export default function Header() {
               </Link>
             )}
             {isAuthenticated && (
-              <button
-                ref={sinoRef}
-                type="button"
+              <Link
+                to="/notificacoes"
                 className={cn(styles['navbar-icon-btn'], styles['navbar-bell-btn'], styles['navbar-login-btn'])}
                 aria-label="Notificações"
-                onClick={toggleNotif}
               >
                 <Bell size={19} strokeWidth={2} />
                 {notifContagem > 0 && (
                   <span className={styles['navbar-bell-badge']}>{notifContagem > 9 ? '9+' : notifContagem}</span>
                 )}
-              </button>
+              </Link>
             )}
             <Link to={contaLink} className={cn(styles['navbar-icon-btn'], styles['navbar-login-btn'])} aria-label={contaLabel}>
               <User size={20} strokeWidth={2} />
@@ -122,17 +108,17 @@ export default function Header() {
         ))}
         <div className={styles['navbar-mobile-divider']} />
         {isAuthenticated && (
-          <button
-            type="button"
+          <Link
+            to="/notificacoes"
             className={cn(styles['navbar-mobile-link'], styles['navbar-mobile-link--button'])}
-            onClick={() => { setMobileOpen(false); toggleNotif(); }}
+            onClick={() => setMobileOpen(false)}
           >
             <Bell size={18} strokeWidth={2} aria-hidden />
             <span>Notificações</span>
             {notifContagem > 0 && (
               <span className={styles['navbar-bell-badge--inline']}>{notifContagem > 9 ? '9+' : notifContagem}</span>
             )}
-          </button>
+          </Link>
         )}
         {podeCriarEvento && (
           <Link to="/criar-evento" className={cn(styles['btn-nav-create'], styles['btn-nav-create--mobile'])} onClick={() => setMobileOpen(false)}>
@@ -145,17 +131,6 @@ export default function Header() {
           <span>{contaLabel}</span>
         </Link>
       </div>
-
-      <NotificacoesPanel
-        open={notifOpen}
-        notificacoes={notificacoes}
-        loading={notifLoading}
-        erro={notifErro}
-        onClose={closeNotif}
-        onMarcarLida={marcarNotifLida}
-        onMarcarTodas={marcarNotifTodas}
-        anchorRef={sinoRef}
-      />
     </nav>
   );
 }

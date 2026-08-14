@@ -1,5 +1,6 @@
 const pool = require('../config/database');
 const { criarNotificacao } = require('../services/notificacao.service');
+const { normalizarWhatsapp } = require('../utils/validators');
 
 const QUANTIDADE_MAX = 10; // limite por reserva
 const RESERVAS_MAX_POR_USUARIO_EVENTO = 1; // um usuário, uma reserva por evento
@@ -25,13 +26,21 @@ const criar = async (req, res) => {
     });
   }
 
+  const client = await pool.connect();
   try {
-    // Verificar se evento existe e está agendado
-    const eventoRes = await pool.query(
-      "SELECT id, comunidade_id, titulo, capacidade_maxima FROM eventos WHERE id = $1 AND status = 'agendado'",
+    await client.query('BEGIN');
+
+    // Verificar se evento existe e está agendado. FOR UPDATE trava a linha do
+    // evento pelo resto da transação: requisições concorrentes para o mesmo
+    // evento_id ficam bloqueadas aqui até o commit/rollback anterior, o que
+    // serializa a checagem de capacidade/duplicata + INSERT abaixo e evita
+    // overselling e reservas duplicadas em corrida.
+    const eventoRes = await client.query(
+      "SELECT id, comunidade_id, titulo, capacidade_maxima FROM eventos WHERE id = $1 AND status = 'agendado' FOR UPDATE",
       [evento_id]
     );
     if (eventoRes.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Evento não encontrado ou não está disponível' });
     }
 
@@ -41,16 +50,18 @@ const criar = async (req, res) => {
     // Conta pendente + confirmado (não só confirmado) para não permitir que
     // reservas pendentes simultâneas estourem o limite antes de serem confirmadas.
     if (capacidade_maxima != null) {
-      const ocupacaoRes = await pool.query(
+      const ocupacaoRes = await client.query(
         `SELECT COALESCE(SUM(quantidade), 0)::int AS total FROM reservas
          WHERE evento_id = $1 AND status_pagamento IN ('pendente', 'confirmado')`,
         [evento_id]
       );
       const vagasRestantes = capacidade_maxima - ocupacaoRes.rows[0].total;
       if (vagasRestantes <= 0) {
+        await client.query('ROLLBACK');
         return res.status(409).json({ error: 'Ingressos esgotados para este evento' });
       }
       if (quantidade > vagasRestantes) {
+        await client.query('ROLLBACK');
         return res.status(409).json({
           error: `Restam apenas ${vagasRestantes} ingresso(s) disponível(is) para este evento`,
         });
@@ -58,28 +69,38 @@ const criar = async (req, res) => {
     }
 
     // Anti-duplicata: usuário já tem reserva pendente/confirmada para este evento?
-    const duplicataRes = await pool.query(
+    const duplicataRes = await client.query(
       `SELECT id FROM reservas
        WHERE comprador_id = $1 AND evento_id = $2
          AND status_pagamento IN ('pendente', 'confirmado')`,
       [comprador_id, evento_id]
     );
     if (duplicataRes.rows.length >= RESERVAS_MAX_POR_USUARIO_EVENTO) {
+      await client.query('ROLLBACK');
       return res.status(409).json({
         error: 'Você já possui uma reserva ativa para este evento',
       });
     }
 
-    // Sorteia aleatoriamente um vendedor ativo da comunidade para confirmar o pagamento
-    const vendedorRes = await pool.query(
+    // Round-robin: escolhe o vendedor ativo da comunidade com menor fila de
+    // reservas pendentes (empate resolvido por id, pra ser determinístico).
+    // Exclui o próprio comprador caso ele também seja vendedor dessa
+    // comunidade — um vendedor nunca pode confirmar a própria reserva
+    // (ver vendedor.controller.js), então atribuí-lo a si mesmo deixaria a
+    // reserva presa pra sempre, sem ninguém apto a confirmar o pagamento.
+    const vendedorRes = await client.query(
       `SELECT v.id, v.nome, v.whatsapp
        FROM vendedores v
+       LEFT JOIN reservas r ON r.vendedor_id = v.id AND r.status_pagamento = 'pendente'
        WHERE v.comunidade_id = $1 AND v.ativo = true
-       ORDER BY RANDOM()
+         AND (v.usuario_id IS NULL OR v.usuario_id != $2)
+       GROUP BY v.id
+       ORDER BY COUNT(r.id) ASC, v.id ASC
        LIMIT 1`,
-      [comunidade_id]
+      [comunidade_id, comprador_id]
     );
     if (vendedorRes.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(422).json({
         error: 'Nenhum vendedor disponível para este evento no momento',
       });
@@ -88,7 +109,7 @@ const criar = async (req, res) => {
     const vendedor = vendedorRes.rows[0];
 
     // INSERT reserva
-    const reservaRes = await pool.query(
+    const reservaRes = await client.query(
       `INSERT INTO reservas (evento_id, comprador_id, vendedor_id, quantidade, forma_pagamento, nome_retirada)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id`,
@@ -96,6 +117,8 @@ const criar = async (req, res) => {
     );
 
     const reserva_id = reservaRes.rows[0].id;
+
+    await client.query('COMMIT');
 
     const formaPagLabel = forma_pagamento === 'whatsapp' ? 'Via WhatsApp' : 'Presencial';
     const mensagem = encodeURIComponent(
@@ -106,7 +129,7 @@ const criar = async (req, res) => {
       (nome_retirada ? `👤 Nome retirada: ${nome_retirada}\n` : '') +
       `🔑 Reserva ID: #${reserva_id}`
     );
-    const whatsapp_link = `https://wa.me/${vendedor.whatsapp.replace(/\D/g, '')}?text=${mensagem}`;
+    const whatsapp_link = `https://wa.me/${normalizarWhatsapp(vendedor.whatsapp)}?text=${mensagem}`;
 
     return res.status(201).json({
       message: 'Reserva criada! Entre em contato com o vendedor para confirmar o pagamento.',
@@ -119,8 +142,11 @@ const criar = async (req, res) => {
     });
 
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('Erro ao criar reserva:', err.message);
     return res.status(500).json({ error: 'Erro interno do servidor' });
+  } finally {
+    client.release();
   }
 };
 

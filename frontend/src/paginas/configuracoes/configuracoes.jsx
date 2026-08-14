@@ -46,7 +46,7 @@ export default function Configuracoes() {
           key: 'perfil-pessoal',
           icon: Music,
           title: 'Perfil',
-          subtitle: 'Nome, email e senha',
+          subtitle: 'Nome e email',
           onClick: () => setPerfilPessoalModalOpen(true),
         },
         {
@@ -91,7 +91,7 @@ export default function Configuracoes() {
           key: 'perfil-pessoal',
           icon: Music,
           title: 'Perfil',
-          subtitle: 'Nome, email e senha',
+          subtitle: 'Nome e email',
           onClick: () => setPerfilPessoalModalOpen(true),
         },
         {

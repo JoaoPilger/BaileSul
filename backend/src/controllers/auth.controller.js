@@ -5,6 +5,14 @@ const { validarCNPJ, geocodificarEndereco } = require('../services/external.serv
 const { limparTokensExpirados } = require('../services/token.service');
 const { whatsappValido, cnpjFormatoValido } = require('../utils/validators');
 
+// Hash bcrypt "de mentira" (sem senha real correspondente), usado só pra
+// gastar o mesmo tempo de CPU de um bcrypt.compare() quando o e-mail não
+// existe. Sem isso, a resposta de e-mail inexistente volta bem mais rápido
+// que a de senha errada — um atacante consegue enumerar e-mails cadastrados
+// só medindo o tempo de resposta do login, mesmo com a mensagem de erro
+// sendo idêntica nos dois casos.
+const HASH_FALSO = '$2b$10$CwTycUXWue0Thq9StjUM0uJ8Q4wPvfeAUE.6/OyJ.7WPz8T.Auiiy';
+
 const inserirTokenAtivo = async (client, usuario_id, token) => {
   const decoded = jwt.decode(token);
   if (!decoded?.exp) {
@@ -149,7 +157,7 @@ const register = async (req, res) => {
       );
 
     } else if (tipo === 'comunidade') {
-      const { nome_entidade, descricao, cnpj, whatsapp, endereco, cidade, estado, latitude, longitude } = perfil;
+      const { nome_entidade, descricao, cnpj, whatsapp, cep, endereco, cidade, estado, latitude, longitude } = perfil;
       if (!nome_entidade || nome_entidade.trim().length === 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Campo obrigatório: perfil.nome_entidade' });
@@ -174,8 +182,8 @@ const register = async (req, res) => {
       await client.query(
         `INSERT INTO perfis_comunidades
            (usuario_id, nome_entidade, descricao, cnpj, cnpj_validado, whatsapp,
-            endereco, cidade, estado, latitude, longitude)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+            cep, endereco, cidade, estado, latitude, longitude)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         [
           usuario_id,
           nome_entidade.trim(),
@@ -183,6 +191,7 @@ const register = async (req, res) => {
           cnpj,
           cnpjValidado,
           whatsapp || null,
+          cep || null,
           endereco || null,
           cidade || null,
           estado || null,
@@ -243,8 +252,10 @@ const login = async (req, res) => {
       [emailNorm]
     );
 
-    // Mensagem genérica para não vazar existência de e-mail
+    // Mensagem genérica para não vazar existência de e-mail — e faz o mesmo
+    // bcrypt.compare "de mentira" abaixo pra não vazar por tempo de resposta.
     if (rows.length === 0) {
+      await bcrypt.compare(senha, HASH_FALSO);
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
@@ -374,7 +385,10 @@ const buscarPerfilPessoal = async (req, res) => {
 
   try {
     const { rows } = await pool.query(
-      'SELECT nome, cidade, estado FROM perfis_pessoais WHERE usuario_id = $1',
+      `SELECT pp.nome, pp.cidade, pp.estado, u.email
+       FROM perfis_pessoais pp
+       JOIN usuarios u ON u.id = pp.usuario_id
+       WHERE pp.usuario_id = $1`,
       [usuario_id]
     );
 
@@ -402,11 +416,13 @@ const atualizarPerfilPessoal = async (req, res) => {
   }
 
   try {
+    // COALESCE preserva cidade/estado existentes quando não enviados no
+    // corpo — a tela de "Editar Perfil" da pessoa só envia nome hoje.
     const { rowCount } = await pool.query(
       `UPDATE perfis_pessoais SET
          nome   = $1,
-         cidade = $2,
-         estado = $3
+         cidade = COALESCE($2, cidade),
+         estado = COALESCE($3, estado)
        WHERE usuario_id = $4`,
       [nome.trim(), cidade || null, estado || null, usuario_id]
     );

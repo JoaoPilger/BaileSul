@@ -236,6 +236,13 @@ const confirmarPagamento = async (req, res) => {
       return res.status(403).json({ error: 'Você não é o vendedor responsável por esta reserva' });
     }
 
+    // Um vendedor nunca pode confirmar o próprio pagamento — mesmo sendo o
+    // vendedor designado pra essa reserva (ex.: comprador que também é
+    // vendedor da mesma comunidade e caiu no round-robin da própria compra).
+    if (Number(reserva.comprador_id) === Number(usuario_id)) {
+      return res.status(403).json({ error: 'Você não pode confirmar o pagamento da sua própria reserva' });
+    }
+
     if (reserva.status_pagamento !== 'pendente') {
       return res.status(409).json({ error: 'Reserva já confirmada, rejeitada ou cancelada' });
     }
@@ -320,6 +327,11 @@ const rejeitarPagamento = async (req, res) => {
 
     if (!reserva.vendedor_usuario_id || reserva.vendedor_usuario_id !== usuario_id) {
       return res.status(403).json({ error: 'Você não é o vendedor responsável por esta reserva' });
+    }
+
+    // Mesma regra da confirmação: vendedor não decide o próprio pagamento.
+    if (Number(reserva.comprador_id) === Number(usuario_id)) {
+      return res.status(403).json({ error: 'Você não pode rejeitar o pagamento da sua própria reserva' });
     }
 
     if (reserva.status_pagamento !== 'pendente') {

@@ -5,8 +5,7 @@ import api from '../../services/api'
 
 export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
   const [nome, setNome] = useState('')
-  const [cidade, setCidade] = useState('')
-  const [estado, setEstado] = useState('')
+  const [email, setEmail] = useState('')
 
   const [errors, setErrors] = useState({})
   const [erroGeral, setErroGeral] = useState('')
@@ -25,8 +24,7 @@ export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
       .then(({ data }) => {
         if (!ativo) return
         setNome(data.nome || '')
-        setCidade(data.cidade || '')
-        setEstado(data.estado || '')
+        setEmail(data.email || '')
       })
       .catch(() => {
         if (ativo) setErroGeral('Não foi possível carregar seu perfil. Tente novamente.')
@@ -38,8 +36,7 @@ export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
 
   const resetar = () => {
     setNome('')
-    setCidade('')
-    setEstado('')
+    setEmail('')
     setErrors({})
     setErroGeral('')
     setSalvando(false)
@@ -75,11 +72,7 @@ export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
 
     setSalvando(true)
     try {
-      await api.put('/auth/me/perfil', {
-        nome: nome.trim(),
-        cidade: cidade.trim() || null,
-        estado: estado.trim() || null,
-      })
+      await api.put('/auth/me/perfil', { nome: nome.trim() })
       onSuccess()
     } catch (err) {
       setErroGeral(err.response?.data?.error || 'Não foi possível salvar o perfil. Tente novamente.')
@@ -121,29 +114,13 @@ export default function EditarPerfilPessoalModal({ open, onClose, onSuccess }) {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="perfil-cidade">Cidade</label>
+            <label htmlFor="perfil-email">E-mail</label>
             <div className={styles.inputWrap}>
               <input
-                id="perfil-cidade"
-                type="text"
-                value={cidade}
-                disabled={carregando}
-                onChange={(e) => setCidade(e.target.value)}
-                className={styles.input}
-              />
-            </div>
-          </div>
-
-          <div className={styles.field}>
-            <label htmlFor="perfil-estado">Estado (UF)</label>
-            <div className={styles.inputWrap}>
-              <input
-                id="perfil-estado"
-                type="text"
-                maxLength={2}
-                value={estado}
-                disabled={carregando}
-                onChange={(e) => setEstado(e.target.value.toUpperCase())}
+                id="perfil-email"
+                type="email"
+                value={email}
+                disabled
                 className={styles.input}
               />
             </div>

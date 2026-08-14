@@ -21,6 +21,7 @@ import MeusIngressosPage from './paginas/meus_ingressos/meusIngressos.jsx'
 import MeusEventos from './paginas/meus_eventos/MeusEventos.jsx'
 import Painel from './paginas/painel/painel.jsx'
 import ContratosPage from './paginas/contratos/contratos.jsx'
+import Notificacoes from './paginas/notificacoes/notificacoes.jsx'
 
 import EditarPerfil from './paginas/editar_perfil/editar_perfil.jsx'
 
@@ -59,6 +60,7 @@ function App() {
           <Route path="/bandas/:id" element={<VitrinePerfil tipo="banda" />} />
           <Route path="/vendedores" element={<Vendedores />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
+          <Route path="/notificacoes" element={<Notificacoes />} />
           <Route path="/editar-perfil" element={<EditarPerfil />} />
           <Route path="/pagamentos" element={<Pagamentos />} />
           <Route path="/meus-ingressos" element={<MeusIngressosPage />} />

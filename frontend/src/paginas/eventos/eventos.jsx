@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { MapPin, Calendar } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
-import { loadEvents } from '../../utils/events'
+import { loadEvents, formatTipoEvento } from '../../utils/events'
 import shared from '../../styles/shared.module.css'
 import styles from '../../styles/listings.module.css'
 
@@ -25,7 +25,7 @@ function ListingCard({ event }) {
       </div>
 
       <div className={styles['listing-card-body']}>
-        <span className={styles['listing-card-label']}>{event.style}</span>
+        <span className={styles['listing-card-label']}>{formatTipoEvento(event.style)}</span>
         <h3 className={styles['listing-card-title']}>{event.title}</h3>
         <div className={styles['listing-card-meta']}>
           <MapPin size={14} />
@@ -37,10 +37,11 @@ function ListingCard({ event }) {
 }
 
 export default function Eventos() {
+  const [searchParams] = useSearchParams()
   const [events, setEvents] = useState([])
   const [query, setQuery] = useState('')
   const [cidadeFiltro, setCidadeFiltro] = useState('')
-  const [estiloFiltro, setEstiloFiltro] = useState('')
+  const [estiloFiltro, setEstiloFiltro] = useState(searchParams.get('style') || '')
   const [sortBy, setSortBy] = useState('recent')
 
   useEffect(() => {
@@ -48,6 +49,15 @@ export default function Eventos() {
       setEvents(data)
     })
   }, [])
+
+  // Mantém o filtro em sincronia se o usuário navegar internamente para uma
+  // URL com ?style= diferente enquanto o componente já está montado nesta
+  // rota (ex.: link "Busque por Estilo" clicado a partir de /eventos).
+  useEffect(() => {
+    const styleParam = searchParams.get('style')
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- deriva o filtro da URL, não é estado local independente
+    if (styleParam) setEstiloFiltro(styleParam)
+  }, [searchParams])
 
   const cidades = useMemo(
     () => Array.from(new Set(events.map((e) => e.city).filter(Boolean))).sort(),
@@ -123,9 +133,9 @@ export default function Eventos() {
                   </select>
 
                   <select value={estiloFiltro} onChange={(e) => setEstiloFiltro(e.target.value)} className={styles['listing-select']}>
-                    <option value="">Todos os estilos</option>
+                    <option value="">Todos os tipos</option>
                     {estilos.map((s) => (
-                      <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
+                      <option key={s} value={s}>{formatTipoEvento(s)}</option>
                     ))}
                   </select>
 

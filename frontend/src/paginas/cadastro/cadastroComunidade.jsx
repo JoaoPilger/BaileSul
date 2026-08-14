@@ -159,6 +159,7 @@ export default function CadastroComunidade() {
           nome_entidade: form.nomeComunidade,
           cnpj: form.cnpj,
           whatsapp: form.telefone,
+          cep: form.cep,
           endereco: endereco || form.rua,
           cidade: form.cidade,
           estado: form.estado,
@@ -385,8 +386,7 @@ export default function CadastroComunidade() {
               <label className={styles['checkbox-group']}>
                 <input type="checkbox" name="termos" checked={form.termos} onChange={handleChange} />
                 <span className={styles['checkbox-label']}>
-                  Aceito os{' '}
-                  <a href="/termos" target="_blank" rel="noreferrer">Termos de compartilhamento de informações</a>
+                  Aceito os Termos de compartilhamento de informações
                 </span>
               </label>
               <FieldHint message={showError('termos')} />

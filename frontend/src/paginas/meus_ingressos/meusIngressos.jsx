@@ -1,39 +1,35 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Calendar, Clock, MapPin } from 'lucide-react'
+import { Search, Calendar, MapPin } from 'lucide-react'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import { useAuth } from '../../contexts/AuthContext'
 import { cn } from '../../utils/cn'
 import api from '../../services/api'
 import Snackbar from '../../components/ui/Snackbar'
+import { TIPO_EVENTO_LABELS } from '../../utils/events'
 import styles from './meusIngressos.module.css'
 
 const DEFAULT_IMAGE =
   'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=200&q=80'
 
 const TIPOS_EVENTO = [
-  { value: '',                 label: 'Todos os tipos' },
-  { value: 'musical_gaucha',   label: 'Musical (Gaúcha)' },
-  { value: 'musical_bandinha', label: 'Musical (Bandinha)' },
-  { value: 'almoco',           label: 'Almoço' },
-  { value: 'bingo',            label: 'Bingo' },
-  { value: 'expos',            label: 'Expos' },
-  { value: 'futebol',          label: 'Futebol' },
+  { value: '', label: 'Todos os tipos' },
+  ...Object.entries(TIPO_EVENTO_LABELS).map(([value, label]) => ({ value, label })),
 ]
 
+/**
+ * data_inicio vem como DATE (serializado tipo "2026-07-10T00:00:00.000Z", sem
+ * hora real) — usar `new Date()` + toLocaleDateString desloca pro dia anterior
+ * em fusos negativos (ex.: America/Sao_Paulo). Extrai os componentes da data
+ * direto da string e monta um Date local, sem passar pelo parser UTC.
+ */
 function formatDate(dateStr) {
   if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return dateStr
-  return d.toLocaleDateString('pt-BR')
-}
-
-function formatTime(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  if (Number.isNaN(d.getTime())) return ''
-  return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const s = String(dateStr).slice(0, 10)
+  const [y, m, d] = s.split('-').map(Number)
+  if (!y || !m || !d) return dateStr
+  return new Date(y, m - 1, d).toLocaleDateString('pt-BR')
 }
 
 function useDebouncedValue(value, delay = 300) {
@@ -76,12 +72,6 @@ function IngressoCard({ reserva, onVerDetalhes, onCancelar, cancelando }) {
             <span>
               <Calendar />
               {formatDate(reserva.data_inicio)}
-            </span>
-          )}
-          {reserva.data_inicio && (
-            <span>
-              <Clock />
-              {formatTime(reserva.data_inicio) || '00:00'}
             </span>
           )}
           {cidade && (

@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css'
 import Header from '../../components/header/Header'
 import Footer from '../../components/footer/Footer'
 import Snackbar from '../../components/ui/Snackbar'
-import { loadEventById } from '../../utils/events'
+import { loadEventById, formatTipoEvento } from '../../utils/events'
 import api from '../../services/api'
 import styles from './evento.module.css';
 
@@ -28,17 +28,6 @@ const DEFAULT_CENTER = [-27.5, -50.5] // Centro aproximado da região Sul do Bra
 const DEFAULT_ZOOM = 6
 const EVENT_ZOOM = 15
 
-const STYLE_LABELS = {
-  sertanejo: 'Sertanejo',
-  forro: 'Forró',
-  pagode: 'Pagode',
-  rock: 'Rock',
-  gaucha: 'Gaúcha',
-  axe: 'Axé',
-  mpb: 'MPB',
-  outro: 'Outro',
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const [y, m, d] = dateStr.split('-')
@@ -57,12 +46,6 @@ function formatDate(dateStr) {
     month: 'long',
     year: 'numeric',
   })
-}
-
-function formatStyle(style) {
-  if (!style) return ''
-  const key = String(style).toLowerCase()
-  return STYLE_LABELS[key] || style.charAt(0).toUpperCase() + style.slice(1)
 }
 
 function formatPrice(price) {
@@ -99,8 +82,8 @@ function buildAddressDisplay(evento) {
 function getDescription(evento) {
   if (evento.description?.trim()) return evento.description.trim()
   const city = evento.city || 'cidade não informada'
-  const style = formatStyle(evento.style) || 'evento'
-  let text = `Esse evento está localizado em ${city} e foi cadastrado como um baile de ${style}.`
+  const tipo = formatTipoEvento(evento.style) || 'evento'
+  let text = `Esse evento está localizado em ${city} e foi cadastrado como um evento do tipo ${tipo}.`
   if (evento.referencia) text += ` Referência: ${evento.referencia}.`
   return text
 }
@@ -244,7 +227,7 @@ export default function EventoPage() {
   const imageSrc = evento.image || DEFAULT_IMAGE
   const priceDisplay = formatPrice(evento.price)
   const isFree = priceDisplay === 'Grátis'
-  const styleLabel = formatStyle(evento.style)
+  const styleLabel = formatTipoEvento(evento.style)
   const quantidadeMaxima = evento.vagas_restantes != null
     ? Math.max(1, Math.min(10, evento.vagas_restantes))
     : 10

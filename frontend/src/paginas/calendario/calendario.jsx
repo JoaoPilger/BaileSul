@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Plus, CalendarDays, MapPin } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { loadEvents } from '../../utils/events'
+import { loadEvents, formatTipoEvento } from '../../utils/events'
 import HeaderCal from '../../components/header/HeaderCal'
 import FooterCal from '../../components/footer/FooterCal'
 import styles from './calendario.module.css';
@@ -193,7 +193,7 @@ export default function Calendario() {
                         <img src={ev.image} alt="" className={styles['cal-event-img']} loading="lazy" />
                       </div>
                       <div className={styles['cal-event-body']}>
-                        <span className={styles['cal-event-style']}>{ev.style}</span>
+                        <span className={styles['cal-event-style']}>{formatTipoEvento(ev.style)}</span>
                         <h3 className={styles['cal-event-title']}>{ev.title}</h3>
                         <div className={styles['cal-event-meta']}>
                           <span className={styles['cal-event-city']}>

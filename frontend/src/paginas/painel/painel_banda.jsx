@@ -74,6 +74,9 @@ export default function PainelBanda() {
 
   const pendentes = agenda.filter((a) => a.status_aceite === 'pendente')
   const aceitos = agenda.filter((a) => a.status_aceite === 'aceito')
+  // "agendado" já exclui cancelados e finalizados — sobra só o que ainda vai
+  // acontecer ou está acontecendo agora.
+  const marcados = agenda.filter((a) => a.status_evento === 'agendado')
 
   const hoje = new Date()
   hoje.setHours(0, 0, 0, 0)
@@ -95,8 +98,7 @@ export default function PainelBanda() {
 
   const stats = [
     { label: 'Contratos Pendentes', value: pendentes.length, tone: 'warning', icon: 'alert' },
-    { label: 'Confirmados', value: aceitos.length, tone: 'green', icon: 'check' },
-    { label: 'Total na Agenda', value: agenda.length, tone: 'blue', icon: 'calendar' },
+    { label: 'Eventos Marcados', value: marcados.length, tone: 'blue', icon: 'calendar' },
   ]
 
   return (
@@ -114,7 +116,7 @@ export default function PainelBanda() {
           <div className={styles['pn-empty']}>Carregando seu painel...</div>
         ) : (
           <>
-            <div className={styles['pn-stats-grid']}>
+            <div className={`${styles['pn-stats-grid']} ${styles['pn-stats-grid--duplo']}`}>
               {stats.map((s) => (
                 <div key={s.label} className={styles['pn-stat-card']}>
                   <div className={styles['pn-stat-info']}>

@@ -1,0 +1,276 @@
+.page {
+  min-height: 100vh;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+}
+
+.main {
+  flex: 1;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 8rem 1.25rem 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Hero ───────────────────────────────────────────────────── */
+
+.hero {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.75rem 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  animation: fadeUp 0.35s ease both;
+}
+
+.heroLeft {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.heroIconWrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(13, 73, 107, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.heroTitle {
+  font-family: var(--font-body);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 0.2rem;
+}
+
+.heroSub {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+.btnMarcarTodas {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  border: 2px solid var(--accent);
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.btnMarcarTodas:hover:not(:disabled) { background: var(--accent); color: var(--white); }
+.btnMarcarTodas:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── Toolbar / Abas ─────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: fadeUp 0.35s ease 0.05s both;
+}
+
+.abas {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.aba {
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 2px solid #e5e7eb;
+  background: var(--white);
+  color: #6b7280;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+
+.aba:hover { border-color: var(--accent); }
+
+.abaAtiva {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--white);
+}
+
+.contagem {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* ── Lista ──────────────────────────────────────────────────── */
+
+.lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  animation: fadeUp 0.4s ease 0.1s both;
+}
+
+.vazio {
+  background: var(--white);
+  border-radius: 12px;
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.vazioDanger {
+  background: #fff5f5;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  color: #ef4444;
+}
+
+.item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  background: var(--white);
+  border: none;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.item:hover { box-shadow: 0 4px 16px rgba(13, 73, 107, 0.1); }
+.item:not(.item--naoLida) { cursor: default; }
+
+.itemDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+  background: transparent;
+}
+.item--naoLida .itemDot { background: var(--accent); }
+.item--naoLida { background: rgba(13, 73, 107, 0.1); }
+
+.itemBody {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.itemTitulo {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: #111827;
+}
+
+.itemMensagem {
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.itemQuando {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: #9ca3af;
+  margin-top: 0.15rem;
+}
+
+/* ── Paginação ──────────────────────────────────────────────── */
+
+.paginacao {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.pageArrow,
+.pageNum {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: var(--white);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+
+.pageArrow svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.pageArrow:disabled { opacity: 0.4; cursor: not-allowed; }
+.pageNum:hover, .pageArrow:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+.pageNumAtiva {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--white);
+}
+
+/* ── Animação ───────────────────────────────────────────────── */
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Responsivo ─────────────────────────────────────────────── */
+
+@media (max-width: 700px) {
+  .hero { flex-direction: column; align-items: flex-start; }
+  .btnMarcarTodas { width: 100%; justify-content: center; }
+  .toolbar { flex-direction: column; align-items: flex-start; }
+}

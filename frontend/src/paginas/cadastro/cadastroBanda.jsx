@@ -332,10 +332,7 @@ export default function CadastroBanda() {
               <label className={styles['checkbox-group']}>
                 <input type="checkbox" name="termos" checked={form.termos} onChange={handleChange} />
                 <span className={styles['checkbox-label']}>
-                  Li e aceito os{' '}
-                  <a href="/termos" target="_blank" rel="noreferrer">Termos de Uso</a>
-                  {' '}e a{' '}
-                  <a href="/privacidade" target="_blank" rel="noreferrer">Política de Privacidade</a>
+                  Li e aceito os Termos de Uso e a Política de Privacidade
                 </span>
               </label>
               <FieldHint message={showError('termos')} />

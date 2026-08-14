@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { cn } from '../../utils/cn';
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { User } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
 import api from '../../services/api'
+import Header from '../../components/header/Header'
 import {
   formatCep,
   formatCityField,
@@ -13,22 +13,11 @@ import {
   validateField,
   validateForm,
   validateImageFile,
-  validateVendorName,
 } from '../../utils/criarEventoValidation'
+import { TIPO_EVENTO_LABELS } from '../../utils/events'
 import styles from './criar_evento.module.css';
 
-const TIPOS_EVENTO = [
-  { value: 'musical', label: 'Musical' },
-  { value: 'almoco',  label: 'Almoço' },
-  { value: 'bingo',   label: 'Bingo' },
-  { value: 'expos',   label: 'Expos' },
-  { value: 'futebol', label: 'Futebol' },
-]
-
-const ESTILOS_MUSICAIS = [
-  { value: 'gaucha',    label: 'Gaúcha' },
-  { value: 'bandinha',  label: 'Bandinha' },
-]
+const TIPOS_EVENTO = Object.entries(TIPO_EVENTO_LABELS).map(([value, label]) => ({ value, label }))
 
 const TEXT_LIMITS = {
   title: 120,
@@ -69,19 +58,30 @@ function descreverRangeDias(minStr, maxStr) {
 }
 
 export default function CriarEvento() {
-  const { isAuthenticated, token } = useAuth()
+  const { isAuthenticated, usuario, token } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const fileRef = useRef(null)
 
   const initialDateStart = location.state?.dateStart || ''
 
+  // RF08: menos de 2 vendedores ativos deixa a comunidade sem retaguarda —
+  // se o único vendedor ficar indisponível, ninguém confirma pagamento.
+  const [vendedoresAtivos, setVendedoresAtivos] = useState(null)
+  useEffect(() => {
+    if (usuario?.tipo !== 'comunidade') return
+    let ativo = true
+    api.get('/vendedores')
+      .then(({ data }) => { if (ativo) setVendedoresAtivos((data || []).filter((v) => v.ativo).length) })
+      .catch(() => { if (ativo) setVendedoresAtivos(null) })
+    return () => { ativo = false }
+  }, [usuario?.tipo])
+
   const [form, setForm] = useState({
     title:     '',
     band:      '',
     descricao: '',
     tipoEvento:     'musical',
-    estiloMusical:  'gaucha',
     dateStart: initialDateStart,
     dateEnd:   '',
     timeStart: '',
@@ -96,23 +96,16 @@ export default function CriarEvento() {
   })
   const [imagemFile, setImagemFile]     = useState(null)
   const [imagemPreview, setImagemPreview] = useState(null)
-  const [vendorName, setVendorName]     = useState('')
-  const [vendors, setVendors]           = useState([])
   const [cepLoading, setCepLoading]     = useState(false)
   const [errors, setErrors]             = useState({})
   const [touched, setTouched]           = useState({})
   const [submitAttempted, setSubmitAttempted] = useState(false)
-  const [vendorError, setVendorError]   = useState('')
   const [formAlert, setFormAlert]       = useState('')
 
   const [bandaId, setBandaId]                 = useState(null)
   const [bandaSugestoes, setBandaSugestoes]    = useState([])
   const [bandaSugestoesOpen, setBandaSugestoesOpen] = useState(false)
   const [, setBandaBuscando]      = useState(false)
-
-  const [vendedoresComunidade, setVendedoresComunidade] = useState([])
-  const [vendorSugestoes, setVendorSugestoes]           = useState([])
-  const [vendorSugestoesOpen, setVendorSugestoesOpen]   = useState(false)
 
   const [diasExtras, setDiasExtras] = useState([])
   const [novoDiaExtra, setNovoDiaExtra] = useState({ data: '', hora_inicio: '', hora_fim: '', observacao: '' })
@@ -200,15 +193,6 @@ export default function CriarEvento() {
 
     if (name === 'cep') buscarCep()
   }
-
-  useEffect(() => {
-    if (!isAuthenticated) return
-    api
-      .get('/vendedores', { headers: { Authorization: `Bearer ${token}` } })
-      .then(({ data }) => setVendedoresComunidade(Array.isArray(data) ? data : []))
-      .catch(() => setVendedoresComunidade([]))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Atualiza o mapa dinamicamente conforme o endereço é preenchido (debounce 800ms)
   useEffect(() => {
@@ -375,50 +359,6 @@ export default function CriarEvento() {
     setCepLoading(false)
   }
 
-  const addVendor = () => {
-    const message = validateVendorName(vendorName)
-    if (message) {
-      setVendorError(message)
-      return
-    }
-    setVendorError('')
-    setVendors((s) => [...s, { id: Date.now(), name: vendorName.trim() }])
-    setVendorName('')
-    setVendorSugestoesOpen(false)
-    setVendorSugestoes([])
-  }
-
-  const removeVendor = (id) => setVendors((s) => s.filter((v) => v.id !== id))
-
-  const handleVendorNameChange = (e) => {
-    const value = e.target.value.slice(0, 80)
-    setVendorName(value)
-    if (vendorError) setVendorError('')
-
-    const termo = value.trim().toLowerCase()
-    if (termo.length < 2) {
-      setVendorSugestoes([])
-      setVendorSugestoesOpen(false)
-      return
-    }
-
-    const jaAdicionados = new Set(vendors.map((v) => v.name.toLowerCase()))
-    const encontrados = vendedoresComunidade
-      .filter((v) => v.nome?.toLowerCase().includes(termo) && !jaAdicionados.has(v.nome.toLowerCase()))
-      .slice(0, 5)
-
-    setVendorSugestoes(encontrados)
-    setVendorSugestoesOpen(encontrados.length > 0)
-  }
-
-  const selecionarVendor = (v) => {
-    setVendors((s) => [...s, { id: v.id, name: v.nome }])
-    setVendorName('')
-    setVendorError('')
-    setVendorSugestoesOpen(false)
-    setVendorSugestoes([])
-  }
-
   const handleNovoDiaExtraCampo = (campo, valor) => {
     setNovoDiaExtra((prev) => ({ ...prev, [campo]: valor }))
     if (diaExtraErro) setDiaExtraErro('')
@@ -444,10 +384,17 @@ export default function CriarEvento() {
 
   const removeDiaExtra = (id) => setDiasExtras((s) => s.filter((d) => d.id !== id))
 
+  const vendedoresInsuficientes = vendedoresAtivos !== null && vendedoresAtivos < 2
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setSubmitAttempted(true)
     setFormAlert('')
+
+    if (vendedoresInsuficientes) {
+      setFormAlert('Cadastre pelo menos 2 vendedores ativos antes de criar o evento.')
+      return
+    }
 
     const normalizedForm = {
       ...form,
@@ -462,9 +409,7 @@ export default function CriarEvento() {
       return
     }
 
-    const tipoEventoFinal = normalizedForm.tipoEvento === 'musical'
-      ? `musical_${normalizedForm.estiloMusical}`
-      : normalizedForm.tipoEvento
+    const tipoEventoFinal = normalizedForm.tipoEvento
 
     const descricaoParts = []
     if (normalizedForm.descricao?.trim()) {
@@ -592,16 +537,7 @@ export default function CriarEvento() {
   return (
     <div className={styles['ce-shell']}>
 
-      <header className={styles['ce-header']}>
-        <div className={styles['ce-header-inner']}>
-          <Link to="/" className={styles['ce-logo-link']} aria-label="BaileSul">
-            <img src="/imagens/BaileSul.png" alt="BaileSul" className={styles['ce-logo-img']} />
-          </Link>
-          <Link to={contaLink} className={styles['ce-user-btn']} aria-label={isAuthenticated ? 'Minha conta' : 'Entrar'}>
-            <User size={20} strokeWidth={1.8} />
-          </Link>
-        </div>
-      </header>
+      <Header />
 
       <main className={styles['ce-main']}>
         <div className={styles['ce-card']}>
@@ -609,6 +545,23 @@ export default function CriarEvento() {
           <div className={styles['ce-card-header']}>
             <h1 className={styles['ce-card-title']}>Criar Evento</h1>
           </div>
+
+          {vendedoresAtivos !== null && vendedoresAtivos < 2 && (
+            <div className={styles['ce-vendor-alert']} role="alert">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span className={styles['ce-vendor-alert-text']}>
+                <strong>
+                  {vendedoresAtivos === 0 ? 'Nenhum vendedor cadastrado. ' : 'Só 1 vendedor cadastrado. '}
+                </strong>
+                Cadastre pelo menos 2 pra garantir que sempre tenha alguém disponível pra confirmar pagamentos.
+              </span>
+              <Link to="/vendedores" className={styles['ce-vendor-alert-link']}>Cadastrar vendedores</Link>
+            </div>
+          )}
 
           <form className={styles['ce-form']} onSubmit={handleSubmit} noValidate>
 
@@ -732,33 +685,6 @@ export default function CriarEvento() {
                   </div>
                 </div>
               </div>
-
-              {form.tipoEvento === 'musical' && (
-                <div className={styles['ce-field']}>
-                  <label className={styles['ce-field-label']}>Estilo Musical *</label>
-                  <div className={styles['ce-row']}>
-                    {ESTILOS_MUSICAIS.map((e) => (
-                      <label
-                        key={e.value}
-                        className={cn(
-                          styles['ce-vendor-item'],
-                          form.estiloMusical === e.value && styles['ce-upload-area--filled'],
-                        )}
-                        style={{ cursor: 'pointer', justifyContent: 'flex-start', gap: '10px' }}
-                      >
-                        <input
-                          type="radio"
-                          name="estiloMusical"
-                          value={e.value}
-                          checked={form.estiloMusical === e.value}
-                          onChange={handleChange}
-                        />
-                        {e.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               <div className={styles['ce-field']}>
                 <label className={styles['ce-field-label']} htmlFor="price">Ingresso / Entrada</label>
@@ -986,72 +912,6 @@ export default function CriarEvento() {
             </div>
 
             <div className={styles['ce-section']}>
-              <div className={styles['ce-section-label']}>Vendedores</div>
-
-              <div className={styles['ce-field']}>
-                <label className={styles['ce-field-label']} htmlFor="vendorName">Nome do Vendedor</label>
-                <div className={styles['ce-vendor-row']}>
-                  <div className={styles['ce-input-wrap']} style={{ flex: 1 }}>
-                    <input
-                      id="vendorName"
-                      type="text"
-                      autoComplete="off"
-                      className={cn(styles['ce-input'], vendorError && styles['ce-input--error'])}
-                      placeholder="Ex: Bar do João"
-                      value={vendorName}
-                      onChange={handleVendorNameChange}
-                      onFocus={() => vendorSugestoes.length > 0 && setVendorSugestoesOpen(true)}
-                      onBlur={() => setTimeout(() => setVendorSugestoesOpen(false), 120)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addVendor() } }}
-                    />
-                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
-                    {vendorSugestoesOpen && vendorSugestoes.length > 0 && (
-                      <ul
-                        className={styles['ce-vendor-list']}
-                        style={{
-                          position: 'absolute',
-                          top: '100%',
-                          left: 0,
-                          right: 0,
-                          zIndex: 20,
-                          background: 'var(--surface)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '10px',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-                          marginTop: '4px',
-                        }}
-                      >
-                        {vendorSugestoes.map((v) => (
-                          <li
-                            key={v.id}
-                            className={styles['ce-vendor-item']}
-                            style={{ cursor: 'pointer' }}
-                            onMouseDown={() => selecionarVendor(v)}
-                          >
-                            <span>{v.nome}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                  <button type="button" className={styles['ce-btn-add']} onClick={addVendor}>+ Adicionar</button>
-                </div>
-                <FieldHint message={vendorError} />
-              </div>
-
-              {vendors.length > 0 && (
-                <ul className={styles['ce-vendor-list']}>
-                  {vendors.map((v) => (
-                    <li key={v.id} className={styles['ce-vendor-item']}>
-                      <span>{v.name}</span>
-                      <button type="button" className={styles['ce-btn-remove']} onClick={() => removeVendor(v.id)}>Remover</button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className={styles['ce-section']}>
               <div className={styles['ce-section-label']}>Localização</div>
 
               <div className={styles['ce-row']}>
@@ -1175,7 +1035,14 @@ export default function CriarEvento() {
 
             <div className={styles['ce-form-actions']}>
               <Link to="/" className={styles['ce-btn-cancel']}>Cancelar</Link>
-              <button type="submit" className={styles['ce-btn-submit']}>Salvar Evento</button>
+              <button
+                type="submit"
+                className={styles['ce-btn-submit']}
+                disabled={vendedoresInsuficientes}
+                title={vendedoresInsuficientes ? 'Cadastre pelo menos 2 vendedores ativos antes de criar o evento' : undefined}
+              >
+                Salvar Evento
+              </button>
             </div>
 
           </form>
